@@ -140,10 +140,10 @@ function AddTransactionForm() {
 
 			{/* Floating Expanding Container */}
 			<div 
-				className={`fixed transition-all duration-300 ease-out z-50 ${
+				className={`fixed transition-all duration-700 ease-out z-50 ${
 					isOpen 
 						? 'inset-x-4 top-16 bottom-20 md:inset-auto md:bottom-8 md:right-6 md:w-[420px] md:h-[630px] bg-white border-2 border-black shadow-box p-6 flex flex-col justify-between origin-bottom-right scale-100 opacity-100'
-						: 'bottom-8 right-6 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-gray-900 origin-bottom-right scale-100'
+						: 'bottom-8 right-6 w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-gray-900 origin-bottom-right scale-100'
 				}`}
 				onClick={() => !isOpen && setIsOpen(true)}
 			>
@@ -176,7 +176,7 @@ function AddTransactionForm() {
 									onClick={() => setType('expense')}
 									className={`py-2 text-xs font-bold border-2 border-black transition-all ${
 										type === 'expense' 
-											? 'bg-rose-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-x-[-1px] translate-y-[-1px]' 
+											? 'bg-rose-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px' 
 											: 'bg-white text-gray-500 hover:bg-gray-50'
 									}`}
 								>
@@ -187,7 +187,7 @@ function AddTransactionForm() {
 									onClick={() => setType('income')}
 									className={`py-2 text-xs font-bold border-2 border-black transition-all ${
 										type === 'income' 
-											? 'bg-emerald-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-x-[-1px] translate-y-[-1px]' 
+											? 'bg-emerald-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px' 
 											: 'bg-white text-gray-500 hover:bg-gray-50'
 									}`}
 								>

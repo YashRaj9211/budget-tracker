@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import DailyBudgetCard from '../components/budget/DailyBudgetCard';
 import Button from '../components/common/Button';
 import TransactionList from '../components/transaction/TransactionList';
@@ -8,6 +8,7 @@ import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
 import { toMonthKey } from '../utils/date';
 import { initDb } from '../db';
+import { useMidnightRefresh } from '../utils/midnight';
 
 function Home() {
 	const selectedYear = useTransactionStore((s) => s.selectedYear);
@@ -35,6 +36,15 @@ function Home() {
 	useEffect(() => {
 		loadBudget(toMonthKey(selectedYear, selectedMonth));
 	}, [selectedYear, selectedMonth, loadBudget]);
+
+	// At midnight: reload transactions so the daily budget recalculates for the new day
+	const handleMidnight = useCallback(() => {
+		const now = new Date();
+		loadMonth(now.getFullYear(), now.getMonth());
+		loadBudget(toMonthKey(now.getFullYear(), now.getMonth()));
+	}, [loadMonth, loadBudget]);
+
+	useMidnightRefresh(handleMidnight);
 
 	return (
 		<div className="relative">

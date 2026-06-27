@@ -106,3 +106,11 @@ export function useMonthlyTotals(): { income: number; expense: number } {
 	}
 	return { income, expense };
 }
+
+/** Today's expense total — used to show over/under daily allowance. */
+export function useTodayExpense(todayDateStr: string): number {
+	const transactions = useTransactionStore((s) => s.transactions);
+	return transactions
+		.filter((t) => t.type === 'expense' && t.date === todayDateStr)
+		.reduce((sum, t) => sum + t.amount, 0);
+}
