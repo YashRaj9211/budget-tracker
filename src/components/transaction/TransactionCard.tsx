@@ -1,6 +1,13 @@
 import { Hamburger, IndianRupee } from 'lucide-react';
+import type { Transaction } from '../../types';
 
-function TransactionCard() {
+interface TransactionCardProps {
+	transaction: Transaction;
+}
+
+function TransactionCard({ transaction }: TransactionCardProps) {
+	const isIncome = transaction.type === 'income';
+
 	return (
 		<li className="py-2.5">
 			<div className="grid grid-cols-12 items-center">
@@ -10,15 +17,18 @@ function TransactionCard() {
 					</div>
 				</div>
 				<div className="col-span-5 text-left pl-2">
-					<p className="font-semibold text-sm text-black leading-tight">Afternoon Lunch</p>
+					<p className="font-semibold text-sm text-black leading-tight">{transaction.description}</p>
 					<p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-0.5">
-						GPay
+						{transaction.account}
 					</p>
 				</div>
-				<div className="col-span-3 text-right text-sm text-gray-300">—</div>
-				<div className="col-span-3 text-right text-sm text-[#8c6239] font-bold flex items-center justify-end gap-0.5">
+				<div className="col-span-3 text-right text-sm text-gray-300">
+					{transaction.category}
+				</div>
+				<div className={`col-span-3 text-right text-sm font-bold flex items-center justify-end gap-0.5 ${isIncome ? 'text-emerald-600' : 'text-[#8c6239]'}`}>
+					{isIncome && <span>+</span>}
 					<IndianRupee size={12} className="inline shrink-0" />
-					<span>80.0</span>
+					<span>{transaction.amount.toFixed(1)}</span>
 				</div>
 			</div>
 		</li>

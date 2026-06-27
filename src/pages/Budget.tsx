@@ -1,22 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Check, Save } from 'lucide-react';
 import { Link } from 'react-router';
-import Button from '../components/common/Button';
+import { useBudgetStore } from '../stores/budgetStore';
+import { getDaysInMonth } from '../utils/date';
 
 function BudgetSettings() {
-	const [selectedMonth, setSelectedMonth] = useState('2026-06');
-	const [monthlyBudget, setMonthlyBudget] = useState('7000');
+	const currentBudget = useBudgetStore((s) => s.currentBudget);
+	const saveBudget = useBudgetStore((s) => s.saveBudget);
+	const loadBudget = useBudgetStore((s) => s.loadBudget);
+
+	const now = new Date();
+	const [selectedMonth, setSelectedMonth] = useState(
+		`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+	);
+	const [monthlyBudget, setMonthlyBudget] = useState('');
 	const [alertThreshold, setAlertThreshold] = useState('80');
 	const [saved, setSaved] = useState(false);
 
-	const handleSave = (e: React.FormEvent) => {
+	// Load budget when month changes
+	useEffect(() => {
+		loadBudget(selectedMonth);
+	}, [selectedMonth, loadBudget]);
+
+	// Sync form fields when budget loads
+	useEffect(() => {
+		if (currentBudget && currentBudget.monthKey === selectedMonth) {
+			setMonthlyBudget(String(currentBudget.monthlyLimit));
+			setAlertThreshold(String(currentBudget.alertThreshold));
+		} else {
+			setMonthlyBudget('');
+			setAlertThreshold('80');
+		}
+	}, [currentBudget, selectedMonth]);
+
+	const handleSave = async (e: React.FormEvent) => {
 		e.preventDefault();
+		await saveBudget({
+			monthKey: selectedMonth,
+			monthlyLimit: Number(monthlyBudget) || 0,
+			alertThreshold: Number(alertThreshold),
+		});
 		setSaved(true);
 		setTimeout(() => setSaved(false), 2000);
 	};
 
-	// Calculate daily budget based on 30-day month
-	const calculatedDaily = Math.round(Number(monthlyBudget || 0) / 30);
+	// Calculate daily budget based on actual days in selected month
+	const [yearNum, monthNum] = selectedMonth.split('-').map(Number);
+	const daysInMonth = getDaysInMonth(yearNum, monthNum - 1);
+	const calculatedDaily = Math.round(Number(monthlyBudget || 0) / daysInMonth);
 
 	return (
 		<div className="relative pb-24">

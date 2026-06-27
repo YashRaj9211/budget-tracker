@@ -1,13 +1,24 @@
 import TransactionCard from './TransactionCard';
 import TransactionsHeader from './TransactionsHeader';
-function TransactionList() {
+import type { DayGroup } from '../../types';
+
+interface TransactionListProps {
+	group: DayGroup;
+}
+
+function TransactionList({ group }: TransactionListProps) {
 	return (
 		<div className="transaction-list">
-			<TransactionsHeader />
+			<TransactionsHeader
+				dayNum={group.dayNum}
+				dayName={group.dayName}
+				income={group.income}
+				expense={group.expense}
+			/>
 			<ul className="px-4">
-				<TransactionCard />
-				<TransactionCard />
-				<TransactionCard />
+				{group.transactions.map((t) => (
+					<TransactionCard key={t.id} transaction={t} />
+				))}
 			</ul>
 		</div>
 	);

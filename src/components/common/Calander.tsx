@@ -3,12 +3,12 @@ import { useState, useEffect } from "react";
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 // Returns the day-of-week index (0=Mon..6=Sun) for the 1st of given month
-function getFirstDayIndex(year, month) {
+function getFirstDayIndex(year: number, month: number) {
   const day = new Date(year, month, 1).getDay(); // 0=Sun
   return day === 0 ? 6 : day - 1; // shift so Mon=0
 }
 
-function getDaysInMonth(year, month) {
+function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
@@ -17,9 +17,6 @@ const MONTH_NAMES = [
   "July","August","September","October","November","December"
 ];
 
-// Sample completed/vacation sets — replace with your own data
-const DEFAULT_COMPLETED = new Set([2,4,5,7,9,12,14,15,16,17,18,22]);
-const DEFAULT_VACATION  = new Set([8]);
 
 interface CalendarProps {
   year?: number;
@@ -71,7 +68,7 @@ export default function Calendar({
     else setMonth(m => m + 1);
   }
 
-  const handleCellClick = (day) => {
+  const handleCellClick = (day: number | null) => {
     if (!day) return;
     const formattedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     if (onSelectDate) {

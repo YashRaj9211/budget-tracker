@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Calendar as CalendarIcon, Calculator, Check, Wallet, PlusCircle } from 'lucide-react';
+import { Plus, X, Calendar as CalendarIcon, Calculator, Check } from 'lucide-react';
 import CustomCalendar from '../common/Calander';
+import { useTransactionStore } from '../../stores/transactionStore';
+import { useBudgetStore } from '../../stores/budgetStore';
 
 function AddTransactionForm() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -9,14 +11,32 @@ function AddTransactionForm() {
 	const [amountInput, setAmountInput] = useState('');
 	const [evaluatedAmount, setEvaluatedAmount] = useState<number | null>(null);
 	const [description, setDescription] = useState('');
-	const [account, setAccount] = useState('GPay');
-	const [categories, setCategories] = useState(['Food', 'Travel', 'Entertainment', 'Utilities', 'Other']);
-	const [selectedCategory, setSelectedCategory] = useState('Food');
+	const [selectedAccount, setSelectedAccount] = useState('');
+	const [selectedCategory, setSelectedCategory] = useState('');
 	const [newCategory, setNewCategory] = useState('');
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [showCalendar, setShowCalendar] = useState(false);
 
 	const amountInputRef = useRef<HTMLInputElement>(null);
+
+	// Store data
+	const addTransaction = useTransactionStore((s) => s.addTransaction);
+	const categories = useBudgetStore((s) => s.categories);
+	const accounts = useBudgetStore((s) => s.accounts);
+	const addCategory = useBudgetStore((s) => s.addCategory);
+
+	// Set defaults when data loads
+	useEffect(() => {
+		if (categories.length > 0 && !selectedCategory) {
+			setSelectedCategory(categories[0]);
+		}
+	}, [categories, selectedCategory]);
+
+	useEffect(() => {
+		if (accounts.length > 0 && !selectedAccount) {
+			setSelectedAccount(accounts[0]);
+		}
+	}, [accounts, selectedAccount]);
 
 	// Evaluate simple mathematical expressions in real-time
 	useEffect(() => {
@@ -77,23 +97,24 @@ function AddTransactionForm() {
 		e.preventDefault();
 		const trimmed = newCategory.trim();
 		if (trimmed && !categories.includes(trimmed)) {
-			setCategories([...categories, trimmed]);
+			addCategory(trimmed);
 			setSelectedCategory(trimmed);
 			setNewCategory('');
 		}
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const finalAmount = evaluatedAmount !== null ? evaluatedAmount : parseFloat(amountInput) || 0;
-		
-		console.log('Transaction Added:', {
+		if (finalAmount <= 0) return;
+
+		await addTransaction({
 			type,
 			date,
 			amount: finalAmount,
 			description,
-			account,
-			category: selectedCategory
+			account: selectedAccount,
+			category: selectedCategory,
 		});
 
 		setIsSubmitted(true);
@@ -263,14 +284,22 @@ function AddTransactionForm() {
 								<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">
 									Account / Method
 								</label>
-								<input 
-									type="text" 
-									value={account}
-									onChange={(e) => setAccount(e.target.value)}
-									placeholder="e.g. GPay, Cash, Card"
-									className="w-full border-2 border-black p-2 bg-white text-sm font-medium focus:outline-none"
-									required
-								/>
+								<div className="flex flex-wrap gap-1.5">
+									{accounts.map((acc) => (
+										<button
+											key={acc}
+											type="button"
+											onClick={() => setSelectedAccount(acc)}
+											className={`px-2.5 py-1 text-xs border border-black font-semibold transition-all ${
+												selectedAccount === acc
+													? 'bg-[#eedcc2] text-black font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]'
+													: 'bg-white text-gray-600 hover:bg-gray-50'
+											}`}
+										>
+											{acc}
+										</button>
+									))}
+								</div>
 							</div>
 
 							{/* Category Selection with Custom Category Add Option */}

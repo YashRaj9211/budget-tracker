@@ -1,18 +1,30 @@
-import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTransactionStore } from '../../stores/transactionStore';
 
 function HomePageHeader() {
-	const [currentDate, setCurrentDate] = useState(new Date(2026, 5)); // June 2026
+	const selectedYear = useTransactionStore((s) => s.selectedYear);
+	const selectedMonth = useTransactionStore((s) => s.selectedMonth);
+	const setSelectedMonth = useTransactionStore((s) => s.setSelectedMonth);
+
+	const displayDate = new Date(selectedYear, selectedMonth);
+	const formattedMonth = displayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
 	const handlePrevMonth = () => {
-		setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1));
+		if (selectedMonth === 0) {
+			setSelectedMonth(selectedYear - 1, 11);
+		} else {
+			setSelectedMonth(selectedYear, selectedMonth - 1);
+		}
 	};
 
 	const handleNextMonth = () => {
-		setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1));
+		if (selectedMonth === 11) {
+			setSelectedMonth(selectedYear + 1, 0);
+		} else {
+			setSelectedMonth(selectedYear, selectedMonth + 1);
+		}
 	};
 
-	const formattedMonth = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 	return (
 		<header className="flex items-center justify-between border border-black p-3 bg-white mb-4">
 			<button
