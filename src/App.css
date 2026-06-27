@@ -1,0 +1,7 @@
+.shadow-box {
+	box-shadow: 6px 6px 0px -2px #000000;
+}
+
+.transaction-list:first-child > .transaction-header {
+	border-top: none;
+}

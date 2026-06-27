@@ -1,0 +1,135 @@
+@import 'tailwindcss';
+
+/* .rubik-<uniquifier> {
+  font-family: "Rubik", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+} */
+
+
+
+body {
+	font-family: 'Rubik', sans-serif;
+	background-color: #fff7fe;
+}
+
+button {
+	font-size: 0.85rem;
+	font-weight: 400;
+	text-align: center;
+}
+
+
+.pastel-pink{
+  background-color: #fecaca;
+}
+
+.pastel-blue{
+  background-color: #bde2ff;
+}
+
+.pastel-purple{
+  background-color: #e4b5fe;
+}
+
+.pastel-yellow{
+  background-color: #fefed4;
+}
+
+.pastel-green{
+  background-color: #aff588;
+}
+
+.pastel-red{
+  background-color: #ff6b6b;
+}
+
+.border-pastel-pink{
+  border: 2px solid #fecaca;
+}
+
+.border-pastel-blue{
+  border: 2px solid #bde2ff;
+}
+
+.border-pastel-purple{
+  border: 2px solid #e4b5fe;
+}
+
+.border-pastel-yellow{
+  border: 2px solid #fefed4;
+}
+
+.border-pastel-green{
+  border: 2px solid #aff588;
+}
+
+.border-pastel-red{
+  border: 2px solid #ff6b6b;
+}
+
+.shadow-pastel-pink{
+  box-shadow: 4px 4px 0px 0px #fecaca;
+}
+
+.shadow-pastel-blue{
+  box-shadow: 4px 4px 0px 0px #bde2ff;
+}
+
+.shadow-pastel-purple{
+  box-shadow: 4px 4px 0px 0px #e4b5fe;
+}
+
+.shadow-pastel-yellow{
+  box-shadow: 4px 4px 0px 0px #fefed4;
+}
+
+.shadow-pastel-green{
+  box-shadow: 4px 4px 0px 0px #aff588;
+}
+
+.shadow-pastel-red{
+  box-shadow: 4px 4px 0px 0px #ff6b6b;
+}
+
+.text-pastel-pink{
+  color: #fecaca;
+}
+
+.text-pastel-blue{
+  color: #bde2ff;
+}
+
+.text-pastel-purple{
+  color: #e4b5fe;
+}
+
+.text-pastel-yellow{
+  color: #fefed4;
+}
+
+.text-pastel-green{
+  color: #aff588;
+}
+
+.text-pastel-red{
+  color: #ff6b6b;
+}
+
+.text-dark-red{
+  color: #8c6239;
+}
+
+
+.text-light-gray{
+  color: #9f8569;
+}
+
+.border-light-gray{
+  border: 1px solid #9f8569;
+}
+
+.border-dark-red{
+  border: 2px solid #8c6239;
+}
