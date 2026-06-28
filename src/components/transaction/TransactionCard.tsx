@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Edit2, Trash2, Hamburger, IndianRupee } from 'lucide-react';
 import type { Transaction } from '../../types';
 
@@ -6,11 +7,15 @@ interface TransactionCardProps {
 }
 
 function TransactionCard({ transaction }: TransactionCardProps) {
+	const [showActions, setShowActions] = useState(false);
 	const isIncome = transaction.type === 'income';
 
 	return (
-		<li className="py-2.5">
-			<div className="grid grid-cols-12 items-center">
+		<li className="py-2.5 border-b border-gray-100 last:border-b-0">
+			<div 
+				className="grid grid-cols-12 items-center cursor-pointer select-none active:bg-gray-50 transition-colors"
+				onClick={() => setShowActions(!showActions)}
+			>
 				<div className="col-span-1 flex items-center justify-start">
 					<div className="p-1 bg-[#eedcc2] border border-black text-[#9f8569] flex items-center justify-center">
 						<Hamburger size={15} />
@@ -34,16 +39,18 @@ function TransactionCard({ transaction }: TransactionCardProps) {
 				</div>
 			</div>
 			
-			<div className="flex items-center gap-1.5 justify-end mt-2">
-				<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-white hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
-					<Edit2 size={10} />
-					<span>Edit</span>
-				</button>
-				<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-rose-50 hover:bg-rose-100 text-rose-700 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
-					<Trash2 size={10} />
-					<span>Delete</span>
-				</button>
-			</div>
+			{showActions && (
+				<div className="flex items-center gap-1.5 justify-end mt-2 animate-fade-in">
+					<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-white hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
+						<Edit2 size={10} />
+						<span>Edit</span>
+					</button>
+					<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-rose-50 hover:bg-rose-100 text-rose-700 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
+						<Trash2 size={10} />
+						<span>Delete</span>
+					</button>
+				</div>
+			)}
 		</li>
 	);
 }
