@@ -1,4 +1,4 @@
-import { Hamburger, IndianRupee } from 'lucide-react';
+import { Edit2, Trash2, Hamburger, IndianRupee } from 'lucide-react';
 import type { Transaction } from '../../types';
 
 interface TransactionCardProps {
@@ -17,19 +17,32 @@ function TransactionCard({ transaction }: TransactionCardProps) {
 					</div>
 				</div>
 				<div className="col-span-5 text-left pl-2">
-					<p className="font-semibold text-sm text-black leading-tight">{transaction.description}</p>
+					<p className="font-semibold text-sm text-black leading-tight">
+						{transaction.description}
+					</p>
 					<p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-0.5">
 						{transaction.account}
 					</p>
 				</div>
-				<div className="col-span-3 text-right text-sm text-gray-300">
-					{transaction.category}
-				</div>
-				<div className={`col-span-3 text-right text-sm font-bold flex items-center justify-end gap-0.5 ${isIncome ? 'text-emerald-600' : 'text-[#8c6239]'}`}>
+				<div className="col-span-3 text-right text-sm text-gray-300">{transaction.category}</div>
+				<div
+					className={`col-span-3 text-right text-sm font-bold flex items-center justify-end gap-0.5 ${isIncome ? 'text-emerald-600' : 'text-[#8c6239]'}`}
+				>
 					{isIncome && <span>+</span>}
 					<IndianRupee size={12} className="inline shrink-0" />
 					<span>{transaction.amount.toFixed(1)}</span>
 				</div>
+			</div>
+			
+			<div className="flex items-center gap-1.5 justify-end mt-2">
+				<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-white hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
+					<Edit2 size={10} />
+					<span>Edit</span>
+				</button>
+				<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 border border-black bg-rose-50 hover:bg-rose-100 text-rose-700 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
+					<Trash2 size={10} />
+					<span>Delete</span>
+				</button>
 			</div>
 		</li>
 	);

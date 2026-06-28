@@ -1,3 +1,4 @@
+import "../../App.css"
 import TransactionCard from './TransactionCard';
 import TransactionsHeader from './TransactionsHeader';
 import type { DayGroup } from '../../types';
