@@ -5,7 +5,7 @@ import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
 // ── Database Config ──
 
 const DB_NAME = 'budget-tracker-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // bumped: budgets store now keyed by 'id'
 
 // Store names
 const TRANSACTIONS = 'transactions';
@@ -20,20 +20,29 @@ let dbPromise: Promise<IDBPDatabase> | null = null;
 function getDb(): Promise<IDBPDatabase> {
 	if (!dbPromise) {
 		dbPromise = openDB(DB_NAME, DB_VERSION, {
-			upgrade(db) {
-				// Transactions store
-				const txStore = db.createObjectStore(TRANSACTIONS, { keyPath: 'id' });
-				txStore.createIndex('date', 'date');
-				txStore.createIndex('monthKey', 'date'); // we'll slice 'YYYY-MM' at query time
+			upgrade(db, oldVersion) {
+				// ── v1 → base schema ──
+				if (oldVersion < 1) {
+					const txStore = db.createObjectStore(TRANSACTIONS, { keyPath: 'id' });
+					txStore.createIndex('date', 'date');
+					txStore.createIndex('monthKey', 'date');
 
-				// Budgets store
-				db.createObjectStore(BUDGETS, { keyPath: 'monthKey' });
+					db.createObjectStore(BUDGETS, { keyPath: 'monthKey' });
 
-				// Categories store (simple value store)
-				db.createObjectStore(CATEGORIES, { keyPath: 'name' });
+					db.createObjectStore(CATEGORIES, { keyPath: 'name' });
+					db.createObjectStore(ACCOUNTS, { keyPath: 'name' });
+				}
 
-				// Accounts store (simple value store)
-				db.createObjectStore(ACCOUNTS, { keyPath: 'name' });
+				// ── v2 → migrate budgets store to use 'id' as keyPath ──
+				if (oldVersion < 2) {
+					// Drop old month-key budget store if it exists
+					if (db.objectStoreNames.contains(BUDGETS)) {
+						db.deleteObjectStore(BUDGETS);
+					}
+					// Create new budget store keyed by UUID
+					const budgetStore = db.createObjectStore(BUDGETS, { keyPath: 'id' });
+					budgetStore.createIndex('startDate', 'startDate');
+				}
 			},
 		});
 	}
@@ -53,6 +62,12 @@ export async function getTransactionsByMonth(monthKey: string): Promise<Transact
 	return all.filter((t) => t.date.startsWith(monthKey));
 }
 
+export async function getTransactionsByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
+	const db = await getDb();
+	const all = await db.getAll(TRANSACTIONS);
+	return all.filter((t) => t.date >= startDate && t.date <= endDate);
+}
+
 export async function addTransaction(transaction: Transaction): Promise<void> {
 	const db = await getDb();
 	await db.put(TRANSACTIONS, transaction);
@@ -65,14 +80,28 @@ export async function deleteTransaction(id: string): Promise<void> {
 
 // ── Budgets ──
 
-export async function getBudget(monthKey: string): Promise<Budget | undefined> {
+/** Get the budget whose date range contains `today` (first match wins). */
+export async function getActiveBudget(today: string): Promise<Budget | undefined> {
 	const db = await getDb();
-	return db.get(BUDGETS, monthKey);
+	const all: Budget[] = await db.getAll(BUDGETS);
+	return all.find((b) => today >= b.startDate && today <= b.endDate);
+}
+
+/** Get all saved budgets, sorted by startDate descending. */
+export async function getAllBudgets(): Promise<Budget[]> {
+	const db = await getDb();
+	const all: Budget[] = await db.getAll(BUDGETS);
+	return all.sort((a, b) => b.startDate.localeCompare(a.startDate));
 }
 
 export async function saveBudget(budget: Budget): Promise<void> {
 	const db = await getDb();
 	await db.put(BUDGETS, budget);
+}
+
+export async function deleteBudget(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete(BUDGETS, id);
 }
 
 // ── Categories ──

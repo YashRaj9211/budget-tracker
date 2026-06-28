@@ -6,7 +6,7 @@ import HomePageHeader from '../components/home/HomeHeader';
 import AddTransactionForm from '../components/transaction/AddTransactionForm';
 import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
-import { toMonthKey } from '../utils/date';
+import { todayStr } from '../utils/date';
 import { initDb } from '../db';
 import { useMidnightRefresh } from '../utils/midnight';
 
@@ -14,7 +14,8 @@ function Home() {
 	const selectedYear = useTransactionStore((s) => s.selectedYear);
 	const selectedMonth = useTransactionStore((s) => s.selectedMonth);
 	const loadMonth = useTransactionStore((s) => s.loadMonth);
-	const loadBudget = useBudgetStore((s) => s.loadBudget);
+	const loadAllTransactions = useTransactionStore((s) => s.loadAllTransactions);
+	const loadActiveBudget = useBudgetStore((s) => s.loadActiveBudget);
 	const loadCategories = useBudgetStore((s) => s.loadCategories);
 	const loadAccounts = useBudgetStore((s) => s.loadAccounts);
 	const dayGroups = useDayGroups();
@@ -26,23 +27,20 @@ function Home() {
 			await loadCategories();
 			await loadAccounts();
 			await loadMonth(selectedYear, selectedMonth);
-			await loadBudget(toMonthKey(selectedYear, selectedMonth));
+			await loadAllTransactions();
+			await loadActiveBudget(todayStr());
 		}
 		init();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Reload when month changes
-	useEffect(() => {
-		loadBudget(toMonthKey(selectedYear, selectedMonth));
-	}, [selectedYear, selectedMonth, loadBudget]);
-
-	// At midnight: reload transactions so the daily budget recalculates for the new day
+	// At midnight: reload transactions + re-check active budget (the date changed)
 	const handleMidnight = useCallback(() => {
 		const now = new Date();
 		loadMonth(now.getFullYear(), now.getMonth());
-		loadBudget(toMonthKey(now.getFullYear(), now.getMonth()));
-	}, [loadMonth, loadBudget]);
+		loadAllTransactions();
+		loadActiveBudget(todayStr());
+	}, [loadMonth, loadAllTransactions, loadActiveBudget]);
 
 	useMidnightRefresh(handleMidnight);
 

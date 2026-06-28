@@ -6,13 +6,15 @@ import { toMonthKey, getDayName, getDayNum } from '../utils/date';
 // ── State Shape ──
 
 interface TransactionState {
-	transactions: Transaction[];
+	transactions: Transaction[]; // current month's transactions
+	allTransactions: Transaction[]; // all transactions (for date-range budget calculations)
 	selectedYear: number;
 	selectedMonth: number; // 0-indexed
 	isLoading: boolean;
 
 	// Actions
 	loadMonth: (year: number, month: number) => Promise<void>;
+	loadAllTransactions: () => Promise<void>;
 	setSelectedMonth: (year: number, month: number) => Promise<void>;
 	addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
 	deleteTransaction: (id: string) => Promise<void>;
@@ -23,6 +25,7 @@ interface TransactionState {
 
 export const useTransactionStore = create<TransactionState>((set, get) => ({
 	transactions: [],
+	allTransactions: [],
 	selectedYear: new Date().getFullYear(),
 	selectedMonth: new Date().getMonth(),
 	isLoading: false,
@@ -34,6 +37,11 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 		// Sort newest first within each day, days descending
 		transactions.sort((a, b) => b.createdAt - a.createdAt);
 		set({ transactions, selectedYear: year, selectedMonth: month, isLoading: false });
+	},
+
+	async loadAllTransactions() {
+		const all = await db.getAllTransactions();
+		set({ allTransactions: all });
 	},
 
 	async setSelectedMonth(year, month) {
@@ -48,18 +56,24 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 			createdAt: Date.now(),
 		};
 		await db.addTransaction(transaction);
-		// Reload if the transaction belongs to the currently viewed month
+		// Reload current month if the transaction belongs to it
 		const { selectedYear, selectedMonth } = get();
 		const txMonthKey = data.date.slice(0, 7); // 'YYYY-MM'
 		if (txMonthKey === toMonthKey(selectedYear, selectedMonth)) {
 			await get().loadMonth(selectedYear, selectedMonth);
 		}
+		// Always refresh allTransactions so the budget card stays in sync
+		await get().loadAllTransactions();
 	},
 
-	async deleteTransaction(_id) {
-		// TODO: implement later
+	async deleteTransaction(id) {
+		await db.deleteTransaction(id);
+		const { selectedYear, selectedMonth } = get();
+		await get().loadMonth(selectedYear, selectedMonth);
+		await get().loadAllTransactions();
 	},
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async editTransaction(_id, _data) {
 		// TODO: implement later
 	},
@@ -109,8 +123,26 @@ export function useMonthlyTotals(): { income: number; expense: number } {
 
 /** Today's expense total — used to show over/under daily allowance. */
 export function useTodayExpense(todayDateStr: string): number {
-	const transactions = useTransactionStore((s) => s.transactions);
-	return transactions
+	const allTransactions = useTransactionStore((s) => s.allTransactions);
+	return allTransactions
 		.filter((t) => t.type === 'expense' && t.date === todayDateStr)
 		.reduce((sum, t) => sum + t.amount, 0);
+}
+
+/** Totals for transactions within a date range, drawn from the full allTransactions list. */
+export function useDateRangeTotals(
+	startDate: string | null | undefined,
+	endDate: string | null | undefined,
+): { income: number; expense: number } {
+	const allTransactions = useTransactionStore((s) => s.allTransactions);
+	if (!startDate || !endDate) return { income: 0, expense: 0 };
+	let income = 0;
+	let expense = 0;
+	for (const t of allTransactions) {
+		if (t.date >= startDate && t.date <= endDate) {
+			if (t.type === 'income') income += t.amount;
+			else expense += t.amount;
+		}
+	}
+	return { income, expense };
 }

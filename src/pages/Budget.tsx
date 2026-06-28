@@ -1,107 +1,169 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Save } from 'lucide-react';
+import { ArrowLeft, Check, Save, Trash2, CalendarRange, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import { useBudgetStore } from '../stores/budgetStore';
-import { getDaysInMonth } from '../utils/date';
+import { formatDisplayDate, getTotalDays, todayStr } from '../utils/date';
 
 function BudgetSettings() {
-	const currentBudget = useBudgetStore((s) => s.currentBudget);
+	const allBudgets = useBudgetStore((s) => s.allBudgets);
 	const saveBudget = useBudgetStore((s) => s.saveBudget);
-	const loadBudget = useBudgetStore((s) => s.loadBudget);
+	const deleteBudget = useBudgetStore((s) => s.deleteBudget);
+	const loadAllBudgets = useBudgetStore((s) => s.loadAllBudgets);
 
-	const now = new Date();
-	const [selectedMonth, setSelectedMonth] = useState(
-		`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-	);
-	const [monthlyBudget, setMonthlyBudget] = useState('');
+	const today = todayStr();
+	const [startDate, setStartDate] = useState(today);
+	const [endDate, setEndDate] = useState('');
+	const [totalLimit, setTotalLimit] = useState('');
 	const [alertThreshold, setAlertThreshold] = useState('80');
 	const [saved, setSaved] = useState(false);
+	const [error, setError] = useState('');
 
-	// Load budget when month changes
+	// Load all budgets on mount
 	useEffect(() => {
-		loadBudget(selectedMonth);
-	}, [selectedMonth, loadBudget]);
+		loadAllBudgets();
+	}, [loadAllBudgets]);
 
-	// Sync form fields when budget loads
+	// Auto-set end date to 30 days from start when start changes
 	useEffect(() => {
-		if (currentBudget && currentBudget.monthKey === selectedMonth) {
-			setMonthlyBudget(String(currentBudget.monthlyLimit));
-			setAlertThreshold(String(currentBudget.alertThreshold));
-		} else {
-			setMonthlyBudget('');
-			setAlertThreshold('80');
+		if (startDate) {
+			const d = new Date(startDate + 'T00:00:00');
+			d.setDate(d.getDate() + 29); // 30-day default
+			const y = d.getFullYear();
+			const m = String(d.getMonth() + 1).padStart(2, '0');
+			const day = String(d.getDate()).padStart(2, '0');
+			setEndDate(`${y}-${m}-${day}`);
 		}
-	}, [currentBudget, selectedMonth]);
+	}, [startDate]);
+
+	const totalDays = startDate && endDate ? getTotalDays(startDate, endDate) : 0;
+	const calculatedDaily =
+		totalDays > 0 ? Math.round(Number(totalLimit || 0) / totalDays) : 0;
 
 	const handleSave = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setError('');
+
+		if (!startDate || !endDate) {
+			setError('Please select both start and end dates.');
+			return;
+		}
+		if (endDate < startDate) {
+			setError('End date must be on or after start date.');
+			return;
+		}
+
 		await saveBudget({
-			monthKey: selectedMonth,
-			monthlyLimit: Number(monthlyBudget) || 0,
+			id: crypto.randomUUID(),
+			startDate,
+			endDate,
+			totalLimit: Number(totalLimit) || 0,
 			alertThreshold: Number(alertThreshold),
 		});
+
 		setSaved(true);
 		setTimeout(() => setSaved(false), 2000);
+
+		// Reset form
+		setTotalLimit('');
+		setAlertThreshold('80');
+		setStartDate(today);
 	};
 
-	// Calculate daily budget based on actual days in selected month
-	const [yearNum, monthNum] = selectedMonth.split('-').map(Number);
-	const daysInMonth = getDaysInMonth(yearNum, monthNum - 1);
-	const calculatedDaily = Math.round(Number(monthlyBudget || 0) / daysInMonth);
+	const handleDelete = async (id: string) => {
+		await deleteBudget(id);
+	};
 
 	return (
 		<div className="relative pb-24">
 			{/* Header */}
 			<div className="flex items-center justify-between border border-black p-3 bg-white shadow-box mb-6">
-				<Link to="/" className="p-1 hover:bg-gray-50 border border-transparent hover:border-black cursor-pointer transition-all flex items-center" aria-label="Go back">
+				<Link
+					to="/"
+					className="p-1 hover:bg-gray-50 border border-transparent hover:border-black cursor-pointer transition-all flex items-center"
+					aria-label="Go back"
+				>
 					<ArrowLeft size={20} />
 				</Link>
 				<h2 className="text-base font-bold text-black tracking-tight">Budget Settings</h2>
-				<div className="w-8"></div> {/* Spacer */}
+				<div className="w-8"></div>
 			</div>
 
-			{/* Main Settings Card */}
+			{/* Create New Budget Form */}
 			<form onSubmit={handleSave} className="border border-black bg-white p-6 shadow-box mb-6">
-				<h3 className="text-lg font-bold text-black mb-4">Set Monthly Budget</h3>
+				<div className="flex items-center gap-2 mb-4">
+					<PlusCircle size={18} />
+					<h3 className="text-lg font-bold text-black">New Budget</h3>
+				</div>
 
 				<div className="space-y-4">
-					{/* Month Selection */}
-					<div>
-						<label htmlFor="budget-month" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-							Select Month
-						</label>
-						<input
-							id="budget-month"
-							type="month"
-							value={selectedMonth}
-							onChange={(e) => setSelectedMonth(e.target.value)}
-							className="w-full border-2 border-black p-2.5 text-sm font-semibold bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
-							required
-						/>
-					</div>
-
-					{/* Monthly Budget Input */}
-					<div>
-						<label htmlFor="monthly-budget" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-							Monthly Limit (₹)
-						</label>
-						<div className="relative">
-							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+					{/* Date Range */}
+					<div className="grid grid-cols-2 gap-3">
+						<div>
+							<label
+								htmlFor="budget-start"
+								className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+							>
+								Start Date
+							</label>
 							<input
-								id="monthly-budget"
-								type="number"
-								value={monthlyBudget}
-								onChange={(e) => setMonthlyBudget(e.target.value)}
-								className="w-full border-2 border-black p-2.5 pl-8 text-base font-medium bg-white focus:outline-none focus:bg-[#fafbfe] transition-all"
-								placeholder="0.00"
+								id="budget-start"
+								type="date"
+								value={startDate}
+								onChange={(e) => setStartDate(e.target.value)}
+								className="w-full border-2 border-black p-2.5 text-sm font-semibold bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
+								required
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="budget-end"
+								className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+							>
+								End Date
+							</label>
+							<input
+								id="budget-end"
+								type="date"
+								value={endDate}
+								min={startDate}
+								onChange={(e) => setEndDate(e.target.value)}
+								className="w-full border-2 border-black p-2.5 text-sm font-semibold bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
 								required
 							/>
 						</div>
 					</div>
 
-					{/* Notification Threshold */}
+					{/* Total Budget Input */}
 					<div>
-						<label htmlFor="threshold" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+						<label
+							htmlFor="total-budget"
+							className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+						>
+							Total Budget Limit (₹)
+						</label>
+						<div className="relative">
+							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+								₹
+							</span>
+							<input
+								id="total-budget"
+								type="number"
+								value={totalLimit}
+								onChange={(e) => setTotalLimit(e.target.value)}
+								className="w-full border-2 border-black p-2.5 pl-8 text-base font-medium bg-white focus:outline-none focus:bg-[#fafbfe] transition-all"
+								placeholder="0.00"
+								min="0"
+								required
+							/>
+						</div>
+					</div>
+
+					{/* Alert Threshold */}
+					<div>
+						<label
+							htmlFor="threshold"
+							className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+						>
 							Alert Threshold (%)
 						</label>
 						<select
@@ -117,17 +179,35 @@ function BudgetSettings() {
 						</select>
 					</div>
 
-					{/* Dynamic Calculations (Subtle Info) */}
-					<div className="border border-black bg-[#fef8f0] p-4 my-2 text-xs text-gray-700 space-y-1.5">
-						<div className="flex justify-between">
-							<span>Calculated Daily Allowance:</span>
-							<span className="font-bold text-black">₹{calculatedDaily}.00 / day</span>
+					{/* Summary */}
+					{totalDays > 0 && (
+						<div className="border border-black bg-[#fef8f0] p-4 text-xs text-gray-700 space-y-1.5">
+							<div className="flex justify-between">
+								<span>Budget Period:</span>
+								<span className="font-bold text-black">{totalDays} days</span>
+							</div>
+							<div className="flex justify-between">
+								<span>Daily Allowance:</span>
+								<span className="font-bold text-black">₹{calculatedDaily.toFixed(2)} / day</span>
+							</div>
+							<div className="flex justify-between">
+								<span>Alert Trigger at:</span>
+								<span className="font-bold text-black">
+									₹
+									{Math.round(
+										Number(totalLimit || 0) * (Number(alertThreshold) / 100),
+									).toFixed(2)}{' '}
+									spent
+								</span>
+							</div>
 						</div>
-						<div className="flex justify-between">
-							<span>Alert Trigger at:</span>
-							<span className="font-bold text-black">₹{Math.round(Number(monthlyBudget || 0) * (Number(alertThreshold) / 100))}.00 spent</span>
-						</div>
-					</div>
+					)}
+
+					{error && (
+						<p className="text-xs font-bold text-rose-600 border border-rose-300 bg-rose-50 px-3 py-2">
+							{error}
+						</p>
+					)}
 				</div>
 
 				{/* Save Button */}
@@ -143,11 +223,83 @@ function BudgetSettings() {
 					) : (
 						<>
 							<Save size={16} />
-							Save Settings
+							Save Budget
 						</>
 					)}
 				</button>
 			</form>
+
+			{/* Existing Budgets List */}
+			{allBudgets.length > 0 && (
+				<div className="border border-black bg-white shadow-box p-5">
+					<div className="flex items-center gap-2 mb-4">
+						<CalendarRange size={18} />
+						<h3 className="text-base font-bold text-black">Saved Budgets</h3>
+					</div>
+
+					<div className="space-y-3">
+						{allBudgets.map((budget) => {
+							const isActive = today >= budget.startDate && today <= budget.endDate;
+							const isPast = today > budget.endDate;
+							const isFuture = today < budget.startDate;
+
+							return (
+								<div
+									key={budget.id}
+									className={`border p-3 flex items-start justify-between gap-3 ${
+										isActive
+											? 'border-emerald-500 bg-emerald-50'
+											: isPast
+											? 'border-gray-300 bg-gray-50'
+											: 'border-black bg-white'
+									}`}
+								>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center gap-2 mb-0.5">
+											<span className="text-xs font-bold text-black">
+												{formatDisplayDate(budget.startDate)} → {formatDisplayDate(budget.endDate)}
+											</span>
+											{isActive && (
+												<span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-500 text-white uppercase tracking-wide">
+													Active
+												</span>
+											)}
+											{isPast && (
+												<span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-400 text-white uppercase tracking-wide">
+													Past
+												</span>
+											)}
+											{isFuture && (
+												<span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-500 text-white uppercase tracking-wide">
+													Upcoming
+												</span>
+											)}
+										</div>
+										<div className="text-xs text-gray-600">
+											<span className="font-semibold text-black">₹{budget.totalLimit.toFixed(2)}</span>
+											{' '}over {getTotalDays(budget.startDate, budget.endDate)} days · Alert at{' '}
+											{budget.alertThreshold}%
+										</div>
+									</div>
+									<button
+										onClick={() => handleDelete(budget.id)}
+										className="shrink-0 p-1.5 border border-transparent hover:border-rose-400 hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-all cursor-pointer"
+										aria-label="Delete budget"
+									>
+										<Trash2 size={15} />
+									</button>
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
+			{allBudgets.length === 0 && (
+				<div className="border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
+					No budgets saved yet. Create one above.
+				</div>
+			)}
 		</div>
 	);
 }

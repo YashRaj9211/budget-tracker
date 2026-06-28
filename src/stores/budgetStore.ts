@@ -5,14 +5,17 @@ import * as db from '../db';
 // ── State Shape ──
 
 interface BudgetState {
-	currentBudget: Budget | null;
+	activeBudget: Budget | null; // budget active for today
+	allBudgets: Budget[]; // all saved budgets (for settings page)
 	categories: string[];
 	accounts: string[];
 	isLoading: boolean;
 
 	// Actions
-	loadBudget: (monthKey: string) => Promise<void>;
+	loadActiveBudget: (today: string) => Promise<void>;
+	loadAllBudgets: () => Promise<void>;
 	saveBudget: (budget: Budget) => Promise<void>;
+	deleteBudget: (id: string) => Promise<void>;
 	loadCategories: () => Promise<void>;
 	addCategory: (name: string) => Promise<void>;
 	deleteCategory: (name: string) => Promise<void>;
@@ -24,20 +27,39 @@ interface BudgetState {
 // ── Store ──
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-	currentBudget: null,
+	activeBudget: null,
+	allBudgets: [],
 	categories: [],
 	accounts: [],
 	isLoading: false,
 
-	async loadBudget(monthKey) {
+	async loadActiveBudget(today) {
 		set({ isLoading: true });
-		const budget = await db.getBudget(monthKey);
-		set({ currentBudget: budget ?? null, isLoading: false });
+		const budget = await db.getActiveBudget(today);
+		set({ activeBudget: budget ?? null, isLoading: false });
+	},
+
+	async loadAllBudgets() {
+		const budgets = await db.getAllBudgets();
+		set({ allBudgets: budgets });
 	},
 
 	async saveBudget(budget) {
 		await db.saveBudget(budget);
-		set({ currentBudget: budget });
+		// Refresh both lists
+		await get().loadAllBudgets();
+		// Re-check if the saved budget is now the active one
+		const { todayStr } = await import('../utils/date');
+		await get().loadActiveBudget(todayStr());
+	},
+
+	async deleteBudget(id) {
+		await db.deleteBudget(id);
+		set((s) => ({
+			allBudgets: s.allBudgets.filter((b) => b.id !== id),
+			// If the deleted budget was the active one, clear it
+			activeBudget: s.activeBudget?.id === id ? null : s.activeBudget,
+		}));
 	},
 
 	async loadCategories() {

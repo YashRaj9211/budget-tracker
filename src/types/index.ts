@@ -14,8 +14,10 @@ export interface Transaction {
 }
 
 export interface Budget {
-	monthKey: string; // 'YYYY-MM' — also the primary key
-	monthlyLimit: number;
+	id: string; // UUID — primary key
+	startDate: string; // 'YYYY-MM-DD'
+	endDate: string; // 'YYYY-MM-DD'
+	totalLimit: number;
 	alertThreshold: number; // 50 | 80 | 90 | 100
 }
 
