@@ -73,6 +73,15 @@ export async function addTransaction(transaction: Transaction): Promise<void> {
 	await db.put(TRANSACTIONS, transaction);
 }
 
+export async function addTransactions(transactions: Transaction[]): Promise<void> {
+	const db = await getDb();
+	const tx = db.transaction(TRANSACTIONS, 'readwrite');
+	for (const transaction of transactions) {
+		tx.store.put(transaction);
+	}
+	await tx.done;
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
 	const db = await getDb();
 	await db.delete(TRANSACTIONS, id);

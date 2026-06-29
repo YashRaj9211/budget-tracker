@@ -19,6 +19,7 @@ interface TransactionState {
 	addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
 	deleteTransaction: (id: string) => Promise<void>;
 	editTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
+	reloadAll: () => Promise<void>;
 }
 
 // ── Store ──
@@ -76,6 +77,12 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	async editTransaction(_id, _data) {
 		// TODO: implement later
+	},
+
+	async reloadAll() {
+		const { selectedYear, selectedMonth } = get();
+		await get().loadMonth(selectedYear, selectedMonth);
+		await get().loadAllTransactions();
 	},
 }));
 

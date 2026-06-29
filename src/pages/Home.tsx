@@ -9,6 +9,7 @@ import { useBudgetStore } from '../stores/budgetStore';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
 import { useMidnightRefresh } from '../utils/midnight';
+import ExcelTools from '../components/common/ExcelTools';
 
 function Home() {
 	const selectedYear = useTransactionStore((s) => s.selectedYear);
@@ -53,6 +54,9 @@ function Home() {
 						<Button text="Daily" type="primary" className="flex-1" />
 						<Button text="Monthly" type="secondary" className="flex-1" />
 						<Button text="Calender" type="secondary" className="flex-1" />
+					</div>
+					<div className="my-2">
+						<ExcelTools />
 					</div>
 				</div>
 				<DailyBudgetCard />
