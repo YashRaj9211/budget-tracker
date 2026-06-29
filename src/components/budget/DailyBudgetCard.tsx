@@ -11,6 +11,13 @@ function DailyBudgetCard() {
 	const { expense: rangeExpense } = useDateRangeTotals(budget?.startDate, budget?.endDate);
 	const todayExpense = useTodayExpense(today);
 
+	// Calculate yesterday's date string to get expenses strictly before today
+	const todayDate = new Date(today + 'T00:00:00');
+	todayDate.setDate(todayDate.getDate() - 1);
+	const yesterday = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+
+	const { expense: expenseBeforeToday } = useDateRangeTotals(budget?.startDate, yesterday);
+
 	// ── No active budget state ──
 	if (!budget) {
 		return (
@@ -37,8 +44,8 @@ function DailyBudgetCard() {
 	const totalDays = getTotalDays(budget.startDate, budget.endDate);
 	const daysRemaining = getDaysRemaining(budget.endDate);
 
-	// Rolling daily allowance: spread remaining budget over remaining days
-	const dailyAllowance = daysRemaining > 0 ? (totalLimit - rangeExpense) / daysRemaining : 0;
+	// Rolling daily allowance: spread remaining budget at start of today over remaining days
+	const dailyAllowance = daysRemaining > 0 ? (totalLimit - expenseBeforeToday) / daysRemaining : 0;
 	const progressPercent =
 		totalLimit > 0 ? Math.min(Math.round((rangeExpense / totalLimit) * 100), 100) : 0;
 
