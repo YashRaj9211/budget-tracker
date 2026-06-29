@@ -43,13 +43,13 @@ function TransactionCard({ transaction }: TransactionCardProps) {
 
 			{showActions && (
 				<div className="flex items-center gap-1.5 justify-end mt-2 animate-fade-in">
-					<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider p-1 border border-black bg-white hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
+					<button className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider p-1 border border-black bg-white hover:bg-gray-50 active:translate-x-pxtactive:translate-y-pxtive:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all">
 						<Edit2 size={10} />
 						{/* <span>Edit</span> */}
 					</button>
 					<button
 						onClick={async () => await deleteTransaction(transaction.id)}
-						className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider p-1 border border-black bg-rose-50 hover:bg-rose-100 text-rose-700 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all"
+						className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider p-1 border border-black bg-rose-50 hover:bg-rose-100 text-rose-700 active:translate-x-px active:translate-y-px active:shadow-none shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all"
 					>
 						<Trash2 size={10} />
 						{/* <span>Delete</span> */}
