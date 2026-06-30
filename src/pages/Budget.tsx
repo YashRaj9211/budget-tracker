@@ -20,7 +20,9 @@ function BudgetSettings() {
 
 	// Load all budgets on mount
 	useEffect(() => {
-		loadAllBudgets();
+		loadAllBudgets().then(() => {
+			(window as any).hideSplashScreen?.();
+		});
 	}, [loadAllBudgets]);
 
 	// Auto-set end date to 30 days from start when start changes

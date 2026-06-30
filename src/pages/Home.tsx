@@ -30,6 +30,8 @@ function Home() {
 			await loadMonth(selectedYear, selectedMonth);
 			await loadAllTransactions();
 			await loadActiveBudget(todayStr());
+			// Hide the initial loading splash screen once initial load is complete
+			(window as any).hideSplashScreen?.();
 		}
 		init();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
