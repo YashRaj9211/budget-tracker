@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Transaction, DayGroup } from '../types';
 import * as db from '../db';
 import { toMonthKey, getDayName, getDayNum } from '../utils/date';
+import { transactionsInitialState } from './initialState';
 
 // ── State Shape ──
 
@@ -11,6 +12,7 @@ interface TransactionState {
 	selectedYear: number;
 	selectedMonth: number; // 0-indexed
 	isLoading: boolean;
+
 
 	// Actions
 	loadMonth: (year: number, month: number) => Promise<void>;
@@ -25,11 +27,8 @@ interface TransactionState {
 // ── Store ──
 
 export const useTransactionStore = create<TransactionState>((set, get) => ({
-	transactions: [],
-	allTransactions: [],
-	selectedYear: new Date().getFullYear(),
-	selectedMonth: new Date().getMonth(),
-	isLoading: false,
+	//all the initial states here
+	...transactionsInitialState,
 
 	async loadMonth(year, month) {
 		set({ isLoading: true });
@@ -84,6 +83,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 		await get().loadMonth(selectedYear, selectedMonth);
 		await get().loadAllTransactions();
 	},
+
+	
 }));
 
 // ── Derived Selectors ──

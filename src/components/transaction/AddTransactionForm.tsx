@@ -3,6 +3,8 @@ import { Plus, X, Calendar as CalendarIcon, Calculator, Check } from 'lucide-rea
 import CustomCalendar from '../common/Calander';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { useBudgetStore } from '../../stores/budgetStore';
+import VoiceInput from '../common/VoiceInput';
+import type { Transaction } from '../../types';
 
 function AddTransactionForm() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -81,7 +83,7 @@ function AddTransactionForm() {
 
 	// Append operators to input
 	const appendOperator = (op: string) => {
-		setAmountInput(prev => {
+		setAmountInput((prev) => {
 			const trimmed = prev.trim();
 			if (!trimmed) return '';
 			// Don't add double operators
@@ -128,31 +130,54 @@ function AddTransactionForm() {
 		}, 1500);
 	};
 
+	const handleVoiceParsed = (parsed: Partial<Transaction>) => {
+		if (parsed.type) setType(parsed.type);
+		if (parsed.amount) setAmountInput(String(parsed.amount));
+		if (parsed.description) setDescription(parsed.description);
+		if (parsed.account) {
+			// Find case-insensitive match or fallback
+			const match = accounts.find(acc => acc.toLowerCase() === parsed.account?.toLowerCase());
+			if (match) setSelectedAccount(match);
+		}
+		if (parsed.category) {
+			// Find case-insensitive match or fallback
+			const match = categories.find(cat => cat.toLowerCase() === parsed.category?.toLowerCase());
+			if (match) setSelectedCategory(match);
+		}
+		if (parsed.date) setDate(parsed.date);
+		setIsOpen(true);
+	};
+
 	return (
 		<>
 			{/* Backdrop Overlay */}
-			<div 
-				className={`fixed inset-0 bg-black/45 backdrop-blur-xs z-40 transition-opacity duration-300 ${
+			<div
+				className={`fixed inset-0 bg-black/45 backdrop-blur-xs z-50 transition-opacity duration-300 ${
 					isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
 				}`}
 				onClick={() => setIsOpen(false)}
 			/>
 
 			{/* Floating Action Button (FAB) */}
-			<button 
-				onClick={() => setIsOpen(true)}
-				className={`fixed bottom-8 right-6 w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-gray-900 transition-all duration-300 ease-out z-40 ${
-					isOpen ? 'scale-0 opacity-0 pointer-events-none rotate-45' : 'scale-100 opacity-100 pointer-events-auto rotate-0'
-				}`}
-				aria-label="Open add transaction form"
-			>
-				<Plus size={24} className="text-white" />
-			</button>
+			<div className={`fixed bottom-8 right-6 flex flex-col items-center gap-3 z-50 transition-all duration-300 ease-out ${
+				isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
+			}`}>
+				<button
+					onClick={() => setIsOpen(true)}
+					className="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-gray-900 transition-all duration-300"
+					aria-label="Open add transaction form"
+				>
+					<Plus size={24} className="text-white" />
+				</button>
+				
+				<VoiceInput onParsed={handleVoiceParsed} />
+			</div>
+
 
 			{/* Form Container */}
-			<div 
+			<div
 				className={`fixed z-50 transition-all duration-300 ease-out origin-bottom-right inset-x-4 top-16 bottom-20 md:inset-auto md:bottom-8 md:right-6 md:w-[420px] md:h-[630px] bg-white border-2 border-black shadow-box p-6 flex flex-col justify-between ${
-					isOpen 
+					isOpen
 						? 'scale-100 opacity-100 translate-y-0 pointer-events-auto'
 						: 'scale-90 opacity-0 translate-y-8 pointer-events-none'
 				}`}
@@ -162,7 +187,7 @@ function AddTransactionForm() {
 					{/* Header */}
 					<div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
 						<h3 className="text-base font-bold text-black tracking-tight">Add Transaction</h3>
-						<button 
+						<button
 							type="button"
 							onClick={() => setIsOpen(false)}
 							className="p-1 hover:bg-gray-100 border border-transparent hover:border-black cursor-pointer transition-all"
@@ -179,8 +204,8 @@ function AddTransactionForm() {
 								type="button"
 								onClick={() => setType('expense')}
 								className={`py-2 text-xs font-bold border-2 border-black transition-all ${
-									type === 'expense' 
-										? 'bg-rose-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px' 
+									type === 'expense'
+										? 'bg-rose-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px'
 										: 'bg-white text-gray-500 hover:bg-gray-50'
 								}`}
 							>
@@ -190,8 +215,8 @@ function AddTransactionForm() {
 								type="button"
 								onClick={() => setType('income')}
 								className={`py-2 text-xs font-bold border-2 border-black transition-all ${
-									type === 'income' 
-										? 'bg-emerald-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px' 
+									type === 'income'
+										? 'bg-emerald-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px'
 										: 'bg-white text-gray-500 hover:bg-gray-50'
 								}`}
 							>
@@ -214,7 +239,7 @@ function AddTransactionForm() {
 							</button>
 							{showCalendar && (
 								<div className="absolute left-0 right-0 mt-1 border-2 border-black shadow-box z-50 bg-white">
-									<CustomCalendar 
+									<CustomCalendar
 										selectedDate={date}
 										onSelectDate={(newDateStr) => {
 											setDate(newDateStr);
@@ -238,10 +263,12 @@ function AddTransactionForm() {
 								)}
 							</div>
 							<div className="relative">
-								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
-								<input 
+								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+									₹
+								</span>
+								<input
 									ref={amountInputRef}
-									type="text" 
+									type="text"
 									value={amountInput}
 									onChange={handleAmountChange}
 									onBlur={handleAmountBlur}
@@ -252,7 +279,7 @@ function AddTransactionForm() {
 							</div>
 							{/* Quick Math Helper Keys */}
 							<div className="flex gap-1.5 mt-1.5">
-								{['+', '-', '*', '/'].map(op => (
+								{['+', '-', '*', '/'].map((op) => (
 									<button
 										key={op}
 										type="button"
@@ -273,8 +300,8 @@ function AddTransactionForm() {
 							<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">
 								Description
 							</label>
-							<input 
-								type="text" 
+							<input
+								type="text"
 								value={description}
 								onChange={(e) => setDescription(e.target.value)}
 								placeholder="e.g. Afternoon Lunch"
@@ -311,7 +338,7 @@ function AddTransactionForm() {
 							<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">
 								Category
 							</label>
-							
+
 							{/* Badges Selection Grid */}
 							<div className="flex flex-wrap gap-1.5 mb-2">
 								{categories.map((cat) => (
@@ -355,8 +382,8 @@ function AddTransactionForm() {
 							type="submit"
 							disabled={isSubmitted}
 							className={`w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer transition-all ${
-								isSubmitted 
-									? 'bg-emerald-100 text-emerald-800' 
+								isSubmitted
+									? 'bg-emerald-100 text-emerald-800'
 									: 'bg-black text-white hover:bg-gray-900'
 							}`}
 						>

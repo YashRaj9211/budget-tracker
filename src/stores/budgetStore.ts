@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Budget } from '../types';
 import * as db from '../db';
+import { budgetsInitialState } from './initialState';
 
 // ── State Shape ──
 
@@ -27,11 +28,7 @@ interface BudgetState {
 // ── Store ──
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
-	activeBudget: null,
-	allBudgets: [],
-	categories: [],
-	accounts: [],
-	isLoading: false,
+	...budgetsInitialState,
 
 	async loadActiveBudget(today) {
 		set({ isLoading: true });
