@@ -1,7 +1,7 @@
 import './App.css';
 import './styles/gradient.css';
 import { Outlet } from 'react-router';
-import BottomNav from './components/common/BottomNav';
+// import BottomNav from './components/common/BottomNav';
 
 function App() {
 	return (
