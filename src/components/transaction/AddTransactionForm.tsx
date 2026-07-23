@@ -159,7 +159,7 @@ function AddTransactionForm() {
 			/>
 
 			{/* Floating Action Button (FAB) */}
-			<div className={`fixed bottom-8 right-6 flex flex-col items-center gap-3 z-50 transition-all duration-300 ease-out ${
+			<div className={`fixed bottom-22 right-6 flex flex-col items-center gap-3 z-50 transition-all duration-300 ease-out ${
 				isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
 			}`}>
 				<button

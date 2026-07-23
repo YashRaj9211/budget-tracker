@@ -1,47 +1,108 @@
-import { NavLink } from 'react-router';
+import { NavLink, useNavigate, useLocation } from 'react-router';
 import { Home, BarChart3, Sliders } from 'lucide-react';
+import { useState } from 'react';
 
 export default function BottomNav() {
+	const navigate = useNavigate();
+	const location = useLocation();
+	
+	const [bubbleStyle, setBubbleStyle] = useState<React.CSSProperties | null>(null);
+	const [isAnimating, setIsAnimating] = useState(false);
+
+	const handleNavClick = (e: React.MouseEvent, path: string) => {
+		// Prevent click if already on that page or currently animating
+		if (location.pathname === path || isAnimating) {
+			e.preventDefault();
+			return;
+		}
+		
+		e.preventDefault(); // Stop NavLink from navigating immediately
+		
+		setIsAnimating(true);
+		
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		// Bubble starts from the center of the clicked tab
+		const x = rect.left + rect.width / 2;
+		const y = rect.top + rect.height / 2;
+		
+		// 1. Initial state (small bubble)
+		setBubbleStyle({
+			left: x,
+			top: y,
+			transform: 'translate(-50%, -50%) scale(0)',
+			opacity: 1
+		});
+		
+		// 2. Expand after a tiny delay to ensure initial state is rendered
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				setBubbleStyle({
+					left: x,
+					top: y,
+					transform: 'translate(-50%, -50%) scale(150)', // Large enough to cover screen
+					opacity: 1,
+					transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)'
+				});
+			});
+		});
+		
+		// 3. After expansion (400ms), navigate and start shrinking
+		setTimeout(() => {
+			navigate(path);
+			
+			// Start shrinking
+			setBubbleStyle({
+				left: x,
+				top: y,
+				transform: 'translate(-50%, -50%) scale(0)',
+				opacity: 1,
+				transition: 'transform 1s cubic-bezier(0.4, 0, 0.2, 1)'
+			});
+			
+			// 4. Cleanup after shrink
+			setTimeout(() => {
+				setBubbleStyle(null);
+				setIsAnimating(false);
+			}, 1000);
+		}, 1000);
+	};
+
 	return (
-		<nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-white border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50 flex items-stretch">
-			{/* Home Link */}
-			<NavLink
-				to="/"
-				className={({ isActive }) =>
-					`flex-1 flex flex-col items-center justify-center py-2 text-xs font-black uppercase tracking-wider text-black border-r-3 border-black transition-all ${
-						isActive ? 'bg-[#bde2ff]' : 'bg-white hover:bg-gray-50'
-					}`
-				}
-			>
-				<Home size={18} className="mb-0.5 stroke-[2.5]" />
-				<span>Home</span>
-			</NavLink>
+		<>
+			{/* The Bubble Overlay */}
+			{bubbleStyle && (
+				<div 
+					className="fixed w-5 h-5 bg-black rounded-full pointer-events-none z-[100]"
+					style={bubbleStyle}
+				/>
+			)}
 
-			{/* Stats Link */}
-			<NavLink
-				to="/stats"
-				className={({ isActive }) =>
-					`flex-1 flex flex-col items-center justify-center py-2 text-xs font-black uppercase tracking-wider text-black border-r-3 border-black transition-all ${
-						isActive ? 'bg-[#e4b5fe]' : 'bg-white hover:bg-gray-50'
-					}`
-				}
-			>
-				<BarChart3 size={18} className="mb-0.5 stroke-[2.5]" />
-				<span>Stats</span>
-			</NavLink>
-
-			{/* Budget Link */}
-			<NavLink
-				to="/budget"
-				className={({ isActive }) =>
-					`flex-1 flex flex-col items-center justify-center py-2 text-xs font-black uppercase tracking-wider text-black transition-all ${
-						isActive ? 'bg-[#fecaca]' : 'bg-white hover:bg-gray-50'
-					}`
-				}
-			>
-				<Sliders size={18} className="mb-0.5 stroke-[2.5]" />
-				<span>Budget</span>
-			</NavLink>
-		</nav>
+			<nav className="fixed bottom-0 p-4 w-full flex justify-around z-50 text-white bg-black -translate-x-4">
+				<NavLink 
+					to={'/'} 
+					onClick={(e) => handleNavClick(e, '/')}
+					className={`flex flex-col items-center`}
+				>
+					<Home className="w-6 h-6" />
+					Home
+				</NavLink>
+				<NavLink 
+					to={'/stats'} 
+					onClick={(e) => handleNavClick(e, '/stats')}
+					className={`flex flex-col items-center`}
+				>
+					<BarChart3 className="w-6 h-6" />
+					Stats
+				</NavLink>
+				<NavLink 
+					to={'/split'} 
+					onClick={(e) => handleNavClick(e, '/split')}
+					className={`flex flex-col items-center`}
+				>
+					<Sliders className="w-6 h-6" />
+					Split
+				</NavLink>
+			</nav>
+		</>
 	);
 }

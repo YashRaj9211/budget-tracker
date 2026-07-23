@@ -1,17 +1,20 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import type { Transaction, Budget } from '../types';
+import type { Group, SplitExpense } from '../types/split';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
 
 // ── Database Config ──
 
 const DB_NAME = 'budget-tracker-db';
-const DB_VERSION = 2; // bumped: budgets store now keyed by 'id'
+const DB_VERSION = 3; // bumped: added split groups and split expenses stores
 
 // Store names
 const TRANSACTIONS = 'transactions';
 const BUDGETS = 'budgets';
 const CATEGORIES = 'categories';
 const ACCOUNTS = 'accounts';
+const SPLIT_GROUPS = 'split_groups';
+const SPLIT_EXPENSES = 'split_expenses';
 
 // ── Open / Upgrade ──
 
@@ -42,6 +45,17 @@ function getDb(): Promise<IDBPDatabase> {
 					// Create new budget store keyed by UUID
 					const budgetStore = db.createObjectStore(BUDGETS, { keyPath: 'id' });
 					budgetStore.createIndex('startDate', 'startDate');
+				}
+
+				// ── v3 → add split groups & expenses ──
+				if (oldVersion < 3) {
+					if (!db.objectStoreNames.contains(SPLIT_GROUPS)) {
+						db.createObjectStore(SPLIT_GROUPS, { keyPath: 'id' });
+					}
+					if (!db.objectStoreNames.contains(SPLIT_EXPENSES)) {
+						const splitStore = db.createObjectStore(SPLIT_EXPENSES, { keyPath: 'id' });
+						splitStore.createIndex('groupId', 'groupId');
+					}
 				}
 			},
 		});
@@ -144,6 +158,18 @@ export async function seedCategories(): Promise<void> {
 	}
 }
 
+export async function seedAccounts(): Promise<void> {
+	const db = await getDb();
+	const count = await db.count(ACCOUNTS);
+	if (count === 0) {
+		const tx = db.transaction(ACCOUNTS, 'readwrite');
+		for (const name of DEFAULT_ACCOUNTS) {
+			tx.store.put({ name });
+		}
+		await tx.done;
+	}
+}
+
 // ── Accounts ──
 
 export async function getAccounts(): Promise<string[]> {
@@ -162,16 +188,118 @@ export async function deleteAccount(name: string): Promise<void> {
 	await db.delete(ACCOUNTS, name);
 }
 
-/** Seed default accounts if store is empty. */
-export async function seedAccounts(): Promise<void> {
+// ── Split Groups & Expenses ──
+
+export async function getAllGroups(): Promise<Group[]> {
 	const db = await getDb();
-	const count = await db.count(ACCOUNTS);
-	if (count === 0) {
-		const tx = db.transaction(ACCOUNTS, 'readwrite');
-		for (const name of DEFAULT_ACCOUNTS) {
-			tx.store.put({ name });
+	const groups = await db.getAll(SPLIT_GROUPS);
+	return groups.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function saveGroup(group: Group): Promise<void> {
+	const db = await getDb();
+	await db.put(SPLIT_GROUPS, group);
+}
+
+export async function deleteGroup(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete(SPLIT_GROUPS, id);
+	// Delete associated splits as well
+	const splits: SplitExpense[] = await db.getAllFromIndex(SPLIT_EXPENSES, 'groupId', id);
+	const tx = db.transaction(SPLIT_EXPENSES, 'readwrite');
+	for (const s of splits) {
+		tx.store.delete(s.id);
+	}
+	await tx.done;
+}
+
+export async function getAllSplits(): Promise<SplitExpense[]> {
+	const db = await getDb();
+	const splits = await db.getAll(SPLIT_EXPENSES);
+	return splits.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function getSplitsByGroup(groupId: string): Promise<SplitExpense[]> {
+	const db = await getDb();
+	const splits: SplitExpense[] = await db.getAllFromIndex(SPLIT_EXPENSES, 'groupId', groupId);
+	return splits.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function saveSplit(split: SplitExpense): Promise<void> {
+	const db = await getDb();
+	await db.put(SPLIT_EXPENSES, split);
+}
+
+export async function deleteSplit(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete(SPLIT_EXPENSES, id);
+}
+
+/** Seed demo split groups and expenses if store is empty. */
+export async function seedSplitData(): Promise<void> {
+	const db = await getDb();
+	const groupCount = await db.count(SPLIT_GROUPS);
+	if (groupCount === 0) {
+		const sampleGroup1: Group = {
+			id: 'demo-group-1',
+			name: 'Goa Trip 🏖️',
+			members: ['You', 'Alex', 'Sam', 'Rohan'],
+			avatarColor: 'pastel-pink',
+			createdAt: Date.now() - 86400000 * 5,
+		};
+		const sampleGroup2: Group = {
+			id: 'demo-group-2',
+			name: 'Roommates 🏠',
+			members: ['You', 'Priya', 'Karan'],
+			avatarColor: 'pastel-blue',
+			createdAt: Date.now() - 86400000 * 10,
+		};
+
+		const today = new Date().toISOString().split('T')[0];
+
+		const sampleSplits: SplitExpense[] = [
+			{
+				id: 'demo-split-1',
+				groupId: 'demo-group-1',
+				title: 'Beach Resort Booking',
+				amount: 8000,
+				paidBy: 'You',
+				splitAmong: ['You', 'Alex', 'Sam', 'Rohan'],
+				date: today,
+				createdAt: Date.now() - 86400000 * 4,
+			},
+			{
+				id: 'demo-split-2',
+				groupId: 'demo-group-1',
+				title: 'Shack Lunch & Drinks',
+				amount: 2400,
+				paidBy: 'Alex',
+				splitAmong: ['You', 'Alex', 'Sam', 'Rohan'],
+				date: today,
+				createdAt: Date.now() - 86400000 * 3,
+			},
+			{
+				id: 'demo-split-3',
+				groupId: 'demo-group-2',
+				title: 'Grocery Shopping',
+				amount: 1500,
+				paidBy: 'Priya',
+				splitAmong: ['You', 'Priya', 'Karan'],
+				date: today,
+				createdAt: Date.now() - 86400000 * 2,
+			},
+		];
+
+		const txG = db.transaction(SPLIT_GROUPS, 'readwrite');
+		await txG.store.put(sampleGroup1);
+		await txG.store.put(sampleGroup2);
+		await txG.done;
+
+		const txS = db.transaction(SPLIT_EXPENSES, 'readwrite');
+		for (const s of sampleSplits) {
+			await txS.store.put(s);
 		}
-		await tx.done;
+		await txS.done;
 	}
 }
 
@@ -181,4 +309,6 @@ export async function seedAccounts(): Promise<void> {
 export async function initDb(): Promise<void> {
 	await seedCategories();
 	await seedAccounts();
+	await seedSplitData();
 }
+

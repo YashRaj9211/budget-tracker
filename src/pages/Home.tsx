@@ -8,7 +8,6 @@ import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
-import { useMidnightRefresh } from '../utils/midnight';
 import ExcelTools from '../components/common/ExcelTools';
 
 function Home() {
@@ -45,7 +44,28 @@ function Home() {
 		loadActiveBudget(todayStr());
 	}, [loadMonth, loadAllTransactions, loadActiveBudget]);
 
-	useMidnightRefresh(handleMidnight);
+	useEffect(() => {
+		let timeoutId: ReturnType<typeof setTimeout>;
+
+		function scheduleNext() {
+			const now = new Date();
+			const tomorrow = new Date(
+				now.getFullYear(),
+				now.getMonth(),
+				now.getDate() + 1, // next day
+				0, 0, 0, 0,        // exactly midnight
+			);
+			const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+			timeoutId = setTimeout(() => {
+				handleMidnight();
+				scheduleNext(); // reschedule for the following midnight
+			}, msUntilMidnight);
+		}
+
+		scheduleNext();
+		return () => clearTimeout(timeoutId);
+	}, [handleMidnight]);
 
 	return (
 		<div className="relative">
