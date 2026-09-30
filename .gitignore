@@ -25,3 +25,21 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Go and Backend Server
+go-server/app
+go-server/*.exe
+go-server/*.exe~
+go-server/*.dll
+go-server/*.so
+go-server/*.dylib
+go-server/*.test
+go-server/*.out
+go-server/.env*
+go-server/dist/
+go-server/tmp/
+
+# Environment Variables
+.env
+.env*.local
+.env.local

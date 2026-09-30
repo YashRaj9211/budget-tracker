@@ -1,0 +1,50 @@
+meta {
+  name: Create Group
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/groups/user/{{userId}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "name": "Trip to Goa",
+    "description": "Weekend getaway and shared villa expenses",
+    "simplifyDebts": true,
+    "imageUrl": "https://example.com/group-cover.png"
+  }
+}
+
+docs {
+  # Create Group (`CreateGroup`)
+  
+  **Handler**: `handlers.CreateGroup` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `POST /api/_private/v1/groups/user/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Creates a new group for sharing and tracking collective bills:
+  - Generates a UUID for the group (prefixed with `group_`).
+  - Automatically enlists the creator (`:userId`) as the initial group member with role `"ADMIN"`.
+  - Configures the `simplifyDebts` debt-graph minimization setting.
+  
+  ### URL Parameters
+  - `userId` (string, path parameter): Creator user ID (defaults to `{{userId}}`).
+  
+  ### Body Fields
+  - `name` (string, required): Group display name.
+  - `description` (string, required): Summary or notes on the group's intent.
+  - `simplifyDebts` (boolean, required): Whether debt graph simplification is enabled.
+  - `imageUrl` (string, optional): Group cover avatar or icon URL.
+}

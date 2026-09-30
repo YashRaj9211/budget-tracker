@@ -1,0 +1,41 @@
+meta {
+  name: Get Accepted Friends
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/friends
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Accepted Friends (`GetFriends`)
+  
+  **Handler**: `handlers.GetFriends` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Route**: `GET /api/_private/v1/friends` (Private - Bearer Token required)
+  
+  ### Description
+  Returns a normalized list of confirmed friends (`status = 'ACCEPTED'`) for the current user:
+  - Resolves friendships bidirectionally across the single-row model.
+  - Returns concise items with `user_id` and `name` (ready for split dropdowns and selector pickers).
+  
+  ### Expected Response Structure
+  ```json
+  [
+    {
+      "user_id": "user_456",
+      "name": "Jane Doe"
+    },
+    {
+      "user_id": "user_789",
+      "name": "Bob Smith"
+    }
+  ]
+  ```
+}

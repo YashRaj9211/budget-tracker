@@ -159,24 +159,23 @@ function AddTransactionForm() {
 			/>
 
 			{/* Floating Action Button (FAB) */}
-			<div className={`fixed bottom-8 right-6 flex flex-col items-center gap-3 z-50 transition-all duration-300 ease-out ${
+			<div className={`fixed bottom-20 right-4 sm:right-[max(1rem,calc(50%-14rem+1rem))] flex flex-col items-end gap-2.5 z-40 transition-all duration-300 ease-out ${
 				isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
 			}`}>
 				<button
 					onClick={() => setIsOpen(true)}
-					className="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none hover:bg-gray-900 transition-all duration-300"
+					className="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:bg-gray-900 transition-all"
 					aria-label="Open add transaction form"
 				>
-					<Plus size={24} className="text-white" />
+					<Plus size={22} className="text-white" />
 				</button>
 				
 				<VoiceInput onParsed={handleVoiceParsed} />
 			</div>
 
-
 			{/* Form Container */}
 			<div
-				className={`fixed z-50 transition-all duration-300 ease-out origin-bottom-right inset-x-4 top-16 bottom-20 md:inset-auto md:bottom-8 md:right-6 md:w-[420px] md:h-[630px] bg-white border-2 border-black shadow-box p-6 flex flex-col justify-between ${
+				className={`fixed z-50 transition-all duration-300 ease-out inset-x-3.5 top-10 bottom-20 max-w-md mx-auto bg-white border-[3px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-5 flex flex-col justify-between ${
 					isOpen
 						? 'scale-100 opacity-100 translate-y-0 pointer-events-auto'
 						: 'scale-90 opacity-0 translate-y-8 pointer-events-none'
@@ -381,7 +380,7 @@ function AddTransactionForm() {
 						<button
 							type="submit"
 							disabled={isSubmitted}
-							className={`w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer transition-all ${
+							className={`w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer transition-all ${
 								isSubmitted
 									? 'bg-emerald-100 text-emerald-800'
 									: 'bg-black text-white hover:bg-gray-900'

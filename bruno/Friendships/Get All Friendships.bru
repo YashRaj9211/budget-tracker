@@ -1,0 +1,27 @@
+meta {
+  name: Get All Friendships
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/friendships
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get All Friendships (`GetFriendships`)
+  
+  **Handler**: `handlers.GetFriendships` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Route**: `GET /api/_private/v1/friendships` (Private - Bearer Token required)
+  
+  ### Description
+  Retrieves all friendship records involving the current authenticated user (both sent and received, whether `PENDING` or `ACCEPTED`):
+  - Preloads full `User` and `Friend` profile associations.
+  - Useful for displaying incoming pending invitations, sent requests, and accepted connections.
+}

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Budget } from '../types';
 import * as db from '../db';
+import { todayStr } from '../utils/date';
 import { budgetsInitialState } from './initialState';
 
 // ── State Shape ──
@@ -46,7 +47,6 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 		// Refresh both lists
 		await get().loadAllBudgets();
 		// Re-check if the saved budget is now the active one
-		const { todayStr } = await import('../utils/date');
 		await get().loadActiveBudget(todayStr());
 	},
 

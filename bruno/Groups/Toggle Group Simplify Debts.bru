@@ -1,0 +1,32 @@
+meta {
+  name: Toggle Group Simplify Debts
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/_private/v1/groups/:groupId/toggle-simplify
+  body: none
+  auth: bearer
+}
+
+params:path {
+  groupId: group_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Toggle Group Simplify Debts (`ToggleGroupSimplify`)
+  
+  **Handler**: `handlers.ToggleGroupSimplify` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `PUT /api/_private/v1/groups/:groupId/toggle-simplify` (Private - Bearer Token required)
+  
+  ### Description
+  Toggles the `simplifyDebts` boolean flag on the group between `true` and `false`.
+  
+  ### Path Parameters
+  - `groupId` (string, path parameter): Group ID.
+}

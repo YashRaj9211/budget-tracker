@@ -1,0 +1,34 @@
+meta {
+  name: Delete Expense
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/_private/v1/expenses/:expenseId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  expenseId: expense_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Delete Expense (`DeleteExpense`)
+  
+  **Handler**: `handlers.DeleteExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
+  **Route**: `DELETE /api/_private/v1/expenses/:expenseId` (Private - Bearer Token required)
+  
+  ### Description
+  Permanently deletes an expense record:
+  - Associated splits and payment links are deleted/cascaded.
+  - Broadcasts `REFETCH_EXPENSES` event over WebSocket to all affected participants and friends.
+  
+  ### Path Parameters
+  - `expenseId` (string, path parameter): ID of the expense to delete.
+}

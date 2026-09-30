@@ -215,7 +215,7 @@ function BudgetSettings() {
 				{/* Save Button */}
 				<button
 					type="submit"
-					className="w-full mt-6 py-2.5 px-4 bg-black text-white font-bold text-sm tracking-wide border-2 border-black flex items-center justify-center gap-2 hover:bg-gray-900 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all"
+					className="w-full mt-6 py-2.5 px-4 bg-black text-white font-bold text-sm tracking-wide border-2 border-black flex items-center justify-center gap-2 hover:bg-gray-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all"
 				>
 					{saved ? (
 						<>

@@ -1,0 +1,32 @@
+meta {
+  name: Get User Expenses
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/expenses/user/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get User Expenses (`GetUserExpenses`)
+  
+  **Handler**: `handlers.GetUserExpenses` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
+  **Route**: `GET /api/_private/v1/expenses/user/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Retrieves a chronological list of all expenses where the specified user is either:
+  1. The original creator/payer of the expense (`expenses.user_id = userId`).
+  2. A participant in an expense split (`expense_splits.user_id = userId`).
+  
+  Preloads the expense splits and associated participant profiles while sanitizing sensitive credentials, sorted by `expense_date desc`.
+  
+  ### URL Parameters
+  - `userId` (string, path parameter): Target user ID (defaults to `{{userId}}`).
+}

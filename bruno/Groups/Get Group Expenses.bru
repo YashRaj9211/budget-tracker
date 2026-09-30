@@ -1,0 +1,34 @@
+meta {
+  name: Get Group Expenses
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/groups/:groupId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  groupId: group_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Group Expenses (`GetGroupExpenses`)
+  
+  **Handler**: `handlers.GetGroupExpenses` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `GET /api/_private/v1/groups/:groupId` (Private - Bearer Token required)
+  
+  ### Description
+  Retrieves all expenses assigned to the designated group ordered by `expense_date desc`:
+  - Preloads `Splits`, `Splits.User`, and the payer `User`.
+  - If `group.simplifyDebts == true`, runs the debt simplification algorithm (`functions.SimplifyDebts`) to net out multi-hop shared balances into a minimal transaction graph before returning.
+  
+  ### Path Parameters
+  - `groupId` (string, path parameter): Group ID.
+}

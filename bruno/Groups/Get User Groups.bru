@@ -1,0 +1,45 @@
+meta {
+  name: Get User Groups
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/groups/user/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get User Groups (`GetUserGroups`)
+  
+  **Handler**: `handlers.GetUserGroups` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `GET /api/_private/v1/groups/user/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Retrieves all groups that the specified user belongs to by joining through `group_members`.
+  
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID (defaults to `{{userId}}`).
+  
+  ### Expected Response Structure
+  ```json
+  {
+    "groups": [
+      {
+        "id": "group_abc123",
+        "name": "Trip to Goa",
+        "description": "Weekend getaway",
+        "imageUrl": null,
+        "simplifyDebts": true,
+        "createdAt": "2026-09-29T10:00:00Z",
+        "updatedAt": "2026-09-29T10:00:00Z"
+      }
+    ]
+  }
+  ```
+}

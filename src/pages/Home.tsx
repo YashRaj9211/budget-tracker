@@ -8,7 +8,6 @@ import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
-import { useMidnightRefresh } from '../utils/midnight';
 import ExcelTools from '../components/common/ExcelTools';
 
 function Home() {
@@ -45,31 +44,52 @@ function Home() {
 		loadActiveBudget(todayStr());
 	}, [loadMonth, loadAllTransactions, loadActiveBudget]);
 
-	useMidnightRefresh(handleMidnight);
+	useEffect(() => {
+		let timeoutId: ReturnType<typeof setTimeout>;
+
+		function scheduleNext() {
+			const now = new Date();
+			const tomorrow = new Date(
+				now.getFullYear(),
+				now.getMonth(),
+				now.getDate() + 1, // next day
+				0, 0, 0, 0,        // exactly midnight
+			);
+			const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+			timeoutId = setTimeout(() => {
+				handleMidnight();
+				scheduleNext(); // reschedule for the following midnight
+			}, msUntilMidnight);
+		}
+
+		scheduleNext();
+		return () => clearTimeout(timeoutId);
+	}, [handleMidnight]);
 
 	return (
-		<div className="relative">
+		<div className="relative space-y-3">
 			<HomePageHeader />
 			<div>
-				<div>
-					<div className="flex items-center justify-between gap-4 my-2">
+				<div className="space-y-2 mb-3">
+					<div className="flex items-center justify-between gap-2">
 						<Button text="Daily" type="primary" className="flex-1" />
 						<Button text="Monthly" type="secondary" className="flex-1" />
-						<Button text="Calender" type="secondary" className="flex-1" />
+						<Button text="Calendar" type="secondary" className="flex-1" />
 					</div>
-					<div className="my-2">
+					<div>
 						<ExcelTools />
 					</div>
 				</div>
 				<DailyBudgetCard />
-				<div className='border'>
+				<div className="mt-3">
 					{/* List of transactions */}
 					{dayGroups.length > 0 ? (
 						dayGroups.map((group) => (
 							<TransactionList key={group.date} group={group} />
 						))
 					) : (
-						<div className="py-8 text-center text-sm text-gray-400">
+						<div className="border-2 border-black p-8 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-center text-sm font-bold text-gray-500">
 							No transactions this month
 						</div>
 					)}

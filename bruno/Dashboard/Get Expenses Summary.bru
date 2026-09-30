@@ -1,0 +1,42 @@
+meta {
+  name: Get Expenses Summary
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/dashboard/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Expenses Summary (`GetExpensesSummary`)
+  
+  **Handler**: `handlers.GetExpensesSummary` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
+  **Route**: `GET /api/_private/v1/dashboard/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Fetches an overarching financial overview for the user:
+  - **`totalExpenses`**: Sum of all personal expenses plus the user's split shares.
+  - **`personalExpenses`**: Total direct personal expenses (`type = 'PERSONAL'`).
+  - **`totalBorrowed`**: Money the user owes to others (unsettled splits in expenses paid by other users).
+  - **`totalLent`**: Money other users owe this user (splits in expenses paid by this user).
+  
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID (defaults to `{{userId}}`).
+  
+  ### Expected Response
+  ```json
+  {
+    "totalExpenses": "250.00",
+    "personalExpenses": "150.00",
+    "totalBorrowed": "50.00",
+    "totalLent": "100.00"
+  }
+  ```
+}

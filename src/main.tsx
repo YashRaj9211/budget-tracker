@@ -6,8 +6,6 @@ import router from './router.ts';
 
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
-		<div className='px-4 py-2 pb-20'>
-			<RouterProvider router={router} />
-		</div>
+		<RouterProvider router={router} />
 	</StrictMode>
 );

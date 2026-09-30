@@ -1,0 +1,32 @@
+meta {
+  name: Get Group Members
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/groups/:groupId/members
+  body: none
+  auth: bearer
+}
+
+params:path {
+  groupId: group_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Group Members (`GetGroupMembers`)
+  
+  **Handler**: `handlers.GetGroupMembers` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `GET /api/_private/v1/groups/:groupId/members` (Private - Bearer Token required)
+  
+  ### Description
+  Returns a list of all members affiliated with the group, preloaded with their user profile and role (`ADMIN` or `MEMBER`).
+  
+  ### Path Parameters
+  - `groupId` (string, path parameter): Group ID.
+}
