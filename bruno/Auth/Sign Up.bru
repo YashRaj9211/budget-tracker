@@ -1,0 +1,49 @@
+meta {
+  name: Sign Up
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/_public/v1/users/signup
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "user@example.com",
+    "name": "Test User",
+    "username": "testuser",
+    "password": "Password123!",
+    "phone": "+1234567890",
+    "avatarUrl": "https://example.com/avatar.png"
+  }
+}
+
+docs {
+  # Register New User (`CreateUser`)
+  
+  **Handler**: `handlers.CreateUser` in [auth_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/auth_handler.go)
+  **Route**: `POST /api/_public/v1/users/signup` (Public)
+  
+  ### Description
+  Creates a new user profile in the database:
+  - Validates `email`, `name`, `username`, and `password`.
+  - Checks if a user with the specified `email` already exists (returns 400 `User already exists`).
+  - Hashes the password with bcrypt.
+  - Automatically assigns a UUID (prefixed with `user_`) via the `BeforeCreate` hook.
+  - Returns the newly created user record.
+  
+  ### Payload Fields
+  - `email` (string, required): Unique user email address.
+  - `name` (string, required): Full display name.
+  - `username` (string, required): Unique username handle.
+  - `password` (string, required): Plaintext password to hash.
+  - `phone` (string, optional): Contact telephone number.
+  - `avatarUrl` (string, optional): Direct URL to user avatar picture.
+}

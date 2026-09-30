@@ -110,18 +110,18 @@ export default function ExcelTools() {
 			<button
 				onClick={handleExport}
 				disabled={isProcessing}
-				className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50"
+				className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border-2 border-black bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
 			>
-				<Download size={16} />
+				<Download size={14} />
 				Export Excel
 			</button>
 			
 			<button
 				onClick={handleImportClick}
 				disabled={isProcessing}
-				className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all disabled:opacity-50"
+				className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border-2 border-black bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
 			>
-				<Upload size={16} />
+				<Upload size={14} />
 				Import Excel
 			</button>
 			

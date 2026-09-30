@@ -26,7 +26,7 @@ export default function Split() {
 	const { totalOwedToUser, totalUserOwes, netTotal } = getTotalUserBalance();
 
 	return (
-		<div className="max-w-xl mx-auto space-y-5 pb-28">
+		<div className="w-full space-y-4 pb-28">
 			{/* Overall Summary Header */}
 			<div className="border-2 border-black p-4 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
 				<div className="flex items-center justify-between mb-3 border-b border-black/20 pb-2">
@@ -41,7 +41,7 @@ export default function Split() {
 				<div className="grid grid-cols-3 gap-2 text-center">
 					{/* Owed to You */}
 					<div className="p-2 border border-black bg-emerald-50">
-						<span className="text-[10px] text-emerald-800 uppercase font-semibold block flex items-center justify-center gap-0.5">
+						<span className="text-[10px] text-emerald-800 uppercase font-semibold flex items-center justify-center gap-0.5">
 							<ArrowUpRight className="w-3 h-3" /> Owed to you
 						</span>
 						<span className="font-extrabold text-sm text-emerald-700">
@@ -51,7 +51,7 @@ export default function Split() {
 
 					{/* You Owe */}
 					<div className="p-2 border border-black bg-rose-50">
-						<span className="text-[10px] text-rose-800 uppercase font-semibold block flex items-center justify-center gap-0.5">
+						<span className="text-[10px] text-rose-800 uppercase font-semibold flex items-center justify-center gap-0.5">
 							<ArrowDownRight className="w-3 h-3" /> You owe
 						</span>
 						<span className="font-extrabold text-sm text-rose-700">

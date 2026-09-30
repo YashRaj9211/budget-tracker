@@ -1,0 +1,61 @@
+meta {
+  name: Get Daily Spend Overview
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/dashboard/graph/{{userId}}?period=MONTH
+  body: none
+  auth: bearer
+}
+
+params:query {
+  period: MONTH
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Daily Spend Overview (`GetDailySpendOverview`)
+  
+  **Handler**: `handlers.GetDailySpendOverview` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
+  **Route**: `GET /api/_private/v1/dashboard/graph/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Provides chronological timeseries metrics tailored for financial charts and graph visualization:
+  - Aggregates daily totals for `personal`, `borrowed`, `lent`, and computed `total` expenditure.
+  - Ensures continuous date entries even for days with zero transactions across the entire window.
+  
+  ### Query Parameters
+  - `period` (string, optional, default: `"MONTH"`):
+    - `"WEEK"`: Last 7 days.
+    - `"MONTH"`: Last 30 days.
+    
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID (defaults to `{{userId}}`).
+  
+  ### Expected Response Structure
+  ```json
+  [
+    {
+      "date": "09/25",
+      "day": "Fri",
+      "personal": 35.5,
+      "borrowed": 12.0,
+      "lent": 0.0,
+      "total": 47.5
+    },
+    {
+      "date": "09/26",
+      "day": "Sat",
+      "personal": 15.0,
+      "borrowed": 0.0,
+      "lent": 20.0,
+      "total": 15.0
+    }
+  ]
+  ```
+}

@@ -18,7 +18,7 @@ export default function GroupCard({ group, onClick }: GroupCardProps) {
 	return (
 		<div
 			onClick={onClick}
-			className={`border-2 border-black p-4 mb-3 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer rounded-none relative overflow-hidden`}
+			className={`border-2 border-black p-4 mb-3 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer rounded-none relative overflow-hidden`}
 		>
 			{/* Top Bar with Group Name & Member count */}
 			<div className="flex items-center justify-between mb-2">

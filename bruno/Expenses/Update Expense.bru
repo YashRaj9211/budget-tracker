@@ -1,0 +1,66 @@
+meta {
+  name: Update Expense
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/_private/v1/expenses/:expenseId
+  body: json
+  auth: bearer
+}
+
+params:path {
+  expenseId: expense_id_here
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "amount": "140.00",
+    "description": "Team Dinner & Dessert",
+    "note": "Updated with dessert costs",
+    "type": "SPLIT",
+    "expenseDate": "2026-09-29T21:30:00Z",
+    "categoryId": null,
+    "groupId": null,
+    "splits": [
+      {
+        "userId": "{{userId}}",
+        "amount": "70.00",
+        "splitType": "EQUAL",
+        "isPaid": true
+      },
+      {
+        "userId": "friend_user_id_here",
+        "amount": "70.00",
+        "splitType": "EQUAL",
+        "isPaid": false
+      }
+    ]
+  }
+}
+
+docs {
+  # Update Expense (`UpdateExpense`)
+  
+  **Handler**: `handlers.UpdateExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
+  **Route**: `PUT /api/_private/v1/expenses/:expenseId` (Private - Bearer Token required)
+  
+  ### Description
+  Modifies an existing expense record atomically:
+  - Updates top-level attributes (`amount`, `description`, `note`, `type`, `expenseDate`, `categoryId`, `groupId`).
+  - Clears existing splits and recreates the updated split shares if `type = 'SPLIT'`.
+  - Reloads related models with preloads (`Splits.User`, `Category`, `Group`).
+  - Broadcasts `REFETCH_EXPENSES` event over WebSocket to all relevant members.
+  
+  ### Path Parameters
+  - `expenseId` (string, path parameter): ID of the expense to update.
+}

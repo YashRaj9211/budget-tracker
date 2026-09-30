@@ -1,0 +1,54 @@
+meta {
+  name: Get Daily Expense Breakdown
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/dashboard/{{userId}}/expenses
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Daily Expense Breakdown (`GetDailyExpenseBreakdown`)
+  
+  **Handler**: `handlers.GetDailyExpenseBreakdown` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
+  **Route**: `GET /api/_private/v1/dashboard/:userId/expenses` (Private - Bearer Token required)
+  
+  ### Description
+  Returns an itemized timeline of expenditures grouped by calendar date (`YYYY-MM-DD`):
+  - Gathers all personal expenditures (`type = 'PERSONAL'`) and marks them with tag `"PERSONAL"`.
+  - Gathers all expense splits assigned to this user:
+    - If paid by another person, tagged as `"BORROWED"` and includes the `paidBy` object (`id`, `username`).
+    - If paid by this user, tagged as `"MY_SHARES"`.
+    
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID (defaults to `{{userId}}`).
+  
+  ### Expected Response Structure
+  ```json
+  {
+    "expenseBreakdown": {
+      "2026-09-29": [
+        {
+          "id": "expense_123",
+          "amount": "24.50",
+          "description": "Lunch at cafe",
+          "type": "SPLIT",
+          "tag": "BORROWED",
+          "paidBy": {
+            "id": "user_456",
+            "username": "alex"
+          },
+          "createdAt": "2026-09-29T13:45:00Z"
+        }
+      ]
+    }
+  }
+  ```
+}

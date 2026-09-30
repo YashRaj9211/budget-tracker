@@ -55,7 +55,7 @@ export default function Auth() {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#fdf2fc] text-black flex flex-col justify-center items-center px-4 py-8">
+		<div className="h-screen text-black flex flex-col justify-center items-center overflow-hidden">
 			{/* Main Neobrutalist Card */}
 			<div className="w-full max-w-md bg-white border-[3px] border-black p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
 				
@@ -73,14 +73,14 @@ export default function Auth() {
 				</div>
 
 				{/* Mode Switcher Buttons */}
-				<div className="grid grid-cols-2 gap-2 mb-6">
+				{/* <div className="grid grid-cols-2 gap-2 mb-6">
 					<button
 						type="button"
 						onClick={() => handleSwitchMode('login')}
 						className={`py-2 text-xs font-black uppercase border-2 border-black transition-all cursor-pointer ${
 							mode === 'login'
 								? 'bg-black text-white shadow-none'
-								: 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
+								: 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
 						}`}
 					>
 						Sign In
@@ -91,12 +91,12 @@ export default function Auth() {
 						className={`py-2 text-xs font-black uppercase border-2 border-black transition-all cursor-pointer ${
 							mode === 'signup'
 								? 'bg-black text-white shadow-none'
-								: 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
+								: 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
 						}`}
 					>
 						Sign Up
 					</button>
-				</div>
+				</div> */}
 
 				{/* Error Feedback */}
 				{error && (
@@ -214,7 +214,7 @@ export default function Auth() {
 					<button
 						type="submit"
 						disabled={isLoading}
-						className="w-full bg-[#aff588] text-black font-black uppercase border-2 border-black py-3 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#9eed68] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+						className="w-full bg-[#aff588] text-black font-black uppercase border-2 border-black py-3 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#9eed68] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
 					>
 						{isLoading ? (
 							<>

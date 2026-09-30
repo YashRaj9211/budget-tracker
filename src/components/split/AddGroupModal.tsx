@@ -90,7 +90,7 @@ export default function AddGroupModal() {
 
 					{/* Theme Color */}
 					<div>
-						<label className="block text-xs font-bold uppercase mb-1 flex items-center gap-1">
+						<label className="block text-xs font-bold uppercase mb-1 items-center gap-1">
 							<Palette className="w-3.5 h-3.5" /> Group Badge Color
 						</label>
 						<div className="flex gap-2">

@@ -1,0 +1,713 @@
+openapi: 3.0.0
+info:
+  title: Divit Go Server API
+  description: API documentation for the Divit Clone Go Server Backend
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/Prod
+    description: AWS API Gateway
+
+paths:
+  /api/_public/v1/users/signup:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpBody'
+      responses:
+        '200':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+
+  /api/_public/v1/users/login:
+    post:
+      summary: Login user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginBody'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '400':
+          description: Invalid credentials
+
+  /api/_private/v1/expenses/user/{userId}:
+    post:
+      summary: Create a new expense
+      tags: [Expenses]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expense'
+      responses:
+        '201':
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+    get:
+      summary: Get user expenses
+      tags: [Expenses]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+
+  /api/_private/v1/expenses/settle/{splitId}/{userId}:
+    put:
+      summary: Settle a specific expense split
+      tags: [Expenses]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: splitId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expense split settled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  split:
+                    $ref: '#/components/schemas/ExpenseSplit'
+
+  /api/_private/v1/expenses/{expenseId}:
+    delete:
+      summary: Delete an expense
+      tags: [Expenses]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: expenseId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expense deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/_private/v1/dashboard/{userId}:
+    get:
+      summary: Get dashboard summary numbers
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalExpenses:
+                    type: number
+                  personalExpenses:
+                    type: number
+                  totalBorrowed:
+                    type: number
+                  totalLent:
+                    type: number
+
+  /api/_private/v1/dashboard/{userId}/expenses:
+    get:
+      summary: Get daily expense breakdown
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expense breakdown map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenseBreakdown:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          amount:
+                            type: string
+                          description:
+                            type: string
+                          type:
+                            type: string
+                          tag:
+                            type: string
+                          paidBy:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              username:
+                                type: string
+                          createdAt:
+                            type: string
+                            format: date-time
+
+  /api/_private/v1/dashboard/{userId}/friends:
+    get:
+      summary: Get friends balances
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Friends balances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  youOwe:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FriendBalance'
+                  owesYou:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FriendBalance'
+  
+  /api/_private/v1/dashboard/graph/{userId}:
+    get:
+      summary: Get daily spend overview graph data
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: period
+          required: false
+          schema:
+            type: string
+            enum: [WEEK, MONTH]
+            default: MONTH
+      responses:
+        '200':
+          description: Graph data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                    day:
+                      type: string
+                    personal:
+                      type: number
+                    borrowed:
+                      type: number
+                    lent:
+                      type: number
+                    total:
+                      type: number
+
+  /api/_private/v1/users/friends/{userId}:
+    get:
+      summary: Get all friends of user
+      tags: [User]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of friendships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friendship'
+
+  /api/_private/v1/groups/user/{userId}:
+    get:
+      summary: Get user groups
+      tags: [Group]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+
+  /api/_private/v1/groups/{groupId}:
+    get:
+      summary: Get group expenses
+      tags: [Group]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+
+  /api/_private/v1/groups/{groupId}/toggle-simplify:
+    put:
+      summary: Toggle simplify debts setting for group
+      tags: [Group]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/_private/v1/groups/{groupId}/members:
+    get:
+      summary: Get group members
+      tags: [Group]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of group members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupMember'
+
+  /api/_private/v1/friendships/send:
+    post:
+      summary: Send a friendship request
+      tags: [Friendship]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendFriendshipRequestBody'
+      responses:
+        '200':
+          description: Request sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/_private/v1/friendships/accept/{friendId}:
+    post:
+      summary: Accept a friendship request
+      tags: [Friendship]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: friendId
+          required: true
+          description: The ID of the friend user whose request you are accepting
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/_private/v1/friendships/reject/{friendId}:
+    post:
+      summary: Reject a friendship request
+      tags: [Friendship]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: friendId
+          required: true
+          description: The ID of the friend user whose request you are rejecting
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/_private/v1/friendships:
+    get:
+      summary: Get all friendships (pending/accepted) for current user
+      tags: [Friendship]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of friendships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friendship'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        simplifyDebts:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+
+    GroupMember:
+      type: object
+      properties:
+        id:
+          type: string
+        groupId:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, MEMBER]
+        joinedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+        currency:
+          type: string
+        description:
+          type: string
+        note:
+          type: string
+        type:
+          type: string
+          enum: [PERSONAL, SPLIT, INCOME]
+        expenseDate:
+          type: string
+          format: date-time
+        userId:
+          type: string
+        categoryId:
+          type: string
+        groupId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        splits:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseSplit'
+        user:
+          $ref: '#/components/schemas/User'
+
+    ExpenseSplit:
+      type: object
+      properties:
+        id:
+          type: string
+        expenseId:
+          type: string
+        userId:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+        splitType:
+          type: string
+          enum: [EQUAL, EXACT, PERCENTAGE, SHARES]
+        percentage:
+          type: string
+        isPaid:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    Friendship:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        friendId:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, BLOCKED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+        friend:
+          $ref: '#/components/schemas/User'
+
+    FriendBalance:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+
+    SignUpBody:
+      type: object
+      required: [email, name, username, password]
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+
+    LoginBody:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    SendFriendshipRequestBody:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string

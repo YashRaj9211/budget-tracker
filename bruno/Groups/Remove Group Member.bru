@@ -1,0 +1,35 @@
+meta {
+  name: Remove Group Member
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/_private/v1/groups/:groupId/members/:userId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  groupId: group_id_here
+  userId: user_id_to_remove_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Remove Group Member (`RemoveGroupMember`)
+  
+  **Handler**: `handlers.RemoveGroupMember` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
+  **Route**: `DELETE /api/_private/v1/groups/:groupId/members/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Ejects a member from the designated group:
+  - Deletes the corresponding `GroupMember` record matching `:groupId` and `:userId`.
+  
+  ### Path Parameters
+  - `groupId` (string, path parameter): Target Group ID.
+  - `userId` (string, path parameter): User ID to remove.
+}

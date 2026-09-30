@@ -21,19 +21,19 @@ function DailyBudgetCard() {
 	// ── No active budget state ──
 	if (!budget) {
 		return (
-			<div className="border border-dashed border-gray-300 bg-white p-5 my-4 flex flex-col items-center justify-center gap-3 text-center">
-				<CalendarRange size={28} className="text-gray-300" />
+			<div className="border-2 border-dashed border-black/40 bg-white p-5 my-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-center gap-3 text-center">
+				<CalendarRange size={28} className="text-gray-400" />
 				<div>
-					<p className="text-sm font-bold text-gray-500">No active budget</p>
-					<p className="text-xs text-gray-400 mt-0.5">
+					<p className="text-sm font-black uppercase text-black">No active budget</p>
+					<p className="text-xs text-gray-500 font-bold mt-0.5">
 						Set up a budget with a date range to track your spending.
 					</p>
 				</div>
 				<Link
 					to="/budget"
-					className="flex items-center gap-1.5 text-xs font-bold border border-black px-3 py-1.5 bg-black text-white hover:bg-gray-800 transition-colors"
+					className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider border-2 border-black px-4 py-2 bg-black text-white hover:bg-gray-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
 				>
-					<PlusCircle size={13} />
+					<PlusCircle size={14} />
 					Create Budget
 				</Link>
 			</div>
@@ -61,7 +61,7 @@ function DailyBudgetCard() {
 	const isActive = today >= budget.startDate && today <= budget.endDate;
 
 	return (
-		<div className="border border-black bg-white p-5 pb-3 shadow-box my-4">
+		<div className="border-2 border-black bg-white p-4 pb-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] my-2">
 			{/* Header */}
 			<div className="flex justify-between items-center mb-1">
 				<h3 className="text-xl font-bold text-black">Budget</h3>

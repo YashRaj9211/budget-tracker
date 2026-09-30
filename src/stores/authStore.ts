@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import type { User, LoginRequest, SignUpRequest } from '../types/auth';
+import type { User, LoginRequest, SignUpRequest, AuthResponse } from '../types/auth';
 import { loginApi, signUpApi } from '../api/authApi';
+import { socketService } from '../api/socketService';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -77,14 +78,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			const res = await signUpApi(userData);
+			const maybeAuth = res as unknown as Partial<AuthResponse>;
 			// If backend returns token on signup, store it directly.
 			// If not, perform auto-login with email/password.
-			if ('token' in res && res.token) {
-				localStorage.setItem(TOKEN_KEY, res.token);
-				localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+			if (maybeAuth.token && maybeAuth.user) {
+				localStorage.setItem(TOKEN_KEY, maybeAuth.token);
+				localStorage.setItem(USER_KEY, JSON.stringify(maybeAuth.user));
 				set({
-					token: res.token,
-					user: res.user,
+					token: maybeAuth.token,
+					user: maybeAuth.user,
 					isAuthenticated: true,
 					isLoading: false,
 				});
@@ -100,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 	},
 
 	logout: () => {
+		socketService.disconnect();
 		localStorage.removeItem(TOKEN_KEY);
 		localStorage.removeItem(USER_KEY);
 		set({

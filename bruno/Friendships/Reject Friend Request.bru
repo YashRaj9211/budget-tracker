@@ -1,0 +1,34 @@
+meta {
+  name: Reject Friend Request
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/friendships/reject/:friendId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  friendId: sender_user_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Reject Friend Request (`RejectFriendship`)
+  
+  **Handler**: `handlers.RejectFriendship` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Route**: `POST /api/_private/v1/friendships/reject/:friendId` (Private - Bearer Token required)
+  
+  ### Description
+  Rejects or cancels a pending friendship invitation:
+  - Deletes the `Friendship` record matching the pending status.
+  - Broadcasts `FRIEND_REQUEST_REJECTED` WebSocket event to the sender.
+  
+  ### Path Parameters
+  - `friendId` (string, path parameter): User ID of the sender.
+}

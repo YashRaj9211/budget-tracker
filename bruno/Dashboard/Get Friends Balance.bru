@@ -1,0 +1,58 @@
+meta {
+  name: Get Friends Balance
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/dashboard/{{userId}}/friends
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Friends Balance (`GetFriendsBalance`)
+  
+  **Handler**: `handlers.GetFriendsBalance` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
+  **Route**: `GET /api/_private/v1/dashboard/:userId/friends` (Private - Bearer Token required)
+  
+  ### Description
+  Calculates the exact net financial balance between the authenticated user and each friend:
+  - **Lent Splits**: Unpaid splits where the current user was the payer (`expenses.user_id = userId` and `splits.user_id != userId`).
+  - **Borrowed Splits**: Unpaid splits where someone else paid for the current user (`splits.user_id = userId` and `expenses.user_id != userId`).
+  - **Direct Payments**: Factor in direct settlement payments (`models.Payment`) made between both parties to reduce or flip debts.
+  - Sorts friends into:
+    - **`owesYou`**: Friends who owe money to this user.
+    - **`youOwe`**: Friends to whom this user owes money.
+    
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID (defaults to `{{userId}}`).
+  
+  ### Expected Response Structure
+  ```json
+  {
+    "owesYou": [
+      {
+        "id": "user_789",
+        "name": "Jane Doe",
+        "username": "janedoe",
+        "avatarUrl": "https://example.com/avatar.png",
+        "amount": "45.00"
+      }
+    ],
+    "youOwe": [
+      {
+        "id": "user_456",
+        "name": "John Smith",
+        "username": "johnsmith",
+        "avatarUrl": null,
+        "amount": "12.50"
+      }
+    ]
+  }
+  ```
+}

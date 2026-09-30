@@ -1,0 +1,51 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/_public/v1/users/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "user@example.com",
+    "password": "Password123!"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody().token) {
+    bru.setEnvVar("authToken", res.getBody().token);
+    if (res.getBody().user && res.getBody().user.id) {
+      bru.setEnvVar("userId", res.getBody().user.id);
+    }
+  }
+}
+
+docs {
+  # User Login (`LoginUser`)
+  
+  **Handler**: `handlers.LoginUser` in [auth_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/auth_handler.go)
+  **Route**: `POST /api/_public/v1/users/login` (Public)
+  
+  ### Description
+  Authenticates an existing user and issues a JWT token:
+  - Looks up the user account by `email`.
+  - Compares provided `password` against the hashed password.
+  - On success, generates a signed JWT bearer token containing `user.id`.
+  - Returns the sanitized user profile (`id`, `email`, `name`, `username`, `phone`, `avatarUrl`) and `token`.
+  
+  ### Bruno Automation
+  This request includes a post-response script that automatically updates:
+  - `{{authToken}}` with the returned JWT token.
+  - `{{userId}}` with the authenticated user's ID.
+  These variables can directly power all subsequent authenticated Bruno requests under `/api/_private/v1/*`.
+}

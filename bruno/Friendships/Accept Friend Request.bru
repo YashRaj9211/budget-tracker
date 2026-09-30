@@ -1,0 +1,35 @@
+meta {
+  name: Accept Friend Request
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/friendships/accept/:friendId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  friendId: sender_user_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Accept Friend Request (`AcceptFriendship`)
+  
+  **Handler**: `handlers.AcceptFriendship` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Route**: `POST /api/_private/v1/friendships/accept/:friendId` (Private - Bearer Token required)
+  
+  ### Description
+  Accepts an incoming pending friendship invite:
+  - Locates the pending request where `user_id = currentUserId` (receiver) and `friend_id = friendId` (sender).
+  - Updates the status to `"ACCEPTED"`.
+  - Dispatches WebSocket event `FRIEND_REQUEST_ACCEPTED` to both users so UIs update synchronously.
+  
+  ### Path Parameters
+  - `friendId` (string, path parameter): User ID of the person who originally sent the invite.
+}

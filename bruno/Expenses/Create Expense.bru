@@ -1,0 +1,79 @@
+meta {
+  name: Create Expense
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/expenses/user/{{userId}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "amount": "120.00",
+    "currency": "INR",
+    "description": "Team Dinner",
+    "note": "Dinner at Mainland China",
+    "type": "SPLIT",
+    "expenseDate": "2026-09-29T20:00:00Z",
+    "categoryId": null,
+    "groupId": null,
+    "splits": [
+      {
+        "userId": "{{userId}}",
+        "amount": "60.00",
+        "splitType": "EQUAL",
+        "isPaid": true
+      },
+      {
+        "userId": "friend_user_id_here",
+        "amount": "60.00",
+        "splitType": "EQUAL",
+        "isPaid": false
+      }
+    ]
+  }
+}
+
+docs {
+  # Create Expense (`CreateExpense`)
+  
+  **Handler**: `handlers.CreateExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
+  **Route**: `POST /api/_private/v1/expenses/user/:userId` (Private - Bearer Token required)
+  
+  ### Description
+  Creates a new expense entry along with its associated splits in an atomic transaction:
+  - Supports `PERSONAL` and `SPLIT` expense types.
+  - If `type = 'PERSONAL'`, splits are automatically excluded to prevent double counting.
+  - If `type = 'SPLIT'`, creates individual entries in `expense_splits` with allocation details.
+  - Auto-defaults `expenseDate` to current timestamp if omitted.
+  - Broadcasts a real-time WebSocket notification (`{"event":"REFETCH_EXPENSES"}`) to all involved users and friends.
+  
+  ### URL Parameters
+  - `userId` (string, path parameter): User ID of the caller/creator (defaults to `{{userId}}`).
+  
+  ### Body Fields
+  - `amount` (string/decimal, required): Total bill amount.
+  - `currency` (string, optional, default: `"INR"`): Currency denomination.
+  - `description` (string, required): Title or purpose of the expense.
+  - `note` (string, optional): Context notes or receipt comments.
+  - `type` (string, required): `"PERSONAL"`, `"SPLIT"`, or `"INCOME"`.
+  - `expenseDate` (ISO8601 string, optional): Date the expense occurred.
+  - `categoryId` (string, optional): Foreign key to category.
+  - `groupId` (string, optional): Foreign key to group (if group expense).
+  - `splits` (array of objects, optional for SPLIT):
+    - `userId` (string): Split participant ID.
+    - `amount` (string/decimal): Share amount.
+    - `splitType` (string): `"EQUAL"`, `"EXACT"`, `"PERCENTAGE"`, `"SHARES"`.
+    - `isPaid` (boolean): Settlement status.
+}

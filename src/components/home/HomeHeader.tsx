@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Link } from 'react-router';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -6,7 +7,6 @@ function HomePageHeader() {
 	const selectedYear = useTransactionStore((s) => s.selectedYear);
 	const selectedMonth = useTransactionStore((s) => s.selectedMonth);
 	const setSelectedMonth = useTransactionStore((s) => s.setSelectedMonth);
-	const logout = useAuthStore((s) => s.logout);
 	const user = useAuthStore((s) => s.user);
 
 	const displayDate = new Date(selectedYear, selectedMonth);
@@ -29,39 +29,41 @@ function HomePageHeader() {
 	};
 
 	return (
-		<header className="flex items-center justify-between border border-black p-3 bg-white mb-4">
-			<div className="flex items-center gap-2">
+		<header className="flex items-center justify-between border-2 border-black p-2.5 bg-white mb-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+			<div className="flex items-center gap-1.5">
 				<button
 					onClick={handlePrevMonth}
-					className="p-1.5 hover:bg-gray-50 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+					className="p-1 hover:bg-gray-100 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
 					aria-label="Previous month"
 				>
-					<ChevronLeft size={18} />
+					<ChevronLeft size={16} />
 				</button>
-				<h2 className="text-base font-bold text-black tracking-tight">{formattedMonth}</h2>
+				<h2 className="text-xs sm:text-sm font-black text-black tracking-tight uppercase px-1">
+					{formattedMonth}
+				</h2>
 				<button
 					onClick={handleNextMonth}
-					className="p-1.5 hover:bg-gray-50 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+					className="p-1 hover:bg-gray-100 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
 					aria-label="Next month"
 				>
-					<ChevronRight size={18} />
+					<ChevronRight size={16} />
 				</button>
 			</div>
 
-			<div className="flex items-center gap-3">
-				{user && (
-					<span className="text-xs font-bold text-gray-700 hidden sm:inline">
-						{user.name || user.username}
-					</span>
-				)}
-				<button
-					onClick={logout}
-					className="p-1.5 hover:bg-rose-50 border border-black text-rose-600 transition-all cursor-pointer flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-					title="Log Out"
-					aria-label="Log Out"
+			<div className="flex items-center gap-2">
+				<Link
+					to="/profile"
+					className="flex items-center gap-1.5 p-1.5 bg-[#fefed4] hover:bg-yellow-200 border border-black text-black transition-all cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+					title="Profile Management"
+					aria-label="Profile Management"
 				>
-					<LogOut size={18} />
-				</button>
+					<User size={15} />
+					{user && (
+						<span className="text-[11px] font-black uppercase max-w-[70px] truncate">
+							{user.name ? user.name.split(' ')[0] : user.username}
+						</span>
+					)}
+				</Link>
 			</div>
 		</header>
 	);

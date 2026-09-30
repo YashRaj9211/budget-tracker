@@ -1,0 +1,43 @@
+meta {
+  name: Send Friend Request
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/friendships/send
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "email": "friend@example.com"
+  }
+}
+
+docs {
+  # Send Friendship Request (`SendFriendshipRequest`)
+  
+  **Handler**: `handlers.SendFriendshipRequest` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Route**: `POST /api/_private/v1/friendships/send` (Private - Bearer Token required)
+  
+  ### Description
+  Sends a friend connection invite to another user by their registered email:
+  - Looks up target user by `email`.
+  - Verifies user is not attempting to friend themselves.
+  - Checks if a friendship or pending request already exists in either direction.
+  - Stores a new `Friendship` with `Status = "PENDING"` (convention: `UserID = Receiver`, `FriendID = Sender`).
+  - Broadcasts a real-time WebSocket notification (`FRIEND_REQUEST_RECEIVED`) to the recipient.
+  
+  ### Body
+  - `email` (string, required): Registered email of the friend.
+}

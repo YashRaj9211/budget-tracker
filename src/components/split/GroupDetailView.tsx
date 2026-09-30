@@ -88,7 +88,7 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 			<div className="grid grid-cols-2 gap-3">
 				<button
 					onClick={() => setAddSplitOpen(true)}
-					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-yellow font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] active:translate-x-[2px] active:translate-y-[2px] transition-all"
+					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-yellow font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 transition-all"
 				>
 					<Plus className="w-4 h-4" />
 					<span>Add Expense</span>
@@ -96,7 +96,7 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 
 				<button
 					onClick={() => setSettleUpOpen(true)}
-					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-green font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] active:translate-x-[2px] active:translate-y-[2px] transition-all"
+					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-green font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 transition-all"
 				>
 					<Handshake className="w-4 h-4" />
 					<span>Settle Up</span>
