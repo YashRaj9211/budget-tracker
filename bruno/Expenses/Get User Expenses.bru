@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/_private/v1/expenses/user/{{userId}}
+  url: {{baseUrl}}/api/_private/v1/expenses
   body: none
   auth: bearer
 }
@@ -18,7 +18,7 @@ docs {
   # Get User Expenses (`GetUserExpenses`)
   
   **Handler**: `handlers.GetUserExpenses` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
-  **Route**: `GET /api/_private/v1/expenses/user/:userId` (Private - Bearer Token required)
+  **Route**: `GET /api/_private/v1/expenses` (Private - Bearer Token required)
   
   ### Description
   Retrieves a chronological list of all expenses where the specified user is either:

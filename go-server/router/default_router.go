@@ -21,8 +21,7 @@ func DefaultRouter(r *gin.RouterGroup) {
 	private.GET("/ws", handlers.WsHandler)
 
 	ExpenseRouter(private)
-	DashboardRoutes(private)
-	UserRouter(private)
+	DashboardRouter(private)
 	GroupRouter(private)
 	FriendshipRouter(private)
 }

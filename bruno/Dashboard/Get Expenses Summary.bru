@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/_private/v1/dashboard/{{userId}}
+  url: {{baseUrl}}/api/_private/v1/dashboard
   body: none
   auth: bearer
 }
@@ -18,7 +18,7 @@ docs {
   # Get Expenses Summary (`GetExpensesSummary`)
   
   **Handler**: `handlers.GetExpensesSummary` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
-  **Route**: `GET /api/_private/v1/dashboard/:userId` (Private - Bearer Token required)
+  **Route**: `GET /api/_private/v1/dashboard` (Private - Bearer Token required)
   
   ### Description
   Fetches an overarching financial overview for the user:

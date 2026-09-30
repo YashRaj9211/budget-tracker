@@ -41,3 +41,11 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export const DEFAULT_ACCOUNTS = ['GPay', 'Cash', 'Card'];
+
+// ── Global Window Augmentations ──
+
+declare global {
+	interface Window {
+		hideSplashScreen?: () => void;
+	}
+}

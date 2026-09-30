@@ -1,0 +1,33 @@
+meta {
+  name: Get Analytics
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/dashboard/analytics?months=6
+  body: none
+  auth: bearer
+}
+
+params:query {
+  months: 6
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Analytics (`GetAnalytics`)
+
+  **Route**: `GET /api/_private/v1/dashboard/analytics?months=1..12` (Bearer token required)
+
+  Chart data for the Finance Hub:
+  - `trend`: one row per month (personal, shared, lent, income, spent). Empty months are included.
+  - `categories`: spending by category over the period.
+  - `groups`: your share vs the group total, per group.
+  - `comparison`: this month vs last month.
+
+  "Spent" = things you paid for yourself + your share of split expenses. Settle-ups are not counted.
+}

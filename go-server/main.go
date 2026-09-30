@@ -36,6 +36,7 @@ func init() {
 
 	// Connect Database
 	database.Connect()
+	database.MigrateOnStartIfEnabled()
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -66,6 +67,7 @@ func main() {
 
 		// Re-register routes for local (cleaner way is to extract setupRouter function)
 		database.Connect()
+		database.MigrateOnStartIfEnabled()
 		go func() {
 			for {
 				time.Sleep(time.Duration(50+rand.Intn(11)) * time.Second)

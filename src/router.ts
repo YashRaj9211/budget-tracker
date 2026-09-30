@@ -1,11 +1,9 @@
 import { createBrowserRouter } from "react-router";
 import Home from "./pages/Home";
 import BudgetSettings from "./pages/Budget";
-import Stats from "./pages/Stats";
 import App from "./App";
 import Split from "./pages/Split";
 import Friends from "./pages/Friends";
-import HubDashboard from "./pages/HubDashboard";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -27,7 +25,8 @@ const router = createBrowserRouter([
 					},
 					{
 						path: "/hub",
-						Component: HubDashboard,
+						// Chart pages load on demand so the charting library is not in the first download
+						lazy: async () => ({ Component: (await import("./pages/HubDashboard")).default }),
 					},
 					{
 						path: "/budget",
@@ -35,7 +34,7 @@ const router = createBrowserRouter([
 					},
 					{
 						path: "/stats",
-						Component: Stats,
+						lazy: async () => ({ Component: (await import("./pages/Stats")).default }),
 					},
 					{
 						path: "/split",
@@ -55,4 +54,4 @@ const router = createBrowserRouter([
 	},
 ]);
 
-export default router;
+export default router;

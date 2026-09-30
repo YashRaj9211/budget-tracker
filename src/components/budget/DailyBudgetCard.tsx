@@ -1,25 +1,13 @@
 import { Settings, TrendingDown, TrendingUp, CalendarRange, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router';
-import { useDateRangeTotals, useTodayExpense } from '../../stores/transactionStore';
-import { useBudgetStore } from '../../stores/budgetStore';
-import { getDaysRemaining, getTotalDays, formatDisplayDate, todayStr } from '../../utils/date';
+import { useDailyBudget } from '../../hooks/useDailyBudget';
+import { formatDisplayDate } from '../../utils/date';
 
 function DailyBudgetCard() {
-	const budget = useBudgetStore((s) => s.activeBudget);
-
-	const today = todayStr();
-	const { expense: rangeExpense } = useDateRangeTotals(budget?.startDate, budget?.endDate);
-	const todayExpense = useTodayExpense(today);
-
-	// Calculate yesterday's date string to get expenses strictly before today
-	const todayDate = new Date(today + 'T00:00:00');
-	todayDate.setDate(todayDate.getDate() - 1);
-	const yesterday = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
-
-	const { expense: expenseBeforeToday } = useDateRangeTotals(budget?.startDate, yesterday);
+	const budgetData = useDailyBudget();
 
 	// ── No active budget state ──
-	if (!budget) {
+	if (!budgetData.hasBudget) {
 		return (
 			<div className="border-2 border-dashed border-black/40 bg-white p-5 my-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-center gap-3 text-center">
 				<CalendarRange size={28} className="text-gray-400" />
@@ -40,25 +28,21 @@ function DailyBudgetCard() {
 		);
 	}
 
-	const totalLimit = budget.totalLimit;
-	const totalDays = getTotalDays(budget.startDate, budget.endDate);
-	const daysRemaining = getDaysRemaining(budget.endDate);
-
-	// Rolling daily allowance: spread remaining budget at start of today over remaining days
-	const dailyAllowance = daysRemaining > 0 ? (totalLimit - expenseBeforeToday) / daysRemaining : 0;
-	const progressPercent =
-		totalLimit > 0 ? Math.min(Math.round((rangeExpense / totalLimit) * 100), 100) : 0;
-
-	// Alert color
-	const alertPct = budget.alertThreshold;
-	const isAlert = progressPercent >= alertPct;
-
-	// Today's over/under vs allowance
-	const todayDelta = dailyAllowance - todayExpense;
-	const isOverToday = todayDelta < 0;
-
-	// Is today within the budget range?
-	const isActive = today >= budget.startDate && today <= budget.endDate;
+	const {
+		budget,
+		today,
+		totalLimit,
+		totalDays,
+		daysRemaining,
+		dailyAllowance,
+		progressPercent,
+		isAlert,
+		todayDelta,
+		isOverToday,
+		isActive,
+		rangeExpense,
+		todayExpense,
+	} = budgetData;
 
 	return (
 		<div className="border-2 border-black bg-white p-4 pb-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] my-2">

@@ -7,6 +7,8 @@ import AddGroupModal from '../components/split/AddGroupModal';
 import AddSplitModal from '../components/split/AddSplitModal';
 import SettleUpModal from '../components/split/SettleUpModal';
 
+import { useWebSocket } from '../hooks/useWebSocket';
+
 export default function Split() {
 	const groups = useSplitStore((s) => s.groups);
 	const selectedGroupId = useSplitStore((s) => s.selectedGroupId);
@@ -15,13 +17,30 @@ export default function Split() {
 	const setAddSplitOpen = useSplitStore((s) => s.setAddSplitOpen);
 	const loadData = useSplitStore((s) => s.loadData);
 	const getTotalUserBalance = useSplitStore((s) => s.getTotalUserBalance);
-	const isLoading = useSplitStore((s) => s.isLoading);
+const isLoading = useSplitStore((s) => s.isLoading);
+	const error = useSplitStore((s) => s.error);
+
+	const { onEvent } = useWebSocket();
 
 	useEffect(() => {
 		loadData().then(() => {
-			(window as any).hideSplashScreen?.();
+			window.hideSplashScreen?.();
 		});
 	}, [loadData]);
+
+	// Listen for live split & expense changes across devices
+	useEffect(() => {
+// Several events can arrive at once; wait a moment and reload only once
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const unsubscribe = onEvent('REFETCH_EXPENSES', () => {
+			clearTimeout(timer);
+			timer = setTimeout(() => loadData(), 500);
+		});
+		return () => {
+			clearTimeout(timer);
+			unsubscribe();
+		};
+	}, [onEvent, loadData]);
 
 	const { totalOwedToUser, totalUserOwes, netTotal } = getTotalUserBalance();
 
@@ -76,6 +95,18 @@ export default function Split() {
 					</div>
 				</div>
 			</div>
+
+{error && (
+				<div className="border-2 border-black bg-rose-50 p-3 flex items-center justify-between gap-3">
+					<span className="text-xs font-bold text-rose-800">{error}</span>
+					<button
+						onClick={() => loadData()}
+						className="border-2 border-black bg-white px-3 py-1 text-xs font-bold hover:bg-gray-100"
+					>
+						Retry
+					</button>
+				</div>
+			)}
 
 			{/* Render Group Detail or Group List */}
 			{selectedGroupId ? (

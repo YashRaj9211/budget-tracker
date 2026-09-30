@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/_private/v1/dashboard/graph/{{userId}}?period=MONTH
+  url: {{baseUrl}}/api/_private/v1/dashboard/graph?period=MONTH
   body: none
   auth: bearer
 }
@@ -22,7 +22,7 @@ docs {
   # Get Daily Spend Overview (`GetDailySpendOverview`)
   
   **Handler**: `handlers.GetDailySpendOverview` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
-  **Route**: `GET /api/_private/v1/dashboard/graph/:userId` (Private - Bearer Token required)
+  **Route**: `GET /api/_private/v1/dashboard/graph` (Private - Bearer Token required)
   
   ### Description
   Provides chronological timeseries metrics tailored for financial charts and graph visualization:

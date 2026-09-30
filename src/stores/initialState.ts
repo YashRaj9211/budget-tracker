@@ -1,15 +1,17 @@
+import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
+
 export const transactionsInitialState = {
-    transactions: [],
-    allTransactions: [],
-    selectedYear: new Date().getFullYear(),
-    selectedMonth: new Date().getMonth(),
-    isLoading: false,
-}
+	transactions: [],
+	allTransactions: [],
+	selectedYear: new Date().getFullYear(),
+	selectedMonth: new Date().getMonth(),
+	isLoading: false,
+};
 
 export const budgetsInitialState = {
-    activeBudget: null,
-    allBudgets: [],
-    categories: ['food', 'entertainment', 'travel', 'shopping', 'utilities', 'social life', 'others'],
-    accounts: ['cash', 'bank', 'credit card', 'upi'],
-    isLoading: false,
-}
+	activeBudget: null,
+	allBudgets: [],
+	categories: [...DEFAULT_CATEGORIES],
+	accounts: [...DEFAULT_ACCOUNTS],
+	isLoading: false,
+};

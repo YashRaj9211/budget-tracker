@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useCallback } from 'react';
 import DailyBudgetCard from '../components/budget/DailyBudgetCard';
 import Button from '../components/common/Button';
 import TransactionList from '../components/transaction/TransactionList';
@@ -8,7 +8,9 @@ import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
-import ExcelTools from '../components/common/ExcelTools';
+
+// Charts load after the first screen so Home stays fast
+const HomeSnapshot = lazy(() => import('../components/home/HomeSnapshot'));
 
 function Home() {
 	const selectedYear = useTransactionStore((s) => s.selectedYear);
@@ -30,7 +32,7 @@ function Home() {
 			await loadAllTransactions();
 			await loadActiveBudget(todayStr());
 			// Hide the initial loading splash screen once initial load is complete
-			(window as any).hideSplashScreen?.();
+			window.hideSplashScreen?.();
 		}
 		init();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,17 +73,17 @@ function Home() {
 		<div className="relative space-y-3">
 			<HomePageHeader />
 			<div>
-				<div className="space-y-2 mb-3">
-					<div className="flex items-center justify-between gap-2">
-						<Button text="Daily" type="primary" className="flex-1" />
-						<Button text="Monthly" type="secondary" className="flex-1" />
-						<Button text="Calendar" type="secondary" className="flex-1" />
-					</div>
-					<div>
-						<ExcelTools />
-					</div>
+				<div className="flex items-center justify-between gap-2 mb-3">
+					<Button text="Daily" type="primary" className="flex-1" />
+					<Button text="Monthly" type="secondary" className="flex-1" />
+					<Button text="Calendar" type="secondary" className="flex-1" />
 				</div>
 				<DailyBudgetCard />
+				<div className="mt-3">
+					<Suspense fallback={null}>
+						<HomeSnapshot />
+					</Suspense>
+				</div>
 				<div className="mt-3">
 					{/* List of transactions */}
 					{dayGroups.length > 0 ? (

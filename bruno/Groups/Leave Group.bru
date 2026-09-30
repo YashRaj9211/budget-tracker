@@ -5,14 +5,13 @@ meta {
 }
 
 delete {
-  url: {{baseUrl}}/api/_private/v1/groups/:groupId/leave/:userId
+  url: {{baseUrl}}/api/_private/v1/groups/:groupId/leave
   body: none
   auth: bearer
 }
 
 params:path {
   groupId: group_id_here
-  userId: {{userId}}
 }
 
 auth:bearer {
@@ -21,17 +20,14 @@ auth:bearer {
 
 docs {
   # Leave Group (`LeaveGroup`)
-  
-  **Handler**: `handlers.LeaveGroup` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
-  **Route**: `DELETE /api/_private/v1/groups/:groupId/leave/:userId` (Private - Bearer Token required)
-  
-  ### Description
-  Allows a user to voluntarily depart from a group:
-  - **Financial Safety Guard**: Calculates the user's net debt/credit balance strictly within this group (`lentSplits - borrowedSplits`).
-  - **Prevents departure if debts exist**: If `netBalance != 0`, returns HTTP 400 error (`"Cannot leave group with unsettled debts. Net balance within group must be 0."`).
-  - If balance is clear (0), removes the user's membership.
-  
+
+  **Route**: `DELETE /api/_private/v1/groups/:groupId/leave` (Bearer token required)
+
+  ### Rules
+  - 404 if you are not a member.
+  - If you are the last ADMIN, the member who joined earliest becomes ADMIN automatically.
+  - If you are the only member, the group is left empty.
+
   ### Path Parameters
-  - `groupId` (string, path parameter): Group ID.
-  - `userId` (string, path parameter): User ID departing (defaults to `{{userId}}`).
+  - `groupId`: Group ID.
 }

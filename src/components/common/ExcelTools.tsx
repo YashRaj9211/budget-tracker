@@ -1,11 +1,14 @@
 import React, { useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
 import { Download, Upload } from 'lucide-react';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { addTransactions, getAllTransactions } from '../../db';
-import type { Transaction } from '../../types';
+import { exportTransactionsToExcel, parseTransactionsFromExcel } from '../../utils/excel';
 
-export default function ExcelTools() {
+interface ExcelToolsProps {
+	className?: string;
+}
+
+export default function ExcelTools({ className = '' }: ExcelToolsProps) {
 	const [isProcessing, setIsProcessing] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const reloadAll = useTransactionStore((s) => s.reloadAll);
@@ -14,23 +17,7 @@ export default function ExcelTools() {
 		try {
 			setIsProcessing(true);
 			const allTx = await getAllTransactions();
-			
-			// Map transactions to flat format for Excel
-			const data = allTx.map(t => ({
-				ID: t.id,
-				Date: t.date,
-				Type: t.type,
-				Amount: t.amount,
-				Description: t.description,
-				Category: t.category,
-				Account: t.account,
-			}));
-
-			const worksheet = XLSX.utils.json_to_sheet(data);
-			const workbook = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
-			
-			XLSX.writeFile(workbook, `budget_tracker_transactions_${new Date().toISOString().slice(0, 10)}.xlsx`);
+			exportTransactionsToExcel(allTx);
 		} catch (error) {
 			console.error('Failed to export to Excel', error);
 			alert('Failed to export transactions.');
@@ -50,41 +37,7 @@ export default function ExcelTools() {
 		try {
 			setIsProcessing(true);
 			const data = await file.arrayBuffer();
-			const workbook = XLSX.read(data);
-			
-			const firstSheetName = workbook.SheetNames[0];
-			const worksheet = workbook.Sheets[firstSheetName];
-			
-			// Get JSON from sheet
-			const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
-			
-			const newTransactions: Transaction[] = [];
-			
-			for (const row of rows) {
-				// Validate required fields
-				if (!row.Date || !row.Amount || !row.Type) continue;
-
-				// Parse amount
-				const amount = Number(row.Amount);
-				if (isNaN(amount)) continue;
-
-				// Enforce Type
-				const type = (row.Type === 'income' || row.Type === 'expense') 
-					? row.Type 
-					: 'expense';
-
-				const tx: Transaction = {
-					id: row.ID ? String(row.ID) : crypto.randomUUID(),
-					date: String(row.Date),
-					type,
-					amount,
-					description: String(row.Description || ''),
-					category: String(row.Category || 'Other'),
-					account: String(row.Account || 'Cash'),
-					createdAt: Date.now(),
-				};
-				newTransactions.push(tx);
-			}
+			const newTransactions = parseTransactionsFromExcel(data);
 
 			if (newTransactions.length > 0) {
 				await addTransactions(newTransactions);
@@ -98,7 +51,6 @@ export default function ExcelTools() {
 			alert('Failed to import transactions. Please check the file format.');
 		} finally {
 			setIsProcessing(false);
-			// Reset file input so the same file can be selected again
 			if (fileInputRef.current) {
 				fileInputRef.current.value = '';
 			}
@@ -106,32 +58,34 @@ export default function ExcelTools() {
 	};
 
 	return (
-		<div className="flex gap-2 w-full">
+		<div className={`flex items-center gap-2 shrink-0 ${className}`}>
 			<button
 				onClick={handleExport}
 				disabled={isProcessing}
-				className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border-2 border-black bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
+				className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-100 border border-black text-black text-xs font-bold uppercase tracking-wider shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
+				title="Export transactions to Excel"
 			>
-				<Download size={14} />
-				Export Excel
+				<Download size={13} />
+				<span>{isProcessing ? '...' : 'Export'}</span>
 			</button>
-			
-			<button
-				onClick={handleImportClick}
-				disabled={isProcessing}
-				className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border-2 border-black bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
-			>
-				<Upload size={14} />
-				Import Excel
-			</button>
-			
+
 			<input
 				type="file"
 				ref={fileInputRef}
 				onChange={handleFileChange}
-				accept=".xlsx, .xls, .csv"
+				accept=".xlsx, .xls"
 				className="hidden"
 			/>
+
+			<button
+				onClick={handleImportClick}
+				disabled={isProcessing}
+				className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#fefed4] hover:bg-yellow-200 border border-black text-black text-xs font-bold uppercase tracking-wider shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
+				title="Import transactions from Excel"
+			>
+				<Upload size={13} />
+				<span>Import</span>
+			</button>
 		</div>
 	);
 }

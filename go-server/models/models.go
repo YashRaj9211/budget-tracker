@@ -164,16 +164,17 @@ func (Category) TableName() string {
 
 // Expense model
 type Expense struct {
-	ID          string          `gorm:"primaryKey;type:varchar(50)" json:"id"`
-	Amount      decimal.Decimal `gorm:"type:decimal(12,2);not null" json:"amount"`
-	Currency    string          `gorm:"default:'INR'" json:"currency"`
-	Description string          `gorm:"not null" json:"description"`
-	Note        *string         `json:"note,omitempty"`
-	Type        ExpenseType     `gorm:"type:varchar(20);not null;index" json:"type"`
-	ExpenseDate time.Time       `gorm:"not null;index" json:"expenseDate"`
-	CreatedAt   time.Time       `gorm:"autoCreateTime" json:"createdAt"`
-	UpdatedAt   time.Time       `gorm:"autoUpdateTime" json:"updatedAt"`
-	DeletedAt   *time.Time      `gorm:"index" json:"-"`
+	ID           string          `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	Amount       decimal.Decimal `gorm:"type:decimal(12,2);not null" json:"amount"`
+	Currency     string          `gorm:"default:'INR'" json:"currency"`
+	Description  string          `gorm:"not null" json:"description"`
+	Note         *string         `json:"note,omitempty"`
+	Type         ExpenseType     `gorm:"type:varchar(20);not null;index" json:"type"`
+	IsSettlement bool            `gorm:"not null;default:false" json:"isSettlement"` // true for "settle up" payments
+	ExpenseDate  time.Time       `gorm:"not null;index" json:"expenseDate"`
+	CreatedAt    time.Time       `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt    time.Time       `gorm:"autoUpdateTime" json:"updatedAt"`
+	DeletedAt    *time.Time      `gorm:"index" json:"-"`
 
 	UserID     string  `gorm:"not null;index" json:"userId"`
 	CategoryID *string `gorm:"index" json:"categoryId,omitempty"`

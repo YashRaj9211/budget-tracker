@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"splitwise-go/database"
 	"splitwise-go/models"
@@ -12,11 +13,12 @@ import (
 )
 
 func CreateExpense(c *gin.Context) {
-	userId := c.Param("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
 
 	var input models.Expense
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -25,17 +27,22 @@ func CreateExpense(c *gin.Context) {
 	}
 
 	// In Splitwise, user_id on the Expense represents the PAYER.
-	// If the frontend passed a payer (input.UserID), keep it. 
-	// Otherwise, default to the user making the request.
+	// The payer defaults to the caller; someone else may be the payer only inside a
+	// group where both are members (checked in authorizeExpense).
+	sanitizeExpenseInput(&input)
 	if input.UserID == "" {
 		input.UserID = userId
 	}
 
-	// Prevent double counting: PERSONAL expenses shouldn't have splits.
-	// The dashboard logic independently tallies PERSONAL expenses vs SPLITS.
-	// If we save a split for a PERSONAL expense, it gets counted twice.
-	if input.Type == "PERSONAL" {
-		input.Splits = nil
+	// Validates amounts/splits. PERSONAL and INCOME expenses never keep splits, which
+	// prevents the dashboard counting them twice.
+	if herr := validateExpenseShape(&input); herr != nil {
+		respondError(c, herr)
+		return
+	}
+	if herr := authorizeExpense(database.DB, userId, &input); herr != nil {
+		respondError(c, herr)
+		return
 	}
 
 	// Default date if not provided
@@ -104,14 +111,23 @@ func CreateExpense(c *gin.Context) {
 
 func SettleExpense(c *gin.Context) {
 	splitId := c.Param("splitId")
-	userId := c.Param("userId")
-	if splitId == "" || userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "splitId and userId are required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userId := userIdVal.(string)
+	if splitId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "splitId is required"})
 		return
 	}
 
 	var expenseSplit models.ExpenseSplit
 	if err := database.DB.Where("id = ? AND user_id = ?", splitId, userId).First(&expenseSplit).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Split not found (you can only settle your own share)"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to settle expense"})
 		return
 	}
@@ -157,11 +173,12 @@ func SettleExpense(c *gin.Context) {
 }
 
 func GetUserExpenses(c *gin.Context) {
-	userId := c.Param("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
 
 	var expenses []models.Expense
 
@@ -195,10 +212,27 @@ func DeleteExpense(c *gin.Context) {
 		return
 	}
 
+	currentUserIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	currentUserId := currentUserIdVal.(string)
+
 	// Load before deleting so we can notify relevant users
 	var expense models.Expense
 	if err := database.DB.Preload("Splits").Where("id = ?", expenseId).First(&expense).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
+		return
+	}
+
+	allowed, err := canModifyExpense(database.DB, currentUserId, &expense)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to delete this expense"})
 		return
 	}
 
@@ -245,6 +279,13 @@ func UpdateExpense(c *gin.Context) {
 		return
 	}
 
+	currentUserIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	currentUserId := currentUserIdVal.(string)
+
 	var input models.Expense
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -257,6 +298,31 @@ func UpdateExpense(c *gin.Context) {
 		return
 	}
 
+	allowed, permErr := canModifyExpense(database.DB, currentUserId, &existingExpense)
+	if permErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": permErr.Error()})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to update this expense"})
+		return
+	}
+
+	// Validate the NEW state the same way as creation. The payer stays the same unless
+	// a new (authorized) payer is provided.
+	sanitizeExpenseInput(&input)
+	if input.UserID == "" {
+		input.UserID = existingExpense.UserID
+	}
+	if herr := validateExpenseShape(&input); herr != nil {
+		respondError(c, herr)
+		return
+	}
+	if herr := authorizeExpense(database.DB, currentUserId, &input); herr != nil {
+		respondError(c, herr)
+		return
+	}
+
 	// Transaction for atomicity
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		// Update primary fields
@@ -264,14 +330,12 @@ func UpdateExpense(c *gin.Context) {
 		existingExpense.Description = input.Description
 		existingExpense.Note = input.Note
 		existingExpense.Type = input.Type
-		existingExpense.ExpenseDate = input.ExpenseDate
+		if !input.ExpenseDate.IsZero() {
+			existingExpense.ExpenseDate = input.ExpenseDate
+		}
 		existingExpense.CategoryID = input.CategoryID
 		existingExpense.GroupID = input.GroupID
-		
-		// Optional: Maintain existing payer (UserID) unless provided
-		if input.UserID != "" {
-			existingExpense.UserID = input.UserID
-		}
+		existingExpense.UserID = input.UserID // already authorized above
 
 		// Delete ALL existing splits for this expense
 		if err := tx.Where("expense_id = ?", expenseId).Delete(&models.ExpenseSplit{}).Error; err != nil {

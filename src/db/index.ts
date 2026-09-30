@@ -82,6 +82,11 @@ export async function getTransactionsByDateRange(startDate: string, endDate: str
 	return all.filter((t) => t.date >= startDate && t.date <= endDate);
 }
 
+export async function getTransaction(id: string): Promise<Transaction | undefined> {
+	const db = await getDb();
+	return db.get(TRANSACTIONS, id);
+}
+
 export async function addTransaction(transaction: Transaction): Promise<void> {
 	const db = await getDb();
 	await db.put(TRANSACTIONS, transaction);

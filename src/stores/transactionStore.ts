@@ -73,9 +73,14 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 		await get().loadAllTransactions();
 	},
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	async editTransaction(_id, _data) {
-		// TODO: implement later
+	async editTransaction(id, data) {
+		const existing = await db.getTransaction(id);
+		if (!existing) throw new Error('Transaction not found');
+		// id and createdAt never change; everything else can be edited
+		const updated: Transaction = { ...existing, ...data, id: existing.id, createdAt: existing.createdAt };
+		if (!(updated.amount > 0) || !updated.date) throw new Error('Amount and date are required');
+		await db.addTransaction(updated); // IndexedDB "put" replaces the old record
+		await get().reloadAll();
 	},
 
 	async reloadAll() {

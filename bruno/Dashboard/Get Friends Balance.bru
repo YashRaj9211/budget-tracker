@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/_private/v1/dashboard/{{userId}}/friends
+  url: {{baseUrl}}/api/_private/v1/dashboard/friends
   body: none
   auth: bearer
 }
@@ -18,7 +18,7 @@ docs {
   # Get Friends Balance (`GetFriendsBalance`)
   
   **Handler**: `handlers.GetFriendsBalance` in [dashboard_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/dashboard_handler.go)
-  **Route**: `GET /api/_private/v1/dashboard/:userId/friends` (Private - Bearer Token required)
+  **Route**: `GET /api/_private/v1/dashboard/friends` (Private - Bearer Token required)
   
   ### Description
   Calculates the exact net financial balance between the authenticated user and each friend:

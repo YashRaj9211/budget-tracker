@@ -41,6 +41,10 @@ export interface CreateExpensePayload {
 	expenseDate?: string;
 	categoryId?: string | null;
 	groupId?: string | null;
+	/** Payer. Leave empty for "me". Inside a group it may be another member. */
+	userId?: string;
+	/** True for a "settle up" payment between two members. */
+	isSettlement?: boolean;
 	splits?: ExpenseSplitInput[];
 }
 
@@ -55,6 +59,7 @@ export interface Expense {
 	userId: string;
 	categoryId?: string;
 	groupId?: string;
+	isSettlement?: boolean;
 	createdAt: string;
 	updatedAt: string;
 	splits?: ExpenseSplit[];
@@ -161,6 +166,39 @@ export interface CreateGroupPayload {
 	description: string;
 	simplifyDebts: boolean;
 	imageUrl?: string;
+	memberIds?: string[];
+}
+
+export interface AnalyticsMonth {
+	month: string; // '2026-09'
+	label: string; // 'Sep'
+	personal: number;
+	shared: number;
+	lent: number;
+	income: number;
+	spent: number;
+}
+
+export interface AnalyticsCategory {
+	categoryId: string;
+	name: string;
+	color: string;
+	amount: number;
+}
+
+export interface AnalyticsGroup {
+	groupId: string;
+	name: string;
+	amount: number; // my share
+	total: number; // whole group
+}
+
+export interface AnalyticsResponse {
+	months: number;
+	trend: AnalyticsMonth[];
+	categories: AnalyticsCategory[];
+	groups: AnalyticsGroup[];
+	comparison: { thisMonth: number; lastMonth: number; changePercent: number };
 }
 
 // -------------------------------------------------------------
@@ -168,23 +206,30 @@ export interface CreateGroupPayload {
 // -------------------------------------------------------------
 
 export const dashboardApi = {
-	getSummary: async (userId: string): Promise<ExpensesSummary> => {
-		const res = await apiClient.get<ExpensesSummary>(`/api/_private/v1/dashboard/${userId}`);
+	getSummary: async (): Promise<ExpensesSummary> => {
+		const res = await apiClient.get<ExpensesSummary>('/api/_private/v1/dashboard');
 		return res.data;
 	},
 
-	getDailyBreakdown: async (userId: string): Promise<DailyExpenseBreakdownResponse> => {
-		const res = await apiClient.get<DailyExpenseBreakdownResponse>(`/api/_private/v1/dashboard/${userId}/expenses`);
+	getDailyBreakdown: async (): Promise<DailyExpenseBreakdownResponse> => {
+		const res = await apiClient.get<DailyExpenseBreakdownResponse>('/api/_private/v1/dashboard/expenses');
 		return res.data;
 	},
 
-	getFriendsBalance: async (userId: string): Promise<FriendsBalanceResponse> => {
-		const res = await apiClient.get<FriendsBalanceResponse>(`/api/_private/v1/dashboard/${userId}/friends`);
+	getFriendsBalance: async (): Promise<FriendsBalanceResponse> => {
+		const res = await apiClient.get<FriendsBalanceResponse>('/api/_private/v1/dashboard/friends');
 		return res.data;
 	},
 
-	getSpendOverviewGraph: async (userId: string, period: 'WEEK' | 'MONTH' = 'MONTH'): Promise<DailySpendStat[]> => {
-		const res = await apiClient.get<DailySpendStat[]>(`/api/_private/v1/dashboard/graph/${userId}`, {
+	getAnalytics: async (months = 6): Promise<AnalyticsResponse> => {
+		const res = await apiClient.get<AnalyticsResponse>('/api/_private/v1/dashboard/analytics', {
+			params: { months },
+		});
+		return res.data;
+	},
+
+	getSpendOverviewGraph: async (period: 'WEEK' | 'MONTH' = 'MONTH'): Promise<DailySpendStat[]> => {
+		const res = await apiClient.get<DailySpendStat[]>('/api/_private/v1/dashboard/graph', {
 			params: { period },
 		});
 		return res.data;
@@ -196,13 +241,13 @@ export const dashboardApi = {
 // -------------------------------------------------------------
 
 export const expenseApi = {
-	create: async (userId: string, payload: CreateExpensePayload): Promise<Expense> => {
-		const res = await apiClient.post<Expense>(`/api/_private/v1/expenses/user/${userId}`, payload);
+	create: async (payload: CreateExpensePayload): Promise<Expense> => {
+		const res = await apiClient.post<Expense>('/api/_private/v1/expenses', payload);
 		return res.data;
 	},
 
-	getUserExpenses: async (userId: string): Promise<Expense[]> => {
-		const res = await apiClient.get<Expense[]>(`/api/_private/v1/expenses/user/${userId}`);
+	getUserExpenses: async (): Promise<Expense[]> => {
+		const res = await apiClient.get<Expense[]>('/api/_private/v1/expenses');
 		return res.data;
 	},
 
@@ -211,13 +256,31 @@ export const expenseApi = {
 		return res.data;
 	},
 
-	settleSplit: async (splitId: string, userId: string): Promise<{ message: string; split: ExpenseSplit }> => {
-		const res = await apiClient.put(`/api/_private/v1/expenses/settle/${splitId}/${userId}`);
+	settleSplit: async (splitId: string): Promise<{ message: string; split: ExpenseSplit }> => {
+		const res = await apiClient.put(`/api/_private/v1/expenses/settle/${splitId}`);
 		return res.data;
 	},
 
 	delete: async (expenseId: string): Promise<{ message: string }> => {
 		const res = await apiClient.delete(`/api/_private/v1/expenses/${expenseId}`);
+		return res.data;
+	},
+};
+
+// -------------------------------------------------------------
+// CATEGORIES APIS
+// -------------------------------------------------------------
+
+export interface ApiCategory {
+	id: string;
+	name: string;
+	icon?: string;
+	color?: string;
+}
+
+export const categoryApi = {
+	list: async (): Promise<ApiCategory[]> => {
+		const res = await apiClient.get<ApiCategory[]>('/api/_private/v1/categories');
 		return res.data;
 	},
 };
@@ -258,13 +321,19 @@ export const friendshipApi = {
 // -------------------------------------------------------------
 
 export const groupApi = {
-	create: async (userId: string, payload: CreateGroupPayload): Promise<Group> => {
-		const res = await apiClient.post<Group>(`/api/_private/v1/groups/user/${userId}`, payload);
+	/** One call that returns every group (with members) and all their expenses. */
+	getOverview: async (): Promise<{ groups: Group[]; expenses: Expense[] }> => {
+		const res = await apiClient.get<{ groups: Group[]; expenses: Expense[] }>('/api/_private/v1/split/overview');
 		return res.data;
 	},
 
-	getUserGroups: async (userId: string): Promise<{ groups: Group[] }> => {
-		const res = await apiClient.get<{ groups: Group[] }>(`/api/_private/v1/groups/user/${userId}`);
+	create: async (payload: CreateGroupPayload): Promise<Group> => {
+		const res = await apiClient.post<Group>('/api/_private/v1/groups', payload);
+		return res.data;
+	},
+
+	getUserGroups: async (): Promise<{ groups: Group[] }> => {
+		const res = await apiClient.get<{ groups: Group[] }>('/api/_private/v1/groups');
 		return res.data;
 	},
 
@@ -293,8 +362,13 @@ export const groupApi = {
 		return res.data;
 	},
 
-	leave: async (groupId: string, userId: string): Promise<{ message: string }> => {
-		const res = await apiClient.delete(`/api/_private/v1/groups/${groupId}/leave/${userId}`);
+	leave: async (groupId: string): Promise<{ message: string }> => {
+		const res = await apiClient.delete(`/api/_private/v1/groups/${groupId}/leave`);
+		return res.data;
+	},
+
+	deleteGroup: async (groupId: string): Promise<{ message: string }> => {
+		const res = await apiClient.delete(`/api/_private/v1/groups/${groupId}`);
 		return res.data;
 	},
 };

@@ -1,25 +1,40 @@
 import { API_BASE_URL } from './client';
 
-export type WebSocketEventType =
+export type KnownWebSocketEventType =
 	| 'REFETCH_EXPENSES'
 	| 'FRIEND_REQUEST_RECEIVED'
 	| 'FRIEND_REQUEST_ACCEPTED'
 	| 'FRIEND_REQUEST_REJECTED'
-	| string;
+	| 'WS_CONNECTED'
+	| 'WS_DISCONNECTED'
+	| 'RAW_MESSAGE';
 
-export interface WebSocketMessage {
-	event: WebSocketEventType;
-	data?: any;
+export type WebSocketEventType = KnownWebSocketEventType | (string & {});
+
+export interface WebSocketEventMap {
+	REFETCH_EXPENSES: undefined;
+	FRIEND_REQUEST_RECEIVED: undefined;
+	FRIEND_REQUEST_ACCEPTED: undefined;
+	FRIEND_REQUEST_REJECTED: undefined;
+	WS_CONNECTED: undefined;
+	WS_DISCONNECTED: undefined;
+	RAW_MESSAGE: string;
+	[key: string]: unknown;
 }
 
-export type WebSocketListener = (message: WebSocketMessage) => void;
+export interface WebSocketMessage<T = unknown> {
+	event: WebSocketEventType;
+	data?: T;
+}
+
+export type WebSocketListener<T = unknown> = (message: WebSocketMessage<T>) => void;
 
 class WebSocketClient {
 	private ws: WebSocket | null = null;
-	private listeners: Set<WebSocketListener> = new Set();
+	private listeners: Set<WebSocketListener<unknown>> = new Set();
 	private reconnectAttempts = 0;
 	private maxReconnectAttempts = 10;
-	private reconnectTimeout: any = null;
+	private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 	private isIntentionallyClosed = false;
 
 	public connect(token?: string) {
@@ -49,7 +64,7 @@ class WebSocketClient {
 				this.notifyListeners({ event: 'WS_CONNECTED' });
 			};
 
-			this.ws.onmessage = (event) => {
+			this.ws.onmessage = (event: MessageEvent<string>) => {
 				try {
 					const data = JSON.parse(event.data);
 					this.notifyListeners(data);
@@ -91,14 +106,22 @@ class WebSocketClient {
 		}
 	}
 
-	public subscribe(listener: WebSocketListener): () => void {
-		this.listeners.add(listener);
+	public subscribe<T = unknown>(listener: WebSocketListener<T>): () => void {
+		this.listeners.add(listener as WebSocketListener<unknown>);
 		return () => {
-			this.listeners.delete(listener);
+			this.listeners.delete(listener as WebSocketListener<unknown>);
 		};
 	}
 
-	public on(event: WebSocketEventType, callback: (data?: any) => void): () => void {
+	public on<K extends keyof WebSocketEventMap>(
+		event: K,
+		callback: (data?: WebSocketEventMap[K]) => void
+	): () => void;
+	public on<T = unknown>(
+		event: string,
+		callback: (data?: T) => void
+	): () => void;
+	public on(event: string, callback: (data?: unknown) => void): () => void {
 		const listener: WebSocketListener = (msg) => {
 			if (msg.event === event) {
 				callback(msg.data);

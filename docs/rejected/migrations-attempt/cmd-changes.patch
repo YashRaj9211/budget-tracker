@@ -1,0 +1,200 @@
+diff --git a/go-server/cmd/fix_schema/main.go b/go-server/cmd/fix_schema/main.go
+index 4131996..92bba3b 100644
+--- a/go-server/cmd/fix_schema/main.go
++++ b/go-server/cmd/fix_schema/main.go
+@@ -3,36 +3,29 @@ package main
+ import (
+ 	"log"
+ 	"splitwise-go/database"
++	"splitwise-go/migrations"
+ 
+ 	"github.com/joho/godotenv"
+ )
+ 
++// Deprecated: schema alterations should be added as versioned SQL migrations
++// under go-server/migrations/*.up.sql and executed via go run ./cmd/migrate.
+ func main() {
++	log.Println("cmd/fix_schema is deprecated. Running standard versioned migrations via database.MigrationManager...")
++
+ 	if err := godotenv.Load(); err != nil {
+ 		log.Println("Warning: No .env file found")
+ 	}
+ 	database.Connect()
+ 
+-	// Alter tables to increase ID column length
+-	queries := []string{
+-		"ALTER TABLE users ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE groups ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE friendships ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE group_members ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE categories ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE expenses ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE expense_splits ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE payments ALTER COLUMN id TYPE VARCHAR(50);",
+-		"ALTER TABLE budgets ALTER COLUMN id TYPE VARCHAR(50);",
++	sqlDB, err := database.DB.DB()
++	if err != nil {
++		log.Fatalf("Failed to retrieve underlying sql.DB: %v", err)
+ 	}
+ 
+-	for _, query := range queries {
+-		log.Printf("Executing: %s", query)
+-		if err := database.DB.Exec(query).Error; err != nil {
+-			// Don't panic, just log (table might not exist yet)
+-			log.Printf("Error executing query: %v", err)
+-		} else {
+-			log.Println("Success")
+-		}
++	manager := database.NewMigrationManager(sqlDB, migrations.SQLFS)
++	if err := manager.RunUpMigrations(); err != nil {
++		log.Fatalf("Migration failed: %v", err)
+ 	}
++	log.Println("Schema verified and migrations applied.")
+ }
+diff --git a/go-server/cmd/migrate/main.go b/go-server/cmd/migrate/main.go
+index d468a91..748a02e 100644
+--- a/go-server/cmd/migrate/main.go
++++ b/go-server/cmd/migrate/main.go
+@@ -1,44 +1,46 @@
+ package main
+ 
+ import (
++	"flag"
+ 	"fmt"
+ 	"log"
+ 
+ 	"splitwise-go/database"
+-	"splitwise-go/models"
++	"splitwise-go/migrations"
+ 
+ 	"github.com/joho/godotenv"
+ )
+ 
+ func main() {
++	direction := flag.String("direction", "up", "Migration direction: up or down")
++	flag.Parse()
++
+ 	// Load .env
+ 	if err := godotenv.Load(); err != nil {
+ 		log.Println("Warning: No .env file found")
+ 	}
+ 
+ 	database.Connect()
+-
+-	fmt.Println("Migrating tables...")
+-
+-	tables := []any{
+-		&models.User{},
+-		&models.Group{},
+-		&models.Category{},
+-		&models.Friendship{},
+-		&models.GroupMember{},
+-		&models.Budget{},
+-		&models.Expense{},
+-		&models.ExpenseSplit{},
+-		&models.Payment{},
++	sqlDB, err := database.DB.DB()
++	if err != nil {
++		log.Fatalf("Failed to retrieve underlying sql.DB: %v", err)
+ 	}
+ 
+-	for _, table := range tables {
+-		if err := database.DB.Migrator().AutoMigrate(table); err != nil {
+-			log.Printf("Failed to migrate table for %T: %v\n", table, err)
+-		} else {
+-			fmt.Printf("Migrated table for %T\n", table)
++	manager := database.NewMigrationManager(sqlDB, migrations.SQLFS)
++
++	if *direction == "down" {
++		fmt.Println("Rolling back latest migration...")
++		if err := manager.RunDownMigration(); err != nil {
++			log.Fatalf("Rollback failed: %v", err)
+ 		}
++		fmt.Println("Rollback completed successfully.")
++		return
++	}
++
++	fmt.Println("Applying versioned migrations (up)...")
++	if err := manager.RunUpMigrations(); err != nil {
++		log.Fatalf("Migration failed: %v", err)
+ 	}
+ 
+-	fmt.Println("Database migration completed successfully.")
++	fmt.Println("Versioned migrations applied successfully.")
+ }
+diff --git a/go-server/cmd/reset_db/main.go b/go-server/cmd/reset_db/main.go
+index 89888df..1e84253 100644
+--- a/go-server/cmd/reset_db/main.go
++++ b/go-server/cmd/reset_db/main.go
+@@ -5,58 +5,33 @@ import (
+ 	"log"
+ 
+ 	"splitwise-go/database"
+-	"splitwise-go/models"
++	"splitwise-go/migrations"
+ 
+ 	"github.com/joho/godotenv"
+ )
+ 
+ func main() {
+-	// Load .env
+ 	if err := godotenv.Load(); err != nil {
+ 		log.Println("Warning: No .env file found")
+ 	}
+ 
+ 	database.Connect()
+-
+-	// Drop tables in reverse order of dependencies to avoid FK errors
+-	fmt.Println("Dropping tables...")
+-
+-	// We use the models to drop tables
+-	tables := []interface{}{
+-		&models.Payment{},
+-		&models.ExpenseSplit{},
+-		&models.Expense{},
+-		&models.GroupMember{},
+-		&models.Budget{},
+-		&models.Friendship{},
+-		&models.Category{},
+-		&models.Group{},
+-		&models.User{},
++	sqlDB, err := database.DB.DB()
++	if err != nil {
++		log.Fatalf("Failed to retrieve underlying sql.DB: %v", err)
+ 	}
+ 
+-	for _, table := range tables {
+-		if err := database.DB.Migrator().DropTable(table); err != nil {
+-			log.Printf("Failed to drop table for %T: %v\n", table, err)
+-		} else {
+-			fmt.Printf("Dropped table for %T\n", table)
+-		}
++	manager := database.NewMigrationManager(sqlDB, migrations.SQLFS)
++
++	fmt.Println("Dropping schema via versioned rollback...")
++	if err := manager.RunDownMigration(); err != nil {
++		log.Printf("Notice during rollback: %v", err)
+ 	}
+ 
+-	fmt.Println("Recreating tables...")
+-	// AutoMigrate will create tables, missing foreign keys, constraints, columns and indexes
+-	if err := database.DB.AutoMigrate(
+-		&models.User{},
+-		&models.Group{},
+-		&models.Category{},
+-		&models.Friendship{},
+-		&models.GroupMember{},
+-		&models.Budget{},
+-		&models.Expense{},
+-		&models.ExpenseSplit{},
+-		&models.Payment{},
+-	); err != nil {
+-		log.Fatalf("Failed to migrate tables: %v", err)
++	fmt.Println("Re-running versioned up migrations...")
++	if err := manager.RunUpMigrations(); err != nil {
++		log.Fatalf("Failed to apply versioned migrations: %v", err)
+ 	}
+ 
+-	fmt.Println("Database reset (dropped & migrated) successfully.")
++	fmt.Println("Database reset and re-migrated cleanly with versioned SQL.")
+ }

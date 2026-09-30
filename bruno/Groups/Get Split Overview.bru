@@ -1,0 +1,25 @@
+meta {
+  name: Get Split Overview
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/split/overview
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Split Overview (`GetSplitOverview`)
+
+  **Route**: `GET /api/_private/v1/split/overview` (Bearer token required)
+
+  Returns `{ groups, expenses }` in one call: every group you belong to (with members)
+  and all expenses of those groups, newest first. The Split screen uses this instead of
+  one request per group.
+}
