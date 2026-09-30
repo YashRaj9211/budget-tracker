@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
 	ArrowLeft,
-	User as UserIcon,
 	Mail,
 	Phone,
 	Sliders,
