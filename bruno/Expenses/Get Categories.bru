@@ -1,0 +1,21 @@
+meta {
+  name: Get Categories
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/categories
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Categories (`GetCategories`)
+
+  `GET /api/_private/v1/categories` - all categories, sorted by name. Use an `id` as `categoryId` when creating an expense.
+}

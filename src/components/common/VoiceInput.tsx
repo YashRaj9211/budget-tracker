@@ -1,15 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
-import { parseVoiceCommand } from '../../utils/gemini';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 import type { Transaction } from '../../types';
-
-// Extend Window to support SpeechRecognition
-declare global {
-	interface Window {
-		SpeechRecognition: any;
-		webkitSpeechRecognition: any;
-	}
-}
 
 interface VoiceInputProps {
 	onParsed: (transaction: Partial<Transaction>) => void;
@@ -17,80 +9,16 @@ interface VoiceInputProps {
 }
 
 const VoiceInput: React.FC<VoiceInputProps> = ({ onParsed, className = '' }) => {
-	const [isListening, setIsListening] = useState(false);
-	const [isProcessing, setIsProcessing] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const isSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-
-	useEffect(() => {
-		if (error) {
-			const timer = setTimeout(() => setError(null), 5000);
-			return () => clearTimeout(timer);
-		}
-	}, [error]);
-
-	const handleListen = () => {
-		if (!isSupported) {
-			setError('Voice recognition is not supported in this browser.');
-			return;
-		}
-
-		const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-		if (!apiKey) {
-			setError('Please set VITE_GEMINI_API_KEY in your .env file.');
-			return;
-		}
-
-		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-		const recognition = new SpeechRecognition();
-
-		recognition.lang = 'en-US';
-		recognition.interimResults = false;
-		recognition.maxAlternatives = 1;
-
-		recognition.onstart = () => {
-			setIsListening(true);
-			setError(null);
-		};
-
-		recognition.onresult = async (event: any) => {
-			const transcript = event.results[0][0].transcript;
-			setIsListening(false);
-			setIsProcessing(true);
-
-			try {
-				const parsed = await parseVoiceCommand(transcript, apiKey);
-				onParsed(parsed);
-			} catch (err) {
-				console.error(err);
-				setError('Failed to process voice command.');
-			} finally {
-				setIsProcessing(false);
-			}
-		};
-
-		recognition.onerror = (event: any) => {
-			console.error('Speech recognition error', event.error);
-			setError('Microphone error: ' + event.error);
-			setIsListening(false);
-		};
-
-		recognition.onend = () => {
-			setIsListening(false);
-		};
-
-		recognition.start();
-	};
+	const { isSupported, isListening, isProcessing, error, startListening } = useVoiceInput(onParsed);
 
 	if (!isSupported) {
-		return null; // Don't render anything if not supported
+		return null;
 	}
 
 	return (
 		<div className={`flex flex-col items-center gap-2 ${className}`}>
 			<button
-				onClick={isListening ? () => {} : handleListen}
+				onClick={isListening ? () => {} : startListening}
 				disabled={isProcessing}
 				className={`relative flex items-center justify-center p-4 rounded-full transition-all duration-300 shadow-lg
 					${
@@ -116,7 +44,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onParsed, className = '' }) => 
 					</span>
 				)}
 			</button>
-			
+
 			{error && (
 				<div className="text-red-500 text-sm mt-2 text-center bg-red-100 dark:bg-red-900/20 px-3 py-1 rounded-md">
 					{error}

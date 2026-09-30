@@ -5,14 +5,13 @@ meta {
 }
 
 put {
-  url: {{baseUrl}}/api/_private/v1/expenses/settle/:splitId/:userId
+  url: {{baseUrl}}/api/_private/v1/expenses/settle/:splitId
   body: none
   auth: bearer
 }
 
 params:path {
   splitId: split_id_here
-  userId: {{userId}}
 }
 
 auth:bearer {
@@ -23,7 +22,7 @@ docs {
   # Settle Expense Split (`SettleExpense`)
   
   **Handler**: `handlers.SettleExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
-  **Route**: `PUT /api/_private/v1/expenses/settle/:splitId/:userId` (Private - Bearer Token required)
+  **Route**: `PUT /api/_private/v1/expenses/settle/:splitId` (Private - Bearer Token required)
   
   ### Description
   Marks a specific user's share in an expense as settled/paid (`is_paid = true`):

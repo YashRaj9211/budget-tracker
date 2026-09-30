@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -13,6 +14,12 @@ import (
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("x-token")
+		if token == "" {
+			// Also accept the standard "Authorization: Bearer <token>" header (Bruno, Swagger, curl).
+			if h := c.GetHeader("Authorization"); strings.HasPrefix(h, "Bearer ") {
+				token = strings.TrimSpace(strings.TrimPrefix(h, "Bearer "))
+			}
+		}
 		if token == "" {
 			token = c.Query("token")
 		}
@@ -42,7 +49,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if !verified.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			c.Abort()	
+			c.Abort()
 			return
 		}
 

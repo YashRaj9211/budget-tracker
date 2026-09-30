@@ -1,44 +1,48 @@
+// Command migrate applies or rolls back the versioned SQL migrations.
+//
+//	go run ./cmd/migrate                      # apply all pending migrations
+//	go run ./cmd/migrate -direction down      # roll back the latest migration
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
 
 	"splitwise-go/database"
-	"splitwise-go/models"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load .env
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: No .env file found")
-	}
+	direction := flag.String("direction", "up", "up or down (down rolls back one migration)")
+	flag.Parse()
 
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
 	database.Connect()
 
-	fmt.Println("Migrating tables...")
-
-	tables := []any{
-		&models.User{},
-		&models.Group{},
-		&models.Category{},
-		&models.Friendship{},
-		&models.GroupMember{},
-		&models.Budget{},
-		&models.Expense{},
-		&models.ExpenseSplit{},
-		&models.Payment{},
+	sqlDB, err := database.DB.DB()
+	if err != nil {
+		log.Fatalf("Failed to get sql.DB: %v", err)
 	}
+	manager := database.DefaultMigrationManager(sqlDB)
 
-	for _, table := range tables {
-		if err := database.DB.Migrator().AutoMigrate(table); err != nil {
-			log.Printf("Failed to migrate table for %T: %v\n", table, err)
-		} else {
-			fmt.Printf("Migrated table for %T\n", table)
+	switch *direction {
+	case "up":
+		if err := manager.Up(); err != nil {
+			log.Fatalf("Migration failed: %v", err)
 		}
+		log.Println("Migrations are up to date.")
+	case "down":
+		rolledBack, err := manager.Down()
+		if err != nil {
+			log.Fatalf("Rollback failed: %v", err)
+		}
+		if !rolledBack {
+			log.Println("Nothing to roll back.")
+		}
+	default:
+		log.Fatalf("Unknown -direction %q (use up or down)", *direction)
 	}
-
-	fmt.Println("Database migration completed successfully.")
 }

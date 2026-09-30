@@ -43,3 +43,6 @@ go-server/tmp/
 .env
 .env*.local
 .env.local
+
+# Analysis and build cache
+.fallow

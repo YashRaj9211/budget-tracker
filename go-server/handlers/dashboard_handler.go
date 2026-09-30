@@ -13,11 +13,12 @@ import (
 
 func GetExpensesSummary(c *gin.Context) {
 	fmt.Println("request context", c.Request.Context())
-	userId := c.Param("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
 
 	// spent on me
 	personalExpenses := []models.Expense{}
@@ -104,12 +105,13 @@ type DailySpendStat struct {
 }
 
 func GetDailySpendOverview(c *gin.Context) {
-	userId := c.Param("userId")
-	period := c.DefaultQuery("period", "MONTH") // WEEK or MONTH
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
+	period := c.DefaultQuery("period", "MONTH") // WEEK or MONTH
 
 	// Determine date range
 	now := time.Now()
@@ -224,11 +226,12 @@ type ExpenseBreakdownItem struct {
 }
 
 func GetDailyExpenseBreakdown(c *gin.Context) {
-	userId := c.Param("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
 
 	var personalExpenses []models.Expense
 	if err := database.DB.Where("user_id = ? AND type = 'PERSONAL'", userId).Find(&personalExpenses).Error; err != nil {
@@ -296,11 +299,12 @@ type FriendBalance struct {
 }
 
 func GetFriendsBalance(c *gin.Context) {
-	userId := c.Param("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	userId := userIdVal.(string)
 
 	// Map to keep track of net balance with each friend
 	// Positive balance: friend owes user

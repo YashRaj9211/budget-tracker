@@ -63,13 +63,13 @@
 
 | File | Function | Lines | CRAP |
 |------|----------|-------|------|
-| `src/components/common/Calander.tsx` | `<arrow>` | 31 | 72.0 |
+| `src/components/common/Calendar.tsx` | `<arrow>` | 31 | 72.0 |
 | `src/components/transaction/AddTransactionForm.tsx` | `<arrow>` | 25 | 72.0 |
 | `src/pages/Budget.tsx` | `<arrow>` | 53 | 56.0 |
 | `src/stores/transactionStore.ts` | `useDateRangeTotals` | 16 | 56.0 |
 | `src/pages/Stats.tsx` | `Stats` | 194 | 56.0 |
 | `src/pages/Budget.tsx` | `handleSave` | 29 | 30.0 |
-| `src/components/common/Calander.tsx` | `Calendar` | 106 | 30.0 |
+| `src/components/common/Calendar.tsx` | `Calendar` | 106 | 30.0 |
 
 ---
 

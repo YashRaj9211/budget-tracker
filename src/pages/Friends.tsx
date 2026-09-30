@@ -34,7 +34,7 @@ export default function Friends() {
 
 	useEffect(() => {
 		loadData();
-		(window as any).hideSplashScreen?.();
+		window.hideSplashScreen?.();
 	}, []);
 
 	// Live sync with WebSocket events from backend

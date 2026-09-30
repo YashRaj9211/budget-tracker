@@ -9,9 +9,10 @@ import (
 
 func ExpenseRouter(r *gin.RouterGroup) {
 	// r.Use(middleware.AuthMiddleware())
-	r.POST("/expenses/user/:userId", handlers.CreateExpense)
-	r.GET("/expenses/user/:userId", handlers.GetUserExpenses)
+	r.GET("/categories", handlers.GetCategories)
+	r.POST("/expenses", handlers.CreateExpense)
+	r.GET("/expenses", handlers.GetUserExpenses)
 	r.PUT("/expenses/:expenseId", handlers.UpdateExpense)
-	r.PUT("/expenses/settle/:splitId/:userId", handlers.SettleExpense)
+	r.PUT("/expenses/settle/:splitId", handlers.SettleExpense)
 	r.DELETE("/expenses/:expenseId", handlers.DeleteExpense)
 }

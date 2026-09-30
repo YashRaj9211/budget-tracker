@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/api/_private/v1/groups/user/{{userId}}
+  url: {{baseUrl}}/api/_private/v1/groups
   body: json
   auth: bearer
 }
@@ -31,16 +31,13 @@ docs {
   # Create Group (`CreateGroup`)
   
   **Handler**: `handlers.CreateGroup` in [group_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/group_handler.go)
-  **Route**: `POST /api/_private/v1/groups/user/:userId` (Private - Bearer Token required)
+  **Route**: `POST /api/_private/v1/groups` (Private - Bearer Token required)
   
   ### Description
   Creates a new group for sharing and tracking collective bills:
   - Generates a UUID for the group (prefixed with `group_`).
-  - Automatically enlists the creator (`:userId`) as the initial group member with role `"ADMIN"`.
+  - Automatically enlists the authenticated creator as the initial group member with role `"ADMIN"`.
   - Configures the `simplifyDebts` debt-graph minimization setting.
-  
-  ### URL Parameters
-  - `userId` (string, path parameter): Creator user ID (defaults to `{{userId}}`).
   
   ### Body Fields
   - `name` (string, required): Group display name.

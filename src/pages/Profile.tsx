@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
-	ArrowLeft,
+	User,
 	Mail,
 	Phone,
 	Sliders,
@@ -12,8 +12,10 @@ import {
 	ShieldAlert,
 	Smartphone,
 	CheckCircle,
+	FileSpreadsheet,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import ExcelTools from '../components/common/ExcelTools';
 
 export default function Profile() {
 	const navigate = useNavigate();
@@ -47,7 +49,7 @@ export default function Profile() {
 						className="p-1.5 hover:bg-gray-100 border border-black transition-all cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
 						aria-label="Go back"
 					>
-						<ArrowLeft size={16} />
+						<User size={16} />
 					</button>
 					<div>
 						<h1 className="text-base font-black text-black uppercase tracking-wider leading-none">
@@ -57,12 +59,6 @@ export default function Profile() {
 							Manage your session and settings
 						</p>
 					</div>
-				</div>
-
-				<div className="flex items-center gap-1">
-					<span className="text-[10px] font-black uppercase px-2 py-0.5 bg-[#bde2ff] border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-						Mobile
-					</span>
 				</div>
 			</div>
 
@@ -162,6 +158,24 @@ export default function Profile() {
 						<span className="text-[10px] font-semibold text-gray-500">Trends & breakdown</span>
 					</Link>
 				</div>
+			</div>
+
+			{/* Data Backup & Excel Tools */}
+			<div className="border-2 border-black p-3.5 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-3">
+				<div className="flex items-center gap-2.5 min-w-0">
+					<div className="p-2 bg-emerald-100 border border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] shrink-0 flex items-center justify-center">
+						<FileSpreadsheet size={16} className="text-emerald-950" />
+					</div>
+					<div className="min-w-0">
+						<h3 className="text-xs font-black text-black uppercase tracking-wider leading-none">
+							Excel Backup
+						</h3>
+						<p className="text-[10px] text-gray-500 font-bold mt-1 truncate">
+							Import or export transaction data
+						</p>
+					</div>
+				</div>
+				<ExcelTools />
 			</div>
 
 			{/* App Specifications */}

@@ -1,8 +1,8 @@
 package router
 
 import (
-	"splitwise-go/handlers"
 	"github.com/gin-gonic/gin"
+	"splitwise-go/handlers"
 )
 
 func AuthRouter(r *gin.RouterGroup) {

@@ -10,7 +10,7 @@ func UserRouter(r *gin.RouterGroup) {
 }
 ```
 
-The legacy route `GET /api/_private/v1/users/friends/:userId` was migrated and replaced by auth-based token context endpoints in [friendhip_router.go](file:///d:/Codes/budget-tracker/go-server/router/friendhip_router.go):
+The legacy route `GET /api/_private/v1/users/friends/:userId` was migrated and replaced by auth-based token context endpoints in [friendship_router.go](file:///d:/Codes/budget-tracker/go-server/router/friendship_router.go):
 - **`GET /api/_private/v1/friends`**: Handled by `handlers.GetFriends` (already created in [bruno/Friendships/Get Accepted Friends.bru](file:///d:/Codes/budget-tracker/bruno/Friendships/Get%20Accepted%20Friends.bru)).
 - **`GET /api/_private/v1/friendships`**: Handled by `handlers.GetFriendships` (already created in [bruno/Friendships/Get All Friendships.bru](file:///d:/Codes/budget-tracker/bruno/Friendships/Get%20All%20Friendships.bru)).
 

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
-import { LayoutDashboard, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
-import { dashboardApi, type ExpensesSummary, type FriendsBalanceResponse, type DailySpendStat } from '../api/financeHubApi';
+import { LayoutDashboard, ArrowUpRight, ArrowDownRight, Activity, TrendingUp, PieChart as PieIcon, Users, Scale } from 'lucide-react';
+import { dashboardApi, type AnalyticsResponse, type ExpensesSummary, type FriendsBalanceResponse, type DailySpendStat } from '../api/financeHubApi';
 import { useAuthStore } from '../stores/authStore';
 import { useWebSocket } from '../hooks/useWebSocket';
+import ChartCard from '../components/charts/ChartCard';
+import ChangeBadge from '../components/charts/ChangeBadge';
+import { CategoryDonut } from '../components/charts/StatsCharts';
+import { DailyTimelineChart, FriendBalanceChart, GroupSpendChart, ServerTrendChart } from '../components/charts/HubCharts';
 
 export default function HubDashboard() {
 	const user = useAuthStore((s) => s.user);
 	const [summary, setSummary] = useState<ExpensesSummary | null>(null);
 	const [friendsBalance, setFriendsBalance] = useState<FriendsBalanceResponse | null>(null);
 	const [graphData, setGraphData] = useState<DailySpendStat[]>([]);
+	const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
 	const [period, setPeriod] = useState<'WEEK' | 'MONTH'>('MONTH');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -21,12 +25,14 @@ export default function HubDashboard() {
 		setIsLoading(true);
 		setError(null);
 		try {
-			const [sumRes, friendsRes, graphRes] = await Promise.all([
-				dashboardApi.getSummary(user.id),
-				dashboardApi.getFriendsBalance(user.id),
-				dashboardApi.getSpendOverviewGraph(user.id, period),
+			const [sumRes, friendsRes, graphRes, analyticsRes] = await Promise.all([
+				dashboardApi.getSummary(),
+				dashboardApi.getFriendsBalance(),
+				dashboardApi.getSpendOverviewGraph(period),
+				dashboardApi.getAnalytics(6),
 			]);
 			setSummary(sumRes);
+			setAnalytics(analyticsRes);
 			setFriendsBalance(friendsRes);
 			setGraphData(graphRes || []);
 		} catch (err: any) {
@@ -38,7 +44,7 @@ export default function HubDashboard() {
 
 	useEffect(() => {
 		loadDashboardData();
-		(window as any).hideSplashScreen?.();
+		window.hideSplashScreen?.();
 	}, [user?.id, period]);
 
 	// Auto-refresh when someone adds or settles an expense over WebSocket
@@ -62,15 +68,9 @@ export default function HubDashboard() {
 							Live synced Splitwise & Cashflow
 						</p>
 					</div>
-					<Link
-						to="/profile"
-						className="text-right p-1.5 bg-[#fefed4] hover:bg-yellow-200 border border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 transition-all block cursor-pointer"
-						title="Manage Profile & Session"
-					>
-						<span className="text-[9px] font-black uppercase text-black/60 block leading-tight">Profile</span>
-						<span className="font-black text-xs text-black block truncate max-w-[80px]">@{user?.username || 'user'}</span>
+					<div className="text-right">
 						{isLoading && <span className="text-[9px] font-black uppercase text-amber-600 block animate-pulse">Syncing</span>}
-					</Link>
+					</div>
 				</div>
 			</div>
 
@@ -110,6 +110,47 @@ export default function HubDashboard() {
 						-₹{summary ? Number(summary.totalBorrowed).toLocaleString() : '0'}
 					</span>
 				</div>
+			</div>
+
+			{/* Spending trend: last 6 months */}
+			<ChartCard
+				className="mb-0"
+				title="Monthly spending"
+				subtitle="What you paid for yourself + your share of split bills"
+				icon={<TrendingUp className="w-4 h-4" />}
+				action={analytics ? <ChangeBadge change={analytics.comparison.lastMonth > 0 ? analytics.comparison.changePercent : null} /> : undefined}
+				empty={!analytics || analytics.trend.every((m) => m.spent === 0 && m.lent === 0)}
+				emptyText="No spending in the last 6 months"
+			>
+				{analytics && <ServerTrendChart data={analytics.trend} />}
+			</ChartCard>
+
+			<div className="grid grid-cols-1 gap-4">
+				<ChartCard className="mb-0" title="By category" subtitle="Last 6 months" icon={<PieIcon className="w-4 h-4" />} empty={!analytics || analytics.categories.length === 0} emptyText="No categorised spending yet">
+					{analytics && <CategoryDonut data={analytics.categories.map((c) => ({ name: c.name, amount: c.amount, color: c.color || undefined }))} centerLabel="Spent" />}
+				</ChartCard>
+
+				<ChartCard className="mb-0" title="Groups" subtitle="Your share vs what the group spent" icon={<Users className="w-4 h-4" />} empty={!analytics || analytics.groups.length === 0} emptyText="No group spending yet">
+					{analytics && <GroupSpendChart data={analytics.groups} />}
+				</ChartCard>
+
+				<ChartCard
+					className="mb-0"
+					title="Who owes whom"
+					subtitle="Green: they owe you · Red: you owe them"
+					icon={<Scale className="w-4 h-4" />}
+					empty={!friendsBalance || (friendsBalance.owesYou.length === 0 && friendsBalance.youOwe.length === 0)}
+					emptyText="You are all settled up"
+				>
+					{friendsBalance && (
+						<FriendBalanceChart
+							data={[
+								...friendsBalance.owesYou.map((f) => ({ name: f.name, balance: Number(f.amount) })),
+								...friendsBalance.youOwe.map((f) => ({ name: f.name, balance: -Number(f.amount) })),
+							]}
+						/>
+					)}
+				</ChartCard>
 			</div>
 
 			{/* Friend Debt Balances */}
@@ -199,38 +240,11 @@ export default function HubDashboard() {
 					</div>
 				</div>
 
-				<div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-					{graphData.length === 0 ? (
-						<p className="text-xs text-black/40 font-bold py-4 text-center">No transactions recorded in this period.</p>
-					) : (
-						graphData
-							.filter((stat) => stat.total > 0)
-							.slice(-10)
-							.reverse()
-							.map((stat) => (
-								<div
-									key={stat.date}
-									className="flex items-center justify-between p-2 border-2 border-black text-xs font-bold"
-								>
-									<div className="flex items-center gap-2">
-										<span className="px-1.5 py-0.5 bg-black text-white text-[10px] font-black">
-											{stat.day}
-										</span>
-										<span>{stat.date}</span>
-									</div>
-									<div className="flex items-center gap-4">
-										{stat.personal > 0 && (
-											<span className="text-neutral-700">Pers: ₹{stat.personal}</span>
-										)}
-										{stat.borrowed > 0 && (
-											<span className="text-rose-700">Borr: ₹{stat.borrowed}</span>
-										)}
-										<span className="font-black text-black">Total: ₹{stat.total}</span>
-									</div>
-								</div>
-							))
-					)}
-				</div>
+				{graphData.every((d) => d.total === 0) ? (
+					<p className="text-xs text-black/40 font-bold py-4 text-center">No transactions recorded in this period.</p>
+				) : (
+					<DailyTimelineChart data={graphData} />
+				)}
 			</div>
 		</div>
 	);

@@ -20,7 +20,7 @@ export default function Auth() {
 	const [phone, setPhone] = useState('');
 
 	useEffect(() => {
-		(window as any).hideSplashScreen?.();
+		window.hideSplashScreen?.();
 	}, []);
 
 	if (isAuthenticated) {

@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/api/_private/v1/expenses/user/{{userId}}
+  url: {{baseUrl}}/api/_private/v1/expenses
   body: json
   auth: bearer
 }
@@ -47,33 +47,14 @@ body:json {
 
 docs {
   # Create Expense (`CreateExpense`)
-  
-  **Handler**: `handlers.CreateExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
-  **Route**: `POST /api/_private/v1/expenses/user/:userId` (Private - Bearer Token required)
-  
-  ### Description
-  Creates a new expense entry along with its associated splits in an atomic transaction:
-  - Supports `PERSONAL` and `SPLIT` expense types.
-  - If `type = 'PERSONAL'`, splits are automatically excluded to prevent double counting.
-  - If `type = 'SPLIT'`, creates individual entries in `expense_splits` with allocation details.
-  - Auto-defaults `expenseDate` to current timestamp if omitted.
-  - Broadcasts a real-time WebSocket notification (`{"event":"REFETCH_EXPENSES"}`) to all involved users and friends.
-  
-  ### URL Parameters
-  - `userId` (string, path parameter): User ID of the caller/creator (defaults to `{{userId}}`).
-  
-  ### Body Fields
-  - `amount` (string/decimal, required): Total bill amount.
-  - `currency` (string, optional, default: `"INR"`): Currency denomination.
-  - `description` (string, required): Title or purpose of the expense.
-  - `note` (string, optional): Context notes or receipt comments.
-  - `type` (string, required): `"PERSONAL"`, `"SPLIT"`, or `"INCOME"`.
-  - `expenseDate` (ISO8601 string, optional): Date the expense occurred.
-  - `categoryId` (string, optional): Foreign key to category.
-  - `groupId` (string, optional): Foreign key to group (if group expense).
-  - `splits` (array of objects, optional for SPLIT):
-    - `userId` (string): Split participant ID.
-    - `amount` (string/decimal): Share amount.
-    - `splitType` (string): `"EQUAL"`, `"EXACT"`, `"PERCENTAGE"`, `"SHARES"`.
-    - `isPaid` (boolean): Settlement status.
+
+  **Route**: `POST /api/_private/v1/expenses` (Bearer token required)
+
+  The user comes from your token. Rules the server enforces:
+  - `type` is PERSONAL, SPLIT or INCOME. `amount` must be > 0.
+  - SPLIT needs `splits`; each user once; split amounts must add up to `amount`.
+  - Without `groupId`, you must be the payer and can only split with accepted friends.
+  - With `groupId`, you, the payer (`userId`, optional) and everyone in `splits` must be group members.
+  - `isSettlement: true` marks a settle-up payment.
+  - 400 = bad input, 403 = not allowed.
 }

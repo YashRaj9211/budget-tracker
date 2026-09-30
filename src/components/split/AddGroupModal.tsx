@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X, Plus, Users, Palette } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Users, Palette, Check } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
+import { useAuthStore } from '../../stores/authStore';
+import { friendshipApi, type FriendItem } from '../../api/financeHubApi';
 
 const COLOR_OPTIONS = [
 	{ name: 'Pink', class: 'pastel-pink' },
@@ -14,54 +16,63 @@ export default function AddGroupModal() {
 	const isAddGroupOpen = useSplitStore((s) => s.isAddGroupOpen);
 	const setAddGroupOpen = useSplitStore((s) => s.setAddGroupOpen);
 	const addGroup = useSplitStore((s) => s.addGroup);
-	const setSelectedGroupId = useSplitStore((s) => s.setSelectedGroupId);
+	const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
 	const [name, setName] = useState('');
-	const [membersInput, setMembersInput] = useState('');
-	const [members, setMembers] = useState<string[]>(['You']);
+	const [description, setDescription] = useState('');
 	const [selectedColor, setSelectedColor] = useState('pastel-pink');
+	const [friends, setFriends] = useState<FriendItem[]>([]);
+	const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	// Load friends when modal opens if authenticated
+	useEffect(() => {
+		if (isAddGroupOpen && isAuthenticated) {
+			friendshipApi
+				.getAcceptedFriends()
+				.then((res) => setFriends(res || []))
+				.catch((err) => console.error('Failed to load friends:', err));
+		}
+	}, [isAddGroupOpen, isAuthenticated]);
 
 	if (!isAddGroupOpen) return null;
 
-	const handleAddMember = (e: React.FormEvent) => {
-		e.preventDefault();
-		const trimmed = membersInput.trim();
-		if (trimmed && !members.includes(trimmed)) {
-			setMembers([...members, trimmed]);
-			setMembersInput('');
+	const toggleFriend = (id: string) => {
+		if (selectedFriendIds.includes(id)) {
+			setSelectedFriendIds(selectedFriendIds.filter((fid) => fid !== id));
+		} else {
+			setSelectedFriendIds([...selectedFriendIds, id]);
 		}
-	};
-
-	const handleRemoveMember = (mToRemove: string) => {
-		if (mToRemove === 'You') return; // Cannot remove 'You'
-		setMembers(members.filter((m) => m !== mToRemove));
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!name.trim()) return;
+		if (!name.trim() || isSubmitting) return;
 
-		const newGroup = {
-			id: crypto.randomUUID(),
-			name: name.trim(),
-			members: members.length > 0 ? members : ['You'],
-			avatarColor: selectedColor,
-			createdAt: Date.now(),
-		};
+		setIsSubmitting(true);
+		try {
+			await addGroup({
+				name: name.trim(),
+				description: description.trim(),
+				memberIds: selectedFriendIds,
+				avatarColor: selectedColor,
+			});
+			setAddGroupOpen(false);
 
-		await addGroup(newGroup);
-		setSelectedGroupId(newGroup.id);
-		setAddGroupOpen(false);
-
-		// Reset state
-		setName('');
-		setMembers(['You']);
-		setMembersInput('');
+			// Reset form
+			setName('');
+			setDescription('');
+			setSelectedFriendIds([]);
+		} catch (error) {
+			console.error('Error creating group:', error);
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-			<div className="bg-white border-2 border-black w-full max-w-md p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative">
+			<div className="bg-white border-2 border-black w-full max-w-md p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative max-h-[90vh] flex flex-col">
 				{/* Close Button */}
 				<button
 					onClick={() => setAddGroupOpen(false)}
@@ -74,7 +85,7 @@ export default function AddGroupModal() {
 					<Users className="w-5 h-5" /> Create New Group
 				</h2>
 
-				<form onSubmit={handleSubmit} className="space-y-4">
+				<form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1">
 					{/* Group Name */}
 					<div>
 						<label className="block text-xs font-bold uppercase mb-1">Group Name</label>
@@ -85,6 +96,18 @@ export default function AddGroupModal() {
 							onChange={(e) => setName(e.target.value)}
 							required
 							className="w-full border-2 border-black p-2.5 text-sm font-medium focus:outline-none focus:bg-yellow-50"
+						/>
+					</div>
+
+					{/* Description */}
+					<div>
+						<label className="block text-xs font-bold uppercase mb-1">Description (Optional)</label>
+						<input
+							type="text"
+							placeholder="Trip expenses, shared apartment bills, etc."
+							value={description}
+							onChange={(e) => setDescription(e.target.value)}
+							className="w-full border-2 border-black p-2 text-sm font-medium focus:outline-none focus:bg-yellow-50"
 						/>
 					</div>
 
@@ -100,57 +123,67 @@ export default function AddGroupModal() {
 									type="button"
 									onClick={() => setSelectedColor(c.class)}
 									className={`w-8 h-8 border-2 border-black ${c.class} ${
-										selectedColor === c.class ? 'ring-2 ring-black scale-110 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'opacity-80'
+										selectedColor === c.class
+											? 'ring-2 ring-black scale-110 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+											: 'opacity-80'
 									}`}
 								/>
 							))}
 						</div>
 					</div>
 
-					{/* Add Members */}
+					{/* Add Friends Section */}
 					<div>
-						<label className="block text-xs font-bold uppercase mb-1">Group Members</label>
-						<div className="flex gap-2 mb-2">
-							<input
-								type="text"
-								placeholder="Enter member name"
-								value={membersInput}
-								onChange={(e) => setMembersInput(e.target.value)}
-								className="flex-1 border-2 border-black p-2 text-sm font-medium focus:outline-none"
-							/>
-							<button
-								type="button"
-								onClick={handleAddMember}
-								className="border-2 border-black bg-pastel-blue px-3 font-bold text-sm hover:bg-blue-200"
-							>
-								<Plus className="w-4 h-4" />
-							</button>
+						<div className="flex items-center justify-between mb-1.5">
+							<label className="block text-xs font-bold uppercase">Add Friends to Group</label>
+							<span className="text-[11px] font-bold text-gray-500">
+								{selectedFriendIds.length} friend{selectedFriendIds.length === 1 ? '' : 's'} added
+							</span>
 						</div>
 
-						{/* Member Chips */}
-						<div className="flex flex-wrap gap-1.5 mt-2">
-							{members.map((m) => (
-								<span
-									key={m}
-									className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-black bg-gray-100 text-xs font-bold"
-								>
-									{m}
-									{m !== 'You' && (
-										<button
-											type="button"
-											onClick={() => handleRemoveMember(m)}
-											className="hover:text-red-600"
-										>
-											<X className="w-3.5 h-3.5" />
-										</button>
-									)}
-								</span>
-							))}
-						</div>
+						{isAuthenticated ? (
+							friends.length > 0 ? (
+								<div className="border-2 border-black p-2 space-y-1.5 max-h-40 overflow-y-auto bg-neutral-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+									{friends.map((f) => {
+										const isSelected = selectedFriendIds.includes(f.user_id);
+										return (
+											<div
+												key={f.user_id}
+												onClick={() => toggleFriend(f.user_id)}
+												className={`flex items-center justify-between p-2 border-2 transition-all cursor-pointer select-none ${
+													isSelected
+														? 'border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+														: 'border-transparent bg-transparent opacity-70 hover:opacity-100 hover:bg-neutral-100'
+												}`}
+											>
+												<div className="flex items-center gap-2">
+													<div
+														className={`w-4 h-4 border-2 border-black flex items-center justify-center ${
+															isSelected ? 'bg-black text-white' : 'bg-white'
+														}`}
+													>
+														{isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+													</div>
+													<span className="text-xs font-bold text-black">{f.name}</span>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							) : (
+								<div className="border-2 border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 bg-gray-50">
+									No accepted friends found. You can add friends from the Finance Hub tab or create a group with just yourself for now.
+								</div>
+							)
+						) : (
+							<div className="border-2 border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 bg-gray-50">
+								Log in to invite and sync group expenses with real friends.
+							</div>
+						)}
 					</div>
 
 					{/* Buttons */}
-					<div className="flex gap-3 pt-3">
+					<div className="flex gap-3 pt-3 border-t-2 border-black">
 						<button
 							type="button"
 							onClick={() => setAddGroupOpen(false)}
@@ -160,9 +193,10 @@ export default function AddGroupModal() {
 						</button>
 						<button
 							type="submit"
-							className="flex-1 border-2 border-black p-2.5 font-bold text-sm bg-black text-white shadow-[3px_3px_0px_0px_rgba(150,150,150,1)] hover:bg-gray-800"
+							disabled={isSubmitting}
+							className="flex-1 border-2 border-black p-2.5 font-bold text-sm bg-black text-white shadow-[3px_3px_0px_0px_rgba(150,150,150,1)] hover:bg-gray-800 disabled:opacity-50"
 						>
-							Save Group
+							{isSubmitting ? 'Creating...' : 'Create Group'}
 						</button>
 					</div>
 				</form>

@@ -1,25 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Calendar as CalendarIcon, Calculator, Check } from 'lucide-react';
-import CustomCalendar from '../common/Calander';
+import React, { useState, useEffect } from 'react';
+import { Plus, X, Calendar as CalendarIcon, Check } from 'lucide-react';
+import CustomCalendar from '../common/Calendar';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { useBudgetStore } from '../../stores/budgetStore';
 import VoiceInput from '../common/VoiceInput';
+import { useMathAmountInput } from '../../hooks/useMathAmountInput';
+import { AmountCalculatorInput } from './AmountCalculatorInput';
+import { CategoryAccountSelector } from './CategoryAccountSelector';
 import type { Transaction } from '../../types';
+import SplitExpenseFields from '../split/SplitExpenseFields';
+import { errorMessage, useSplitDraft } from '../../hooks/useSplitDraft';
 
 function AddTransactionForm() {
 	const [isOpen, setIsOpen] = useState(false);
-	const [type, setType] = useState<'income' | 'expense'>('expense');
+	const [type, setType] = useState<'income' | 'expense' | 'split'>('expense');
 	const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-	const [amountInput, setAmountInput] = useState('');
-	const [evaluatedAmount, setEvaluatedAmount] = useState<number | null>(null);
 	const [description, setDescription] = useState('');
 	const [selectedAccount, setSelectedAccount] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('');
-	const [newCategory, setNewCategory] = useState('');
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [showCalendar, setShowCalendar] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 
-	const amountInputRef = useRef<HTMLInputElement>(null);
+	const {
+		amountInput,
+		setAmountInput,
+		evaluatedAmount,
+		handleAmountChange,
+		handleAmountBlur,
+		appendOperator,
+		resetAmount,
+	} = useMathAmountInput();
+
+	const finalAmount = evaluatedAmount !== null ? evaluatedAmount : parseFloat(amountInput) || 0;
+	const isSplit = type === 'split';
+
+	// Split state (group / friends / who paid / how to divide). Only loads when the Split tab is open.
+	const draft = useSplitDraft({ active: isOpen && isSplit, amount: finalAmount });
 
 	// Store data
 	const addTransaction = useTransactionStore((s) => s.addTransaction);
@@ -40,94 +58,53 @@ function AddTransactionForm() {
 		}
 	}, [accounts, selectedAccount]);
 
-	// Evaluate simple mathematical expressions in real-time
-	useEffect(() => {
-		const sanitized = amountInput.replace(/[^0-9+\-*/().\s]/g, '');
-		if (!sanitized.trim()) {
-			setEvaluatedAmount(null);
-			return;
-		}
-
-		try {
-			// If it contains mathematical operators
-			if (/[+\-*/]/.test(sanitized)) {
-				// Safe evaluation using Function constructor
-				const result = new Function(`return ${sanitized}`)();
-				if (typeof result === 'number' && isFinite(result) && !isNaN(result)) {
-					setEvaluatedAmount(Number(result.toFixed(2)));
-				} else {
-					setEvaluatedAmount(null);
-				}
-			} else {
-				const parsed = parseFloat(sanitized);
-				setEvaluatedAmount(!isNaN(parsed) ? parsed : null);
-			}
-		} catch {
-			setEvaluatedAmount(null);
-		}
-	}, [amountInput]);
-
-	// Auto-resolve math expression on blur
-	const handleAmountBlur = () => {
-		if (evaluatedAmount !== null && /[+\-*/]/.test(amountInput)) {
-			setAmountInput(String(evaluatedAmount));
+	const handleAddCategory = (newCat: string) => {
+		if (!categories.includes(newCat)) {
+			addCategory(newCat);
+			setSelectedCategory(newCat);
 		}
 	};
 
-	const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const val = e.target.value;
-		// Only allow numbers, math operators (+ - * / .), parentheses, and spaces
-		const sanitized = val.replace(/[^0-9+\-*/().\s]/g, '');
-		setAmountInput(sanitized);
-	};
-
-	// Append operators to input
-	const appendOperator = (op: string) => {
-		setAmountInput((prev) => {
-			const trimmed = prev.trim();
-			if (!trimmed) return '';
-			// Don't add double operators
-			if (['+', '-', '*', '/'].includes(trimmed.slice(-1))) {
-				return trimmed.slice(0, -1) + op + ' ';
-			}
-			return trimmed + ' ' + op + ' ';
-		});
-		amountInputRef.current?.focus();
-	};
-
-	const handleAddCategory = (e: React.MouseEvent) => {
-		e.preventDefault();
-		const trimmed = newCategory.trim();
-		if (trimmed && !categories.includes(trimmed)) {
-			addCategory(trimmed);
-			setSelectedCategory(trimmed);
-			setNewCategory('');
-		}
+	const finishAndReset = () => {
+		setIsSubmitted(true);
+		setTimeout(() => {
+			setIsSubmitted(false);
+			setIsOpen(false);
+			resetAmount();
+			setDescription('');
+			setType('expense');
+			draft.reset();
+		}, 1500);
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const finalAmount = evaluatedAmount !== null ? evaluatedAmount : parseFloat(amountInput) || 0;
-		if (finalAmount <= 0) return;
+		if (finalAmount <= 0 || isSaving) return;
+		setSubmitError(null);
+
+		if (isSplit) {
+			// Split expenses are saved on the server so your friends see them too
+			setIsSaving(true);
+			try {
+				await draft.submit({ description: description.trim(), date, amount: finalAmount });
+				finishAndReset();
+			} catch (err) {
+				setSubmitError(errorMessage(err));
+			} finally {
+				setIsSaving(false);
+			}
+			return;
+		}
 
 		await addTransaction({
-			type,
+			type: type as 'income' | 'expense',
 			date,
 			amount: finalAmount,
 			description,
 			account: selectedAccount,
 			category: selectedCategory,
 		});
-
-		setIsSubmitted(true);
-		setTimeout(() => {
-			setIsSubmitted(false);
-			setIsOpen(false);
-			// Reset form
-			setAmountInput('');
-			setDescription('');
-			setType('expense');
-		}, 1500);
+		finishAndReset();
 	};
 
 	const handleVoiceParsed = (parsed: Partial<Transaction>) => {
@@ -135,13 +112,11 @@ function AddTransactionForm() {
 		if (parsed.amount) setAmountInput(String(parsed.amount));
 		if (parsed.description) setDescription(parsed.description);
 		if (parsed.account) {
-			// Find case-insensitive match or fallback
-			const match = accounts.find(acc => acc.toLowerCase() === parsed.account?.toLowerCase());
+			const match = accounts.find((acc) => acc.toLowerCase() === parsed.account?.toLowerCase());
 			if (match) setSelectedAccount(match);
 		}
 		if (parsed.category) {
-			// Find case-insensitive match or fallback
-			const match = categories.find(cat => cat.toLowerCase() === parsed.category?.toLowerCase());
+			const match = categories.find((cat) => cat.toLowerCase() === parsed.category?.toLowerCase());
 			if (match) setSelectedCategory(match);
 		}
 		if (parsed.date) setDate(parsed.date);
@@ -159,9 +134,11 @@ function AddTransactionForm() {
 			/>
 
 			{/* Floating Action Button (FAB) */}
-			<div className={`fixed bottom-20 right-4 sm:right-[max(1rem,calc(50%-14rem+1rem))] flex flex-col items-end gap-2.5 z-40 transition-all duration-300 ease-out ${
-				isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
-			}`}>
+			<div
+				className={`fixed bottom-20 right-4 sm:right-[max(1rem,calc(50%-14rem+1rem))] flex flex-col items-end gap-2.5 z-40 transition-all duration-300 ease-out ${
+					isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
+				}`}
+			>
 				<button
 					onClick={() => setIsOpen(true)}
 					className="w-12 h-12 bg-black text-white border-2 border-black flex items-center justify-center cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:bg-gray-900 transition-all"
@@ -169,7 +146,7 @@ function AddTransactionForm() {
 				>
 					<Plus size={22} className="text-white" />
 				</button>
-				
+
 				<VoiceInput onParsed={handleVoiceParsed} />
 			</div>
 
@@ -181,11 +158,10 @@ function AddTransactionForm() {
 						: 'scale-90 opacity-0 translate-y-8 pointer-events-none'
 				}`}
 			>
-				{/* Expanded Form Content */}
 				<div className="flex flex-col h-full justify-between">
 					{/* Header */}
 					<div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
-						<h3 className="text-base font-bold text-black tracking-tight">Add Transaction</h3>
+						<h3 className="text-base font-bold text-black tracking-tight">{isSplit ? 'Split an Expense' : 'Add Transaction'}</h3>
 						<button
 							type="button"
 							onClick={() => setIsOpen(false)}
@@ -198,32 +174,32 @@ function AddTransactionForm() {
 					{/* Scrollable Form Body */}
 					<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 space-y-4 text-left">
 						{/* Transaction Type Selector */}
-						<div className="grid grid-cols-2 gap-2">
-							<button
-								type="button"
-								onClick={() => setType('expense')}
-								className={`py-2 text-xs font-bold border-2 border-black transition-all ${
-									type === 'expense'
-										? 'bg-rose-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px'
-										: 'bg-white text-gray-500 hover:bg-gray-50'
-								}`}
-							>
-								Expense
-							</button>
-							<button
-								type="button"
-								onClick={() => setType('income')}
-								className={`py-2 text-xs font-bold border-2 border-black transition-all ${
-									type === 'income'
-										? 'bg-emerald-100 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px'
-										: 'bg-white text-gray-500 hover:bg-gray-50'
-								}`}
-							>
-								Income
-							</button>
+						<div className="grid grid-cols-3 gap-2" role="group" aria-label="Transaction type">
+							{(
+								[
+									['expense', 'Expense', 'bg-rose-100'],
+									['income', 'Income', 'bg-emerald-100'],
+									['split', 'Split', 'bg-purple-100'],
+								] as const
+							).map(([id, text, color]) => (
+								<button
+									key={id}
+									type="button"
+									aria-pressed={type === id}
+									onClick={() => {
+										setType(id);
+										setSubmitError(null);
+									}}
+									className={`py-2 text-xs font-bold border-2 border-black transition-all cursor-pointer ${
+										type === id ? `${color} text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px` : 'bg-white text-gray-500 hover:bg-gray-50'
+									}`}
+								>
+									{text}
+								</button>
+							))}
 						</div>
 
-						{/* Date Field (Custom Neo-Brutalist Calendar Dropdown) */}
+						{/* Date Field */}
 						<div className="relative">
 							<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">
 								Date
@@ -249,50 +225,14 @@ function AddTransactionForm() {
 							)}
 						</div>
 
-						{/* Amount Field with Calculator Logic */}
-						<div>
-							<div className="flex justify-between items-baseline mb-1">
-								<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider">
-									Amount (₹)
-								</label>
-								{evaluatedAmount !== null && (
-									<span className="text-xs font-bold text-emerald-600">
-										= ₹{evaluatedAmount.toFixed(2)}
-									</span>
-								)}
-							</div>
-							<div className="relative">
-								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-									₹
-								</span>
-								<input
-									ref={amountInputRef}
-									type="text"
-									value={amountInput}
-									onChange={handleAmountChange}
-									onBlur={handleAmountBlur}
-									placeholder="e.g. 80.0 or 80 + 20"
-									className="w-full border-2 border-black p-2 pl-7 text-sm font-medium bg-white focus:outline-none"
-									required
-								/>
-							</div>
-							{/* Quick Math Helper Keys */}
-							<div className="flex gap-1.5 mt-1.5">
-								{['+', '-', '*', '/'].map((op) => (
-									<button
-										key={op}
-										type="button"
-										onClick={() => appendOperator(op)}
-										className="w-7 h-7 text-xs font-bold border border-black bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-all"
-									>
-										{op}
-									</button>
-								))}
-								<span className="text-[10px] text-gray-400 self-center ml-2 flex items-center gap-1">
-									<Calculator size={11} /> Supports live math
-								</span>
-							</div>
-						</div>
+						{/* Amount with live math calculation */}
+						<AmountCalculatorInput
+							amountInput={amountInput}
+							evaluatedAmount={evaluatedAmount}
+							onChange={handleAmountChange}
+							onBlur={handleAmountBlur}
+							onAppendOperator={appendOperator}
+						/>
 
 						{/* Description Field */}
 						<div>
@@ -309,81 +249,35 @@ function AddTransactionForm() {
 							/>
 						</div>
 
-						{/* Account Field */}
-						<div>
-							<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">
-								Account / Method
-							</label>
-							<div className="flex flex-wrap gap-1.5">
-								{accounts.map((acc) => (
-									<button
-										key={acc}
-										type="button"
-										onClick={() => setSelectedAccount(acc)}
-										className={`px-2.5 py-1 text-xs border border-black font-semibold transition-all ${
-											selectedAccount === acc
-												? 'bg-[#eedcc2] text-black font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]'
-												: 'bg-white text-gray-600 hover:bg-gray-50'
-										}`}
-									>
-										{acc}
-									</button>
-								))}
-							</div>
-						</div>
+						{/* Account and Category (own tracker) or Split details (shared with others) */}
+						{isSplit ? (
+							<SplitExpenseFields draft={draft} />
+						) : (
+							<CategoryAccountSelector
+								accounts={accounts}
+								selectedAccount={selectedAccount}
+								onSelectAccount={setSelectedAccount}
+								categories={categories}
+								selectedCategory={selectedCategory}
+								onSelectCategory={setSelectedCategory}
+								onAddCategory={handleAddCategory}
+							/>
+						)}
 
-						{/* Category Selection with Custom Category Add Option */}
-						<div>
-							<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-								Category
-							</label>
-
-							{/* Badges Selection Grid */}
-							<div className="flex flex-wrap gap-1.5 mb-2">
-								{categories.map((cat) => (
-									<button
-										key={cat}
-										type="button"
-										onClick={() => setSelectedCategory(cat)}
-										className={`px-2.5 py-1 text-xs border border-black font-semibold transition-all ${
-											selectedCategory === cat
-												? 'bg-[#eedcc2] text-black font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]'
-												: 'bg-white text-gray-600 hover:bg-gray-50'
-										}`}
-									>
-										{cat}
-									</button>
-								))}
-							</div>
-
-							{/* Add custom category input */}
-							<div className="flex gap-1">
-								<input
-									type="text"
-									value={newCategory}
-									onChange={(e) => setNewCategory(e.target.value)}
-									placeholder="Add custom category..."
-									className="flex-1 border border-black px-2 py-1 text-xs bg-white focus:outline-none"
-								/>
-								<button
-									onClick={handleAddCategory}
-									type="button"
-									className="px-2.5 bg-black text-white border border-black hover:bg-gray-900 transition-all flex items-center justify-center cursor-pointer"
-									aria-label="Add custom category"
-								>
-									<Plus size={14} />
-								</button>
-							</div>
-						</div>
+						{submitError && (
+							<p role="alert" className="border-2 border-rose-400 bg-rose-50 p-2 text-xs font-bold text-rose-800">
+								{submitError}
+							</p>
+						)}
 
 						{/* Submit Button */}
 						<button
 							type="submit"
-							disabled={isSubmitted}
+							disabled={isSubmitted || isSaving || (isSplit && !!draft.error)}
 							className={`w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer transition-all ${
 								isSubmitted
 									? 'bg-emerald-100 text-emerald-800'
-									: 'bg-black text-white hover:bg-gray-900'
+									: 'bg-black text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
 							}`}
 						>
 							{isSubmitted ? (
@@ -392,7 +286,7 @@ function AddTransactionForm() {
 									Added!
 								</>
 							) : (
-								'Add Transaction'
+								isSaving ? 'Saving…' : isSplit ? 'Add Split' : 'Add Transaction'
 							)}
 						</button>
 					</form>
