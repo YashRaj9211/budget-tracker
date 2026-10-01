@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>Verify your email - Dekhkar</title>
+<style>
+  body { margin:0; padding:0; background:#fefed4; }
+  @media only screen and (max-width:620px) {
+    .wrap { width:100% !important; }
+    .pad { padding-left:18px !important; padding-right:18px !important; }
+    .otp { font-size:32px !important; letter-spacing:6px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#fefed4;">
+
+<!-- Hidden preheader (inbox preview only) -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#fefed4;font-size:1px;line-height:1px;">
+  Welcome to Dekhkar. {{.OTP}} is your verification code. Valid for 10 minutes. Your first expense is on us: this email.
+  &#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fefed4;">
+<tr><td align="center" style="padding:32px 14px;">
+
+  <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0"
+         style="width:600px;max-width:600px;background:#ffffff;border:2px solid #000000;box-shadow:6px 6px 0px 0px rgba(0,0,0,1);">
+
+    <!-- Header -->
+    <tr>
+      <td class="pad" style="background:#aff588;border-bottom:2px solid #000000;padding:20px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="vertical-align:middle;">
+              <img src="{{.LogoURL}}" alt="Dekhkar" width="40" height="40" style="vertical-align:middle;border:2px solid #000000;background:#ffffff;">
+              <span style="font-size:22px;font-weight:800;color:#000000;vertical-align:middle;margin-left:10px;letter-spacing:-0.5px;">Dekhkar</span>
+            </td>
+            <td align="right" style="vertical-align:middle;">
+              <span style="display:inline-block;background:#000000;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 10px;">New account</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Intro -->
+    <tr>
+      <td class="pad" style="padding:32px 28px 8px 28px;">
+        <h1 style="margin:0 0 12px 0;font-size:24px;line-height:30px;font-weight:800;color:#000000;">Welcome to Dekhkar</h1>
+        <p style="margin:0;font-size:16px;line-height:24px;color:#374151;">
+          One last step before you start tracking. Enter the code below to confirm this email and open your account.
+        </p>
+      </td>
+    </tr>
+
+    <!-- OTP card -->
+    <tr>
+      <td class="pad" style="padding:24px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#bde2ff;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
+          <tr>
+            <td align="center" style="padding:20px 16px 8px 16px;">
+              <span style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1e3a8a;">Your verification code</span>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:4px 16px 22px 16px;">
+              <div class="otp" style="display:inline-block;background:#ffffff;border:2px solid #000000;padding:12px 10px 12px 20px;font-family:'SFMono-Regular',Menlo,Consolas,'Courier New',monospace;font-size:42px;line-height:48px;font-weight:800;letter-spacing:10px;color:#000000;">{{.OTP}}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Expiry bar (full = 10 minutes left) -->
+    <tr>
+      <td class="pad" style="padding:20px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8c6239;padding-bottom:6px;">Time left on this code</td>
+            <td align="right" style="font-size:12px;font-weight:700;color:#000000;padding-bottom:6px;">10 min</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #000000;background:#f9fafb;">
+          <tr>
+            <td style="height:16px;line-height:16px;font-size:1px;background:#aff588;border-right:2px solid #000000;" width="100%">&nbsp;</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- What's waiting card -->
+    <tr>
+      <td class="pad" style="padding:24px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#d1fae5;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
+          <tr>
+            <td style="padding:14px 16px;">
+              <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#065f46;margin-bottom:8px;">Waiting for you inside</div>
+              <div style="font-size:14px;line-height:22px;color:#000000;">
+                &bull; Log every transaction in seconds<br>
+                &bull; Set a daily budget and watch it tick down<br>
+                &bull; See where the money actually went in Stats
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Heads up card -->
+    <tr>
+      <td class="pad" style="padding:24px 28px 8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:#fef3c7;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
+          <tr>
+            <td style="padding:14px 16px;">
+              <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#92400e;margin-bottom:6px;">Heads up</div>
+              <div style="font-size:14px;line-height:21px;color:#000000;">
+                Never share this code with anyone. We will never ask for it by call, chat, or text.
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Ignore note -->
+    <tr>
+      <td class="pad" style="padding:20px 28px 32px 28px;">
+        <p style="margin:0;font-size:14px;line-height:21px;color:#9f8569;">
+          Didn't sign up for Dekhkar? Ignore this email and no account will be created.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td class="pad" align="center" style="background:#f9fafb;border-top:2px solid #000000;padding:18px 28px;">
+        <p style="margin:0;font-size:13px;line-height:20px;color:#9f8569;">
+          &copy; {{.Year}} Dekhkar. All rights reserved.<br>
+          This is an automated message, please do not reply.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+
+</td></tr>
+</table>
+</body>
+</html>

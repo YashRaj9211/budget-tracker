@@ -1,0 +1,9 @@
+CREATE TABLE otps (
+    id VARCHAR(50) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_otps_email ON otps(email);
