@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User, LoginRequest, SignUpRequest, AuthResponse } from '../types/auth';
-import { loginApi, signUpApi } from '../api/authApi';
+import { loginApi, signUpApi, requestOtpApi, verifyOtpApi } from '../api/authApi';
 import { socketService } from '../api/socketService';
 
 const TOKEN_KEY = 'auth_token';
@@ -15,6 +15,8 @@ interface AuthState {
 
 	login: (credentials: LoginRequest) => Promise<void>;
 	signup: (userData: SignUpRequest) => Promise<void>;
+	requestOtp: (email: string) => Promise<void>;
+	verifyOtp: (email: string, code: string) => Promise<void>;
 	logout: () => void;
 	checkAuth: () => void;
 	clearError: () => void;
@@ -96,6 +98,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			}
 		} catch (err: unknown) {
 			const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
+			set({ error: errorMessage, isLoading: false });
+			throw err;
+		}
+	},
+
+	requestOtp: async (email: string) => {
+		set({ isLoading: true, error: null });
+		try {
+			await requestOtpApi(email);
+			set({ isLoading: false });
+		} catch (err: unknown) {
+			const errorMessage = err instanceof Error ? err.message : 'Failed to request OTP';
+			set({ error: errorMessage, isLoading: false });
+			throw err;
+		}
+	},
+
+	verifyOtp: async (email: string, code: string) => {
+		set({ isLoading: true, error: null });
+		try {
+			const res = await verifyOtpApi(email, code);
+			localStorage.setItem(TOKEN_KEY, res.token);
+			localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+			set({
+				token: res.token,
+				user: res.user,
+				isAuthenticated: true,
+				isLoading: false,
+			});
+		} catch (err: unknown) {
+			const errorMessage = err instanceof Error ? err.message : 'Failed to verify OTP';
 			set({ error: errorMessage, isLoading: false });
 			throw err;
 		}

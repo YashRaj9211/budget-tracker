@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_otps_email;
+DROP TABLE IF EXISTS otps;

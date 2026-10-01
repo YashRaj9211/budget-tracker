@@ -255,6 +255,19 @@ func (Budget) TableName() string {
 	return "budgets"
 }
 
+// OTP model for login/verification
+type OTP struct {
+	ID        string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	Email     string    `gorm:"not null;index" json:"email"`
+	Code      string    `gorm:"not null" json:"code"`
+	ExpiresAt time.Time `gorm:"not null" json:"expiresAt"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
+}
+
+func (OTP) TableName() string {
+	return "otps"
+}
+
 // BeforeCreate hooks to generate CUIDs (you'll need to implement CUID generation)
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == "" {
@@ -318,3 +331,11 @@ func (b *Budget) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+func (o *OTP) BeforeCreate(tx *gorm.DB) error {
+	if o.ID == "" {
+		o.ID = utils.GenerateUUID("otp")
+	}
+	return nil
+}
+

@@ -10,6 +10,10 @@ export default function Auth() {
 	const { login, signup, isAuthenticated, isLoading, error, clearError } = useAuthStore();
 
 	const [mode, setMode] = useState<AuthMode>('login');
+	const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
+	const [otpState, setOtpState] = useState<'idle' | 'requested'>('idle');
+	const [otpCode, setOtpCode] = useState('');
+	const [resendCooldown, setResendCooldown] = useState(0);
 	const [showPassword, setShowPassword] = useState(false);
 
 	// Form State
@@ -22,6 +26,13 @@ export default function Auth() {
 	useEffect(() => {
 		window.hideSplashScreen?.();
 	}, []);
+
+	useEffect(() => {
+		if (resendCooldown > 0) {
+			const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+			return () => clearTimeout(timer);
+		}
+	}, [resendCooldown]);
 
 	if (isAuthenticated) {
 		return <Navigate to="/" replace />;
@@ -38,7 +49,19 @@ export default function Auth() {
 
 		try {
 			if (mode === 'login') {
-				await login({ email, password });
+				if (loginMethod === 'password') {
+					await login({ email, password });
+					navigate('/');
+				} else {
+					if (otpState === 'idle') {
+						await useAuthStore.getState().requestOtp(email);
+						setOtpState('requested');
+						setResendCooldown(20);
+					} else {
+						await useAuthStore.getState().verifyOtp(email, otpCode);
+						navigate('/');
+					}
+				}
 			} else {
 				await signup({
 					email,
@@ -47,8 +70,8 @@ export default function Auth() {
 					username,
 					phone: phone ? phone : undefined,
 				});
+				navigate('/');
 			}
-			navigate('/');
 		} catch {
 			// Error is handled in authStore
 		}
@@ -160,36 +183,103 @@ export default function Auth() {
 								required
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
+								disabled={otpState === 'requested'}
 								placeholder="e.g. name@example.com"
-								className="w-full bg-white border-2 border-black pl-10 pr-4 py-2.5 text-sm text-black placeholder:text-gray-500 font-bold focus:outline-none focus:ring-2 focus:ring-[#bde2ff] focus:ring-offset-2 transition-all"
+								className="w-full bg-white border-2 border-black pl-10 pr-4 py-2.5 text-sm text-black placeholder:text-gray-500 font-bold focus:outline-none focus:ring-2 focus:ring-[#bde2ff] focus:ring-offset-2 transition-all disabled:bg-gray-100"
 							/>
 						</div>
 					</div>
 
-					{/* Password */}
-					<div>
-						<label className="block text-xs font-black uppercase tracking-wider text-black mb-1">
-							Password
-						</label>
-						<div className="relative">
-							<Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
-							<input
-								type={showPassword ? 'text' : 'password'}
-								required
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								placeholder="••••••••"
-								className="w-full bg-white border-2 border-black pl-10 pr-10 py-2.5 text-sm text-black placeholder:text-gray-500 font-bold focus:outline-none focus:ring-2 focus:ring-[#bde2ff] focus:ring-offset-2 transition-all"
-							/>
+					{/* Password or OTP */}
+					{(mode === 'signup' || (mode === 'login' && loginMethod === 'password')) && (
+						<div>
+							<div className="flex justify-between items-center mb-1">
+								<label className="block text-xs font-black uppercase tracking-wider text-black">
+									Password
+								</label>
+								{mode === 'login' && (
+									<button
+										type="button"
+										onClick={() => {
+											setLoginMethod('otp');
+											setOtpState('idle');
+											clearError();
+										}}
+										className="text-[10px] font-black uppercase underline hover:text-gray-600"
+									>
+										Use OTP Instead
+									</button>
+								)}
+							</div>
+							<div className="relative">
+								<Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
+								<input
+									type={showPassword ? 'text' : 'password'}
+									required
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+									placeholder="••••••••"
+									className="w-full bg-white border-2 border-black pl-10 pr-10 py-2.5 text-sm text-black placeholder:text-gray-500 font-bold focus:outline-none focus:ring-2 focus:ring-[#bde2ff] focus:ring-offset-2 transition-all"
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black hover:opacity-70 transition-opacity"
+								>
+									{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+								</button>
+							</div>
+						</div>
+					)}
+
+					{mode === 'login' && loginMethod === 'otp' && otpState === 'requested' && (
+						<div>
+							<div className="flex justify-between items-center mb-1">
+								<label className="block text-xs font-black uppercase tracking-wider text-black">
+									6-Digit OTP
+								</label>
+								<button
+									type="button"
+									disabled={resendCooldown > 0}
+									onClick={async () => {
+										clearError();
+										await useAuthStore.getState().requestOtp(email);
+										setResendCooldown(20);
+									}}
+									className="text-[10px] font-black uppercase underline hover:text-gray-600 disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
+								>
+									{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+								</button>
+							</div>
+							<div className="relative">
+								<Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
+								<input
+									type="text"
+									required
+									maxLength={6}
+									value={otpCode}
+									onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+									placeholder="123456"
+									className="w-full bg-white border-2 border-black pl-10 pr-4 py-2.5 text-sm text-black placeholder:text-gray-500 font-bold focus:outline-none focus:ring-2 focus:ring-[#bde2ff] focus:ring-offset-2 transition-all tracking-[0.5em]"
+								/>
+							</div>
+						</div>
+					)}
+
+					{mode === 'login' && loginMethod === 'otp' && otpState === 'idle' && (
+						<div className="flex justify-end mt-[-8px]">
 							<button
 								type="button"
-								onClick={() => setShowPassword(!showPassword)}
-								className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black hover:opacity-70 transition-opacity"
+								onClick={() => {
+									setLoginMethod('password');
+									clearError();
+								}}
+								className="text-[10px] font-black uppercase underline hover:text-gray-600"
 							>
-								{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+								Use Password Instead
 							</button>
 						</div>
-					</div>
+					)}
 
 					{mode === 'signup' && (
 						/* Phone Number */
@@ -214,7 +304,7 @@ export default function Auth() {
 					<button
 						type="submit"
 						disabled={isLoading}
-						className="w-full bg-[#aff588] text-black font-black uppercase border-2 border-black py-3 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#9eed68] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+						className="w-full bg-[#aff588] text-black font-black uppercase border-2 border-black py-3 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#9eed68] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none mt-6"
 					>
 						{isLoading ? (
 							<>
@@ -223,7 +313,15 @@ export default function Auth() {
 							</>
 						) : (
 							<>
-								<span>{mode === 'login' ? 'Sign In' : 'Sign Up'}</span>
+								<span>
+									{mode === 'signup'
+										? 'Sign Up'
+										: loginMethod === 'password'
+										? 'Sign In'
+										: otpState === 'idle'
+										? 'Send OTP'
+										: 'Verify OTP & Login'}
+								</span>
 								<ArrowRight className="w-4 h-4 text-black" />
 							</>
 						)}
