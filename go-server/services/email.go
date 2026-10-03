@@ -59,3 +59,72 @@ func SendOTP(email, otp, templateName, subject string) error {
 	log.Printf("OTP email sent to %s, id: %s", email, sent.Id)
 	return nil
 }
+
+type FriendRequestEmailData struct {
+	RecipientName string
+	SenderName    string
+	SenderEmail   string
+	ActionURL     string
+	LogoURL       string
+	Year          int
+}
+
+// SendFriendRequestEmail sends an email notification to the recipient of a friend request.
+func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail string) error {
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey == "" {
+		log.Printf("RESEND_API_KEY not set; skipping friend request email to %s", toEmail)
+		return nil
+	}
+
+	client := resend.NewClient(apiKey)
+
+	t, err := template.ParseFiles("templates/friend_request.html")
+	if err != nil {
+		log.Printf("Failed to parse friend request email template: %v", err)
+		return err
+	}
+
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://budget-tracker-phi-ivory.vercel.app"
+	}
+	actionURL := fmt.Sprintf("%s/friends", frontendURL)
+
+	displayName := senderName
+	if displayName == "" {
+		displayName = senderEmail
+	}
+
+	data := FriendRequestEmailData{
+		RecipientName: recipientName,
+		SenderName:    displayName,
+		SenderEmail:   senderEmail,
+		ActionURL:     actionURL,
+		LogoURL:       "https://budget-tracker-phi-ivory.vercel.app/budget-tracker-icon.png",
+		Year:          time.Now().Year(),
+	}
+
+	var body bytes.Buffer
+	if err := t.Execute(&body, data); err != nil {
+		log.Printf("Failed to execute friend request email template: %v", err)
+		return err
+	}
+
+	subject := fmt.Sprintf("%s sent you a friend request on Dekhkar", displayName)
+	params := &resend.SendEmailRequest{
+		From:    "noreply@dekhkar.prjly.org",
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    body.String(),
+	}
+
+	sent, err := client.Emails.Send(params)
+	if err != nil {
+		log.Printf("Failed to send friend request email to %s: %v", toEmail, err)
+		return err
+	}
+
+	log.Printf("Friend request email sent to %s, id: %s", toEmail, sent.Id)
+	return nil
+}

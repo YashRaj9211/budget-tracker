@@ -9,9 +9,10 @@ import (
 
 
 func GenerateToken(userId string) string {
+	days := 30
 	claims := jwt.MapClaims{
 		"userId": userId,
-		"exp":    jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		"exp":    jwt.NewNumericDate(time.Now().Add(time.Duration(days) * 24 * time.Hour)),
 		"iat":    jwt.NewNumericDate(time.Now()),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

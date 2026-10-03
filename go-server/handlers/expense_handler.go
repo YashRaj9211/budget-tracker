@@ -78,8 +78,16 @@ func CreateExpense(c *gin.Context) {
 	// Broadcast to relevant users
 	userIDs := make(map[string]bool)
 	userIDs[createdExpense.UserID] = true
+	userIDs[userId] = true
 	for _, s := range createdExpense.Splits {
 		userIDs[s.UserID] = true
+	}
+	if createdExpense.GroupID != nil {
+		var gMembers []string
+		database.DB.Model(&models.GroupMember{}).Where("group_id = ?", *createdExpense.GroupID).Pluck("user_id", &gMembers)
+		for _, mid := range gMembers {
+			userIDs[mid] = true
+		}
 	}
 
 	// Include accepted friends of the creator so both sides always get the update
@@ -241,11 +249,19 @@ func DeleteExpense(c *gin.Context) {
 		return
 	}
 
-	// Notify creator + split users + friends
+	// Notify creator + split users + group members + friends
 	userIDs := make(map[string]bool)
 	userIDs[expense.UserID] = true
+	userIDs[currentUserId] = true
 	for _, s := range expense.Splits {
 		userIDs[s.UserID] = true
+	}
+	if expense.GroupID != nil {
+		var gMembers []string
+		database.DB.Model(&models.GroupMember{}).Where("group_id = ?", *expense.GroupID).Pluck("user_id", &gMembers)
+		for _, mid := range gMembers {
+			userIDs[mid] = true
+		}
 	}
 
 	var friendRows []struct{ UserID string }
@@ -382,8 +398,16 @@ func UpdateExpense(c *gin.Context) {
 	// Notify all users who were/are relevant to this expense
 	userIDs := make(map[string]bool)
 	userIDs[updatedExpense.UserID] = true
+	userIDs[currentUserId] = true
 	for _, s := range updatedExpense.Splits {
 		userIDs[s.UserID] = true
+	}
+	if updatedExpense.GroupID != nil {
+		var gMembers []string
+		database.DB.Model(&models.GroupMember{}).Where("group_id = ?", *updatedExpense.GroupID).Pluck("user_id", &gMembers)
+		for _, mid := range gMembers {
+			userIDs[mid] = true
+		}
 	}
 
 	// Also notify userIDs that were in the OLD version if they were removed

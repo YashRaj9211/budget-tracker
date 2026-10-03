@@ -82,7 +82,7 @@ func withSearchPath(t *testing.T, dsn, schema string) string {
 			t.Fatal(err)
 		}
 		q := u.Query()
-		q.Set("search_path", schema)
+		q.Set("options", "-c search_path="+schema)
 		u.RawQuery = q.Encode()
 		return u.String()
 	}

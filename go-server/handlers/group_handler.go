@@ -16,8 +16,8 @@ import (
 
 type CreateGroupBody struct {
 	Name          string   `json:"name" binding:"required"`
-	Description   string   `json:"description" binding:"required"`
-	SimplifyDebts *bool    `json:"simplifyDebts" binding:"required"`
+	Description   *string  `json:"description" binding:"omitempty"`
+	SimplifyDebts *bool    `json:"simplifyDebts" binding:"omitempty"`
 	ImageURL      *string  `json:"imageUrl" binding:"omitempty"`
 	MemberIDs     []string `json:"memberIds" binding:"omitempty"`
 }
@@ -61,10 +61,23 @@ func CreateGroup(c *gin.Context) {
 		memberIDs = append(memberIDs, mID)
 	}
 
+	var simplifyDebts bool
+	if body.SimplifyDebts != nil {
+		simplifyDebts = *body.SimplifyDebts
+	}
+
+	var description *string
+	if body.Description != nil {
+		trimmed := strings.TrimSpace(*body.Description)
+		if trimmed != "" {
+			description = &trimmed
+		}
+	}
+
 	group := models.Group{
 		Name:          strings.TrimSpace(body.Name),
-		Description:   &body.Description,
-		SimplifyDebts: *body.SimplifyDebts,
+		Description:   description,
+		SimplifyDebts: simplifyDebts,
 		ImageURL:      body.ImageURL,
 	}
 
@@ -469,19 +482,21 @@ func GetSplitOverview(c *gin.Context) {
 	}
 
 	expenses := []models.Expense{}
-	if len(groups) > 0 {
-		groupIDs := make([]string, 0, len(groups))
-		for _, g := range groups {
-			groupIDs = append(groupIDs, g.ID)
-		}
-		if err := database.DB.
-			Preload("Splits.User").
-			Where("group_id IN ?", groupIDs).
-			Order("expense_date desc").
-			Find(&expenses).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+	groupIDs := make([]string, 0, len(groups))
+	for _, g := range groups {
+		groupIDs = append(groupIDs, g.ID)
+	}
+
+	query := database.DB.Preload("Splits.User").Preload("User")
+	if len(groupIDs) > 0 {
+		query = query.Where("group_id IN ? OR (group_id IS NULL AND (expenses.user_id = ? OR expenses.id IN (SELECT expense_id FROM expense_splits WHERE user_id = ?)))", groupIDs, userId, userId)
+	} else {
+		query = query.Where("group_id IS NULL AND (expenses.user_id = ? OR expenses.id IN (SELECT expense_id FROM expense_splits WHERE user_id = ?))", userId, userId)
+	}
+
+	if err := query.Order("expense_date desc").Find(&expenses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"groups": groups, "expenses": expenses})

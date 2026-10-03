@@ -10,4 +10,5 @@ func AuthRouter(r *gin.RouterGroup) {
 	r.POST("/users/login", handlers.LoginUser)
 	r.POST("/users/request-otp", handlers.RequestOTP)
 	r.POST("/users/verify-otp", handlers.VerifyOTP)
+	r.POST("/users/refresh", handlers.RefreshToken)
 }

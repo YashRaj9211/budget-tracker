@@ -149,6 +149,9 @@ func validateExpenseShape(in *models.Expense) *httpError {
 	}
 
 	if len(in.Splits) == 0 {
+		if in.GroupID != nil {
+			return nil
+		}
 		return badRequest("a SPLIT expense needs at least one split")
 	}
 
@@ -218,31 +221,53 @@ func authorizeExpense(db *gorm.DB, callerID string, in *models.Expense) *httpErr
 		return nil
 	}
 
-	// No group: only the caller can be the payer, and only accepted friends can be charged.
-	if payer != callerID {
-		return forbidden("Only the payer can record an expense outside a group")
+	// No group:
+	if in.Type != models.ExpenseTypeSplit {
+		// Personal and income expenses must be recorded by the caller for themselves.
+		if payer != callerID {
+			return forbidden("Only the payer can record an expense outside a group")
+		}
+		return nil
 	}
-	if len(in.Splits) > 0 {
-		friends, err := acceptedFriendSet(db, callerID)
-		if err != nil {
-			return serverError(err)
+
+	// SPLIT expense outside a group:
+	friends, err := acceptedFriendSet(db, callerID)
+	if err != nil {
+		return serverError(err)
+	}
+
+	// Payer must be the caller or an accepted friend
+	if payer != callerID && !friends[payer] {
+		return forbidden("The payer must be yourself or an accepted friend")
+	}
+
+	// Caller must be involved in the expense (as payer or participant)
+	callerInvolved := (payer == callerID)
+	for _, s := range in.Splits {
+		if s.UserID == callerID {
+			callerInvolved = true
+		} else if !friends[s.UserID] {
+			return forbidden("You can only split expenses with accepted friends")
 		}
-		for _, s := range in.Splits {
-			if s.UserID != callerID && !friends[s.UserID] {
-				return forbidden("You can only split expenses with accepted friends")
-			}
-		}
+	}
+	if !callerInvolved {
+		return forbidden("You must be involved in the expense as the payer or a participant")
 	}
 	return nil
 }
 
-// canModifyExpense: the payer, or any member of the expense's group, may edit or delete it.
+// canModifyExpense: the payer, or any member of the expense's group or split participant, may edit or delete it.
 func canModifyExpense(db *gorm.DB, callerID string, exp *models.Expense) (bool, error) {
 	if exp.UserID == callerID {
 		return true, nil
 	}
 	if exp.GroupID != nil {
 		return isGroupMember(db, *exp.GroupID, callerID)
+	}
+	for _, s := range exp.Splits {
+		if s.UserID == callerID {
+			return true, nil
+		}
 	}
 	return false, nil
 }

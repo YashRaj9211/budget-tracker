@@ -23,9 +23,13 @@ import (
 var ginLambda *ginadapter.GinLambda
 
 func init() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
+	// Load .env file (supports running from repo root or go-server dir)
+	if err := godotenv.Load(".env", "go-server/.env", "../go-server/.env"); err != nil {
 		log.Println("No .env file found")
+	}
+
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Println("WARNING: JWT_SECRET environment variable is not set!")
 	}
 
 	// Initialize Router
@@ -44,6 +48,8 @@ func init() {
 		})
 	})
 
+	router.DefaultRouter(&r.RouterGroup)
+
 	// Adapter for Lambda
 	ginLambda = ginadapter.New(r)
 }
@@ -55,7 +61,7 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 
 func main() {
 	// If running locally (not in Lambda), start the server
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(".env", "go-server/.env", "../go-server/.env"); err != nil {
 		log.Println("No .env file found")
 	}
 

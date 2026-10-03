@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"splitwise-go/models"
 	"splitwise-go/router"
@@ -71,8 +72,9 @@ func (a *api) signup(name string) user {
 		_ = json.Unmarshal(w.Body.Bytes(), &out)
 		return w.Code, out
 	}
-	email := name + "@example.com"
-	if code, out := pub("signup", map[string]any{"email": email, "name": name, "username": name, "password": "password123"}); code != 200 {
+	uid := fmt.Sprintf("%s_%d", name, time.Now().UnixNano())
+	email := uid + "@example.com"
+	if code, out := pub("signup", map[string]any{"email": email, "name": name, "username": uid, "password": "password123"}); code != 200 {
 		a.t.Fatalf("signup %s: %d %v", name, code, out)
 	}
 	code, out := pub("login", map[string]any{"email": email, "password": "password123"})
@@ -166,9 +168,16 @@ func TestExpenseAuthorizationAndValidation(t *testing.T) {
 	code, _ = a.call("POST", "/expenses", alice.Token, map[string]any{"amount": "100", "description": "dinner", "type": "SPLIT", "splits": []any{split(alice.ID, "50"), split(bob.ID, "50")}})
 	a.expect("split with a friend", 201, code)
 
-	// A payer other than the caller is not allowed outside a group.
+	// A payer other than the caller is not allowed outside a group for personal expenses.
 	code, _ = a.call("POST", "/expenses", alice.Token, map[string]any{"amount": "10", "description": "x", "type": "PERSONAL", "userId": bob.ID})
 	a.expect("impersonate payer outside group", 403, code)
+
+	// A friend can be the payer outside a group for a SPLIT expense if both are involved.
+	code, out = a.call("POST", "/expenses", alice.Token, map[string]any{"amount": "60", "description": "coffee paid by bob", "type": "SPLIT", "userId": bob.ID, "splits": []any{split(alice.ID, "30"), split(bob.ID, "30")}})
+	a.expect("friend paid outside group", 201, code)
+	if asMap(out)["userId"] != bob.ID {
+		t.Errorf("expected payer to be bob, got %v", asMap(out)["userId"])
+	}
 
 	// Nested objects in the JSON must not create records.
 	var usersBefore int64
@@ -224,6 +233,10 @@ func TestGroupRules(t *testing.T) {
 
 	code, out := a.call("POST", "/groups", alice.Token, map[string]any{"name": "Trip", "description": "d", "simplifyDebts": false, "memberIds": []string{bob.ID}})
 	a.expect("create group with a friend", 200, code)
+	emptyDescCode, _ := a.call("POST", "/groups", alice.Token, map[string]any{"name": "Trip Empty Desc", "description": "", "simplifyDebts": false})
+	a.expect("create group with empty description", 200, emptyDescCode)
+	minimalCode, _ := a.call("POST", "/groups", alice.Token, map[string]any{"name": "Trip Minimal"})
+	a.expect("create group with only name", 200, minimalCode)
 	gid := asMap(out)["id"].(string)
 	if n := len(asList(asMap(out)["members"])); n != 2 {
 		t.Errorf("want 2 members, got %d", n)
@@ -250,6 +263,21 @@ func TestGroupRules(t *testing.T) {
 	if asMap(out)["userId"] != bob.ID {
 		t.Errorf("payer should be bob, got %v", asMap(out)["userId"])
 	}
+
+	// Alice records an expense in group paid by Bob with NO splits
+	code, out = a.call("POST", "/expenses", alice.Token, map[string]any{
+		"amount":      "45",
+		"description": "snacks for group (no splits)",
+		"type":        "SPLIT",
+		"groupId":     gid,
+		"userId":      bob.ID,
+		"splits":      []any{},
+	})
+	a.expect("group expense with no splits paid by bob", 201, code)
+	if len(asList(asMap(out)["splits"])) != 0 {
+		t.Errorf("expected 0 splits, got %v", asMap(out)["splits"])
+	}
+
 	code, _ = a.call("DELETE", "/expenses/"+expID, carol.Token, nil)
 	a.expect("outsider deletes group expense", 403, code)
 
@@ -373,5 +401,117 @@ func TestCategoriesList(t *testing.T) {
 	list := asList(out)
 	if len(list) != 2 || asMap(list[0])["name"] != "Food" {
 		t.Errorf("want [Food, Travel] sorted by name, got %v", out)
+	}
+}
+
+func TestGroupCreationComprehensive(t *testing.T) {
+	a := newAPI(t)
+	alice, bob, charlie, dave := a.signup("alice"), a.signup("bob"), a.signup("charlie"), a.signup("dave")
+	a.befriend(alice, bob)
+	a.befriend(alice, charlie)
+	// dave is NOT alice's friend
+
+	// 1. Rejects missing / empty name
+	code, _ := a.call("POST", "/groups", alice.Token, map[string]any{"name": ""})
+	a.expect("empty name", 400, code)
+	code, _ = a.call("POST", "/groups", alice.Token, map[string]any{"name": "   "})
+	a.expect("whitespace name", 400, code)
+
+	// 2. Rejects adding a non-friend as member
+	code, _ = a.call("POST", "/groups", alice.Token, map[string]any{
+		"name": "Weekend Goa Trip",
+		"memberIds": []string{dave.ID},
+	})
+	a.expect("add non-friend on creation", 400, code)
+
+	// 3. Rejects adding non-existent user ID
+	code, _ = a.call("POST", "/groups", alice.Token, map[string]any{
+		"name": "Ghost Trip",
+		"memberIds": []string{"fake-user-id-999"},
+	})
+	a.expect("add ghost user on creation", 400, code)
+
+	// 4. Successfully creates group with only name (defaults tested)
+	code, out := a.call("POST", "/groups", alice.Token, map[string]any{
+		"name": "Solo Hackathon",
+	})
+	a.expect("minimal group creation", 200, code)
+	soloGroup := asMap(out)
+	if soloGroup["name"] != "Solo Hackathon" {
+		t.Errorf("expected name 'Solo Hackathon', got %v", soloGroup["name"])
+	}
+	if soloGroup["simplifyDebts"] != false {
+		t.Errorf("expected simplifyDebts false, got %v", soloGroup["simplifyDebts"])
+	}
+	members := asList(soloGroup["members"])
+	if len(members) != 1 {
+		t.Fatalf("expected exactly 1 member (creator), got %d", len(members))
+	}
+	creatorMember := asMap(members[0])
+	if creatorMember["userId"] != alice.ID || creatorMember["role"] != "ADMIN" {
+		t.Errorf("creator member mismatch: %v", creatorMember)
+	}
+
+	// 5. Successfully creates group with description, simplifyDebts=true, and multiple friends
+	code, out = a.call("POST", "/groups", alice.Token, map[string]any{
+		"name": "Flat 302 Roommates",
+		"description": "Monthly rent, utilities, and groceries",
+		"simplifyDebts": true,
+		"memberIds": []string{bob.ID, charlie.ID, alice.ID}, // includes alice to test deduplication
+	})
+	a.expect("group with friends and config", 200, code)
+	flatGroup := asMap(out)
+	flatGid := flatGroup["id"].(string)
+	if flatGroup["simplifyDebts"] != true {
+		t.Errorf("expected simplifyDebts true, got %v", flatGroup["simplifyDebts"])
+	}
+	flatMembers := asList(flatGroup["members"])
+	if len(flatMembers) != 3 {
+		t.Fatalf("expected 3 members (alice, bob, charlie), got %d", len(flatMembers))
+	}
+
+	// Verify roles: alice is ADMIN, bob and charlie are MEMBER
+	roleMap := make(map[string]string)
+	for _, m := range flatMembers {
+		mMap := asMap(m)
+		roleMap[mMap["userId"].(string)] = mMap["role"].(string)
+		// Verify user profile is preloaded
+		userObj := asMap(mMap["user"])
+		if userObj == nil || userObj["id"] == nil {
+			t.Errorf("expected member user profile to be loaded, got %v", mMap)
+		}
+	}
+	if roleMap[alice.ID] != "ADMIN" {
+		t.Errorf("expected alice to be ADMIN, got %s", roleMap[alice.ID])
+	}
+	if roleMap[bob.ID] != "MEMBER" || roleMap[charlie.ID] != "MEMBER" {
+		t.Errorf("expected friends to be MEMBER, got %v", roleMap)
+	}
+
+	// 6. Verify retrievable via GET /groups
+	code, out = a.call("GET", "/groups", alice.Token, nil)
+	a.expect("list user groups", 200, code)
+	userGroups := asList(asMap(out)["groups"])
+	if len(userGroups) < 2 {
+		t.Errorf("expected at least 2 groups for alice, got %d", len(userGroups))
+	}
+
+	// 7. Verify retrievable via GET /groups/:groupId
+	code, out = a.call("GET", "/groups/"+flatGid, bob.Token, nil)
+	a.expect("get group by id", 200, code)
+
+	// 8. Verify split overview contains group
+	code, out = a.call("GET", "/split/overview", charlie.Token, nil)
+	a.expect("split overview contains group", 200, code)
+	overviewGroups := asList(asMap(out)["groups"])
+	foundFlat := false
+	for _, og := range overviewGroups {
+		if asMap(og)["id"] == flatGid {
+			foundFlat = true
+			break
+		}
+	}
+	if !foundFlat {
+		t.Errorf("charlie's overview missing group %s", flatGid)
 	}
 }
