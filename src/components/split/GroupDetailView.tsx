@@ -208,14 +208,25 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 										</div>
 										<p className="text-xs text-gray-600 mt-0.5">
 											<span className="font-semibold text-black">{split.paidBy}</span> paid ₹
-											{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} • split among {split.splitAmong.join(', ')}
+											{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+											{split.splitAmong && split.splitAmong.length > 0
+												? ` • split among ${split.splitAmong.join(', ')}`
+												: ' • not split'}
 										</p>
 										<p className="text-[11px] text-gray-400 mt-0.5">{split.date}</p>
 									</div>
 
 									<div className="flex items-center gap-3">
 										<div className="text-right">
-											{isUserPayer ? (
+											{!split.splitAmong || split.splitAmong.length === 0 ? (
+												isUserPayer ? (
+													<span className="text-xs font-bold text-gray-700 block">
+														You paid ₹{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+													</span>
+												) : (
+													<span className="text-xs text-gray-500 block">No split</span>
+												)
+											) : isUserPayer ? (
 												<span className="text-xs font-bold text-emerald-700 block">
 													You lent ₹{(split.amount - (isUserInvolved ? userShareAmount : 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
 												</span>

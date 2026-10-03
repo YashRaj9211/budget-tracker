@@ -11,7 +11,11 @@ export interface Transaction {
 	account: string;
 	date: string; // 'YYYY-MM-DD'
 	createdAt: number; // Date.now()
+	syncStatus?: 'synced' | 'pending';
+	serverId?: string;
 }
+
+export * from './sync';
 
 export interface Budget {
 	id: string; // UUID — primary key
@@ -19,6 +23,8 @@ export interface Budget {
 	endDate: string; // 'YYYY-MM-DD'
 	totalLimit: number;
 	alertThreshold: number; // 50 | 80 | 90 | 100
+	syncStatus?: 'synced' | 'pending';
+	serverId?: string;
 }
 
 export interface DayGroup {

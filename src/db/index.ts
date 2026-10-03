@@ -1,12 +1,12 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Transaction, Budget } from '../types';
+import type { Transaction, Budget, SyncQueueItem } from '../types';
 import type { Group, SplitExpense } from '../types/split';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
 
 // ── Database Config ──
 
 const DB_NAME = 'budget-tracker-db';
-const DB_VERSION = 3; // bumped: added split groups and split expenses stores
+const DB_VERSION = 4; // bumped: added sync_queue store
 
 // Store names
 const TRANSACTIONS = 'transactions';
@@ -15,6 +15,7 @@ const CATEGORIES = 'categories';
 const ACCOUNTS = 'accounts';
 const SPLIT_GROUPS = 'split_groups';
 const SPLIT_EXPENSES = 'split_expenses';
+const SYNC_QUEUE = 'sync_queue';
 
 // ── Open / Upgrade ──
 
@@ -55,6 +56,14 @@ function getDb(): Promise<IDBPDatabase> {
 					if (!db.objectStoreNames.contains(SPLIT_EXPENSES)) {
 						const splitStore = db.createObjectStore(SPLIT_EXPENSES, { keyPath: 'id' });
 						splitStore.createIndex('groupId', 'groupId');
+					}
+				}
+
+				// ── v4 → add sync queue ──
+				if (oldVersion < 4) {
+					if (!db.objectStoreNames.contains(SYNC_QUEUE)) {
+						const syncStore = db.createObjectStore(SYNC_QUEUE, { keyPath: 'id' });
+						syncStore.createIndex('createdAt', 'createdAt');
 					}
 				}
 			},
@@ -308,6 +317,108 @@ export async function seedSplitData(): Promise<void> {
 	}
 }
 
+// ── Sync Queue & Synchronization Helpers ──
+
+export async function addToSyncQueue(item: SyncQueueItem): Promise<void> {
+	const db = await getDb();
+	await db.put(SYNC_QUEUE, item);
+}
+
+export async function getSyncQueue(): Promise<SyncQueueItem[]> {
+	const db = await getDb();
+	const items: SyncQueueItem[] = await db.getAll(SYNC_QUEUE);
+	return items.sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export async function removeSyncQueueItem(id: string): Promise<void> {
+	const db = await getDb();
+	await db.delete(SYNC_QUEUE, id);
+}
+
+export async function updateSyncQueueItem(item: SyncQueueItem): Promise<void> {
+	const db = await getDb();
+	await db.put(SYNC_QUEUE, item);
+}
+
+export async function clearSyncQueue(): Promise<void> {
+	const db = await getDb();
+	await db.clear(SYNC_QUEUE);
+}
+
+export async function getSyncQueueCount(): Promise<number> {
+	const db = await getDb();
+	return db.count(SYNC_QUEUE);
+}
+
+/** Get transactions that need to be synced to cloud (pending or not yet assigned a serverId). */
+export async function getUnsyncedTransactions(): Promise<Transaction[]> {
+	const db = await getDb();
+	const all: Transaction[] = await db.getAll(TRANSACTIONS);
+	return all.filter((t) => t.syncStatus !== 'synced' || !t.serverId);
+}
+
+export async function markTransactionSynced(localId: string, serverId?: string): Promise<void> {
+	const db = await getDb();
+	const existing = await db.get(TRANSACTIONS, localId);
+	if (existing) {
+		existing.syncStatus = 'synced';
+		if (serverId) existing.serverId = serverId;
+		await db.put(TRANSACTIONS, existing);
+	}
+}
+
+/** Get local groups that are not yet marked as synced. */
+export async function getUnsyncedGroups(): Promise<Group[]> {
+	const db = await getDb();
+	const all: Group[] = await db.getAll(SPLIT_GROUPS);
+	// Groups without serverId or with syncStatus === 'pending', excluding demo seed groups
+	return all.filter((g) => !g.id.startsWith('demo-') && (g.syncStatus !== 'synced' || !g.serverId));
+}
+
+export async function markGroupSynced(localId: string, serverId?: string): Promise<void> {
+	const db = await getDb();
+	const existing = await db.get(SPLIT_GROUPS, localId);
+	if (existing) {
+		existing.syncStatus = 'synced';
+		if (serverId) existing.serverId = serverId;
+		await db.put(SPLIT_GROUPS, existing);
+	}
+}
+
+/** Get local splits that are not yet marked as synced. */
+export async function getUnsyncedSplits(): Promise<SplitExpense[]> {
+	const db = await getDb();
+	const all: SplitExpense[] = await db.getAll(SPLIT_EXPENSES);
+	return all.filter((s) => !s.id.startsWith('demo-') && (s.syncStatus !== 'synced' || !s.serverId));
+}
+
+export async function markSplitSynced(localId: string, serverId?: string): Promise<void> {
+	const db = await getDb();
+	const existing = await db.get(SPLIT_EXPENSES, localId);
+	if (existing) {
+		existing.syncStatus = 'synced';
+		if (serverId) existing.serverId = serverId;
+		await db.put(SPLIT_EXPENSES, existing);
+	}
+}
+
+/** Get local budgets that are not yet marked as synced. */
+export async function getUnsyncedBudgets(): Promise<Budget[]> {
+	const db = await getDb();
+	const all: Budget[] = await db.getAll(BUDGETS);
+	return all.filter((b) => b.syncStatus !== 'synced' || !b.serverId);
+}
+
+export async function markBudgetSynced(localId: string, serverId?: string): Promise<void> {
+	const db = await getDb();
+	const existing = await db.get(BUDGETS, localId);
+	if (existing) {
+		existing.syncStatus = 'synced';
+		if (serverId) existing.serverId = serverId;
+		await db.put(BUDGETS, existing);
+	}
+}
+
 // ── Init ──
 
 /** Call once on app startup to seed defaults. */
@@ -316,4 +427,5 @@ export async function initDb(): Promise<void> {
 	await seedAccounts();
 	await seedSplitData();
 }
+
 

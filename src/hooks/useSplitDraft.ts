@@ -3,6 +3,9 @@ import { categoryApi, expenseApi, friendshipApi, type ApiCategory, type FriendIt
 import { useAuthStore } from '../stores/authStore';
 import { useSplitStore } from '../stores/splitStore';
 import { computeSplits, type SplitResult } from '../utils/splitMath';
+import * as db from '../db';
+import { syncService } from '../services/syncService';
+import type { SplitExpense } from '../types/split';
 
 export interface Person {
 	id: string;
@@ -70,20 +73,30 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 
 	// Everyone who can be part of this expense (always includes me)
 	const people: Person[] = useMemo(() => {
-		if (!me) return [];
+		if (!me) {
+			if (mode === 'group' && group?.members) {
+				return group.members.map((name) => ({ id: name, name }));
+			}
+			return [];
+		}
 		if (mode === 'group') {
-			return (group?.memberDetails ?? []).map((m) => ({ id: m.id, name: m.id === me.id ? 'You' : m.name }));
+			if (group?.memberDetails && group.memberDetails.length > 0) {
+				return group.memberDetails.map((m) => ({ id: m.id, name: me && m.id === me.id ? 'You' : m.name }));
+			}
+			return (group?.members ?? ['You']).map((name) => ({ id: name, name }));
 		}
 		return [{ id: me.id, name: 'You' }, ...friends.map((f) => ({ id: f.user_id, name: f.name }))];
 	}, [me, mode, group, friends]);
 
-	// Friends mode starts with nobody ticked (you pick who); group mode starts with everyone.
+	// Friends mode starts with everyone if 1 friend, or just 'You'; group mode starts with everyone.
 	const selectedIds = useMemo(() => {
 		if (chosen) return people.filter((p) => chosen.has(p.id)).map((p) => p.id);
-		return mode === 'group' ? people.map((p) => p.id) : me ? [me.id] : [];
+		if (mode === 'group') return people.map((p) => p.id);
+		if (people.length === 2) return people.map((p) => p.id);
+		return me ? [me.id] : [];
 	}, [chosen, people, mode, me]);
 
-	const payerId = mode === 'friends' ? me?.id ?? '' : people.some((p) => p.id === payerChoice) ? payerChoice : me?.id ?? '';
+	const payerId = people.some((p) => p.id === payerChoice) ? payerChoice : me?.id ?? people[0]?.id ?? '';
 
 	const toggle = useCallback(
 		(id: string) => {
@@ -95,10 +108,23 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 		[selectedIds]
 	);
 
+	const selectAll = useCallback(() => {
+		setChosen(new Set(people.map((p) => p.id)));
+	}, [people]);
+
+	const selectNone = useCallback(() => {
+		setChosen(new Set());
+	}, []);
+
+	const setSelectedIds = useCallback((ids: string[]) => {
+		setChosen(new Set(ids));
+	}, []);
+
 	const switchMode = (m: SplitWith) => {
 		setSplitWith(m);
 		setChosen(null);
 		setValues({});
+		setPayerChoice('');
 	};
 	const switchGroup = (id: string) => {
 		setGroupChoice(id);
@@ -108,26 +134,31 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 	};
 	const setValue = (id: string, v: string) => setValues((prev) => ({ ...prev, [id]: v }));
 
-	const result: SplitResult = useMemo(
-		() =>
-			computeSplits(
-				amount,
-				splitType,
-				selectedIds.map((id) => ({ userId: id, value: values[id] ?? (splitType === 'SHARES' ? '1' : undefined) })),
-				payerId
-			),
-		[amount, splitType, selectedIds, values, payerId]
-	);
+	const result: SplitResult = useMemo(() => {
+		if (mode === 'group' && selectedIds.length === 0) {
+			if (!(Math.round(amount * 100) > 0)) {
+				return { ok: false, error: 'Enter an amount first' };
+			}
+			return { ok: true, splits: [] };
+		}
+		return computeSplits(
+			amount,
+			splitType,
+			selectedIds.map((id) => ({ userId: id, value: values[id] ?? (splitType === 'SHARES' ? '1' : undefined) })),
+			payerId
+		);
+	}, [mode, amount, splitType, selectedIds, values, payerId]);
 
 	const missingTarget = mode === 'group' && !group ? 'Create a group first, or split with friends' : mode === 'friends' && friends.length === 0 ? 'Add a friend first' : null;
-	const nobodyElse = selectedIds.length === 0 || (selectedIds.length === 1 && selectedIds[0] === payerId);
+	const nobodyElse = mode !== 'group' && (selectedIds.length === 0 || (selectedIds.length === 1 && selectedIds[0] === payerId));
 	const error = missingTarget ?? (nobodyElse ? 'Choose who to split with' : result.ok ? null : result.error);
 
-	/** Send the expense to the server and refresh the Split screen data. */
+	/** Send the expense to the server and refresh data, or save locally if offline. */
 	const submit = async (info: { description: string; date: string; amount: number }) => {
 		if (!result.ok || error) throw new Error(error ?? (result.ok ? '' : result.error));
-		await expenseApi.create({
-			type: 'SPLIT',
+
+		const payload = {
+			type: 'SPLIT' as const,
 			amount: info.amount,
 			description: info.description,
 			currency: 'INR',
@@ -136,8 +167,50 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 			categoryId: categoryId || null,
 			userId: payerId,
 			splits: result.splits,
+		};
+
+		if (navigator.onLine) {
+			try {
+				await expenseApi.create(payload);
+				await loadGroups();
+				return;
+			} catch (err: unknown) {
+				console.warn('[useSplitDraft] Server create failed. Checking if offline fallback applies:', err);
+				const status = (err as { response?: { status?: number } })?.response?.status;
+				if (typeof status === 'number' && status >= 400 && status < 500) {
+					throw err;
+				}
+			}
+		}
+
+		// Offline fallback: save locally in IndexedDB & queue sync
+		const localId = crypto.randomUUID();
+		const payerPerson = people.find((p) => p.id === payerId);
+		const splitExpense: SplitExpense = {
+			id: localId,
+			groupId: mode === 'group' ? groupId : '',
+			title: info.description,
+			amount: info.amount,
+			paidBy: payerPerson?.name || 'You',
+			paidById: payerId,
+			splitAmong: people.filter((p) => selectedIds.includes(p.id)).map((p) => p.name),
+			splitAmongIds: selectedIds,
+			date: info.date,
+			createdAt: Date.now(),
+			syncStatus: 'pending',
+		};
+
+		await db.saveSplit(splitExpense);
+		await syncService.enqueue({
+			entityType: 'split',
+			action: 'create',
+			recordId: localId,
+			payload,
 		});
-		await loadGroups();
+
+		useSplitStore.setState((s) => ({
+			splits: [splitExpense, ...s.splits],
+		}));
 	};
 
 	const reset = () => {
@@ -145,12 +218,13 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 		setValues({});
 		setSplitType('EQUAL');
 		setCategoryId('');
+		setPayerChoice('');
 	};
 
 	return {
 		mode, switchMode, allowFriends,
 		groups, groupId, switchGroup,
-		people, selectedIds, toggle,
+		people, selectedIds, toggle, selectAll, selectNone, setSelectedIds,
 		payerId, setPayerChoice,
 		splitType, setSplitType, values, setValue,
 		categories, categoryId, setCategoryId,

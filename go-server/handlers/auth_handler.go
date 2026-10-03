@@ -1,9 +1,12 @@
 package handlers
 
 import (
-	"math/rand"
-	"time"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"splitwise-go/database"
 	"splitwise-go/models"
@@ -11,6 +14,7 @@ import (
 	"splitwise-go/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type SignUpBody struct {
@@ -196,6 +200,88 @@ func VerifyOTP(c *gin.Context) {
 			"avatarUrl": user.AvatarURL,
 		},
 		"token": token,
+	})
+}
+
+type RefreshTokenBody struct {
+	Token string `json:"token"`
+}
+
+// RefreshToken allows clients with a valid or recently expired (within 30 days) JWT to seamlessly renew their session.
+func RefreshToken(c *gin.Context) {
+	var body RefreshTokenBody
+	_ = c.ShouldBindJSON(&body)
+
+	tokenStr := body.Token
+	if tokenStr == "" {
+		tokenStr = c.GetHeader("x-token")
+	}
+	if tokenStr == "" {
+		if h := c.GetHeader("Authorization"); strings.HasPrefix(h, "Bearer ") {
+			tokenStr = strings.TrimSpace(strings.TrimPrefix(h, "Bearer "))
+		}
+	}
+
+	if tokenStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required for refresh"})
+		return
+	}
+
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	var claims jwt.MapClaims
+	parsed, err := parser.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil || !parsed.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token signature"})
+		return
+	}
+
+	userIdVal, ok := claims["userId"]
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
+	}
+	userId, ok := userIdVal.(string)
+	if !ok || userId == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid userId in token"})
+		return
+	}
+
+	// Allow refresh up to 30 days after expiration
+	if expVal, ok := claims["exp"]; ok {
+		if expFloat, ok := expVal.(float64); ok {
+			expTime := time.Unix(int64(expFloat), 0)
+			if time.Since(expTime) > 30*24*time.Hour {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Session expired beyond renewal window"})
+				return
+			}
+		}
+	}
+
+	// Verify user still exists in DB
+	var user models.User
+	if err := database.DB.Where("id = ?", userId).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User account no longer exists"})
+		return
+	}
+
+	// Issue a fresh 30-day token
+	newToken := utils.GenerateToken(user.ID)
+	c.JSON(http.StatusOK, gin.H{
+		"token": newToken,
+		"user": gin.H{
+			"id":        user.ID,
+			"email":     user.Email,
+			"name":      user.Name,
+			"username":  user.Username,
+			"phone":     user.Phone,
+			"avatarUrl": user.AvatarURL,
+		},
 	})
 }
 

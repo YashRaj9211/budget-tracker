@@ -3,6 +3,9 @@ import type { Transaction, DayGroup } from '../types';
 import * as db from '../db';
 import { toMonthKey, getDayName, getDayNum } from '../utils/date';
 import { transactionsInitialState } from './initialState';
+import { expenseApi } from '../api/financeHubApi';
+import { useAuthStore } from './authStore';
+import { syncService } from '../services/syncService';
 
 // ── State Shape ──
 
@@ -54,8 +57,44 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 			...data,
 			id: crypto.randomUUID(),
 			createdAt: Date.now(),
+			syncStatus: 'pending',
 		};
+		// Save locally immediately for 100% offline-first availability
 		await db.addTransaction(transaction);
+
+		// If online and authenticated, attempt immediate cloud sync
+		const auth = useAuthStore.getState();
+		if (auth.isAuthenticated && navigator.onLine) {
+			try {
+				const created = await expenseApi.create({
+					type: data.type === 'income' ? 'INCOME' : 'PERSONAL',
+					amount: data.amount,
+					description: data.description || 'Personal Transaction',
+					currency: 'INR',
+					expenseDate: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+				});
+				transaction.syncStatus = 'synced';
+				transaction.serverId = created.id;
+				await db.addTransaction(transaction);
+			} catch (err) {
+				console.warn('[transactionStore] Immediate sync failed. Enqueuing for background sync:', err);
+				await syncService.enqueue({
+					entityType: 'transaction',
+					action: 'create',
+					recordId: transaction.id,
+					payload: transaction,
+				});
+			}
+		} else {
+			// Enqueue for background sync once online/authenticated
+			await syncService.enqueue({
+				entityType: 'transaction',
+				action: 'create',
+				recordId: transaction.id,
+				payload: transaction,
+			});
+		}
+
 		// Reload current month if the transaction belongs to it
 		const { selectedYear, selectedMonth } = get();
 		const txMonthKey = data.date.slice(0, 7); // 'YYYY-MM'
@@ -67,6 +106,31 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 	},
 
 	async deleteTransaction(id) {
+		const existing = await db.getTransaction(id);
+		if (existing?.serverId) {
+			const auth = useAuthStore.getState();
+			if (auth.isAuthenticated && navigator.onLine) {
+				try {
+					await expenseApi.delete(existing.serverId);
+				} catch (err) {
+					console.warn('[transactionStore] Cloud delete failed. Enqueuing:', err);
+					await syncService.enqueue({
+						entityType: 'transaction',
+						action: 'delete',
+						recordId: id,
+						payload: { serverId: existing.serverId },
+					});
+				}
+			} else {
+				await syncService.enqueue({
+					entityType: 'transaction',
+					action: 'delete',
+					recordId: id,
+					payload: { serverId: existing.serverId },
+				});
+			}
+		}
+
 		await db.deleteTransaction(id);
 		const { selectedYear, selectedMonth } = get();
 		await get().loadMonth(selectedYear, selectedMonth);
@@ -77,9 +141,54 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 		const existing = await db.getTransaction(id);
 		if (!existing) throw new Error('Transaction not found');
 		// id and createdAt never change; everything else can be edited
-		const updated: Transaction = { ...existing, ...data, id: existing.id, createdAt: existing.createdAt };
+		const updated: Transaction = {
+			...existing,
+			...data,
+			id: existing.id,
+			createdAt: existing.createdAt,
+			syncStatus: 'pending',
+		};
 		if (!(updated.amount > 0) || !updated.date) throw new Error('Amount and date are required');
 		await db.addTransaction(updated); // IndexedDB "put" replaces the old record
+
+		const auth = useAuthStore.getState();
+		if (existing.serverId) {
+			if (auth.isAuthenticated && navigator.onLine) {
+				try {
+					await expenseApi.update(existing.serverId, {
+						amount: updated.amount,
+						description: updated.description,
+						expenseDate: updated.date ? new Date(updated.date).toISOString() : new Date().toISOString(),
+					});
+					updated.syncStatus = 'synced';
+					await db.addTransaction(updated);
+				} catch (err) {
+					console.warn('[transactionStore] Cloud update failed. Enqueuing:', err);
+					await syncService.enqueue({
+						entityType: 'transaction',
+						action: 'update',
+						recordId: id,
+						payload: { serverId: existing.serverId, ...updated },
+					});
+				}
+			} else {
+				await syncService.enqueue({
+					entityType: 'transaction',
+					action: 'update',
+					recordId: id,
+					payload: { serverId: existing.serverId, ...updated },
+				});
+			}
+		} else {
+			// Created offline, not yet synced: enqueue create
+			await syncService.enqueue({
+				entityType: 'transaction',
+				action: 'create',
+				recordId: id,
+				payload: updated,
+			});
+		}
+
 		await get().reloadAll();
 	},
 

@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"splitwise-go/database"
 	"splitwise-go/models"
+	"splitwise-go/services"
 	"splitwise-go/websocket"
 
 	"github.com/gin-gonic/gin"
@@ -67,6 +69,16 @@ func SendFriendshipRequest(c *gin.Context) {
 		[]string{targetUserId},
 		[]byte(`{"event":"FRIEND_REQUEST_RECEIVED"}`),
 	)
+
+	// Send email notification to target user
+	var sender models.User
+	if err := database.DB.Where("id = ?", currentUserId.(string)).First(&sender).Error; err == nil {
+		go func(toEmail, toName, senderName, senderEmail string) {
+			if err := services.SendFriendRequestEmail(toEmail, toName, senderName, senderEmail); err != nil {
+				log.Printf("Failed to send friend request email to %s: %v", toEmail, err)
+			}
+		}(targetUser.Email, targetUser.Name, sender.Name, sender.Email)
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Friendship request sent successfully"})
 }

@@ -24,14 +24,18 @@ export default function AddGroupModal() {
 	const [friends, setFriends] = useState<FriendItem[]>([]);
 	const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	// Load friends when modal opens if authenticated
 	useEffect(() => {
-		if (isAddGroupOpen && isAuthenticated) {
-			friendshipApi
-				.getAcceptedFriends()
-				.then((res) => setFriends(res || []))
-				.catch((err) => console.error('Failed to load friends:', err));
+		if (isAddGroupOpen) {
+			setErrorMessage(null);
+			if (isAuthenticated) {
+				friendshipApi
+					.getAcceptedFriends()
+					.then((res) => setFriends(res || []))
+					.catch((err) => console.error('Failed to load friends:', err));
+			}
 		}
 	}, [isAddGroupOpen, isAuthenticated]);
 
@@ -50,6 +54,7 @@ export default function AddGroupModal() {
 		if (!name.trim() || isSubmitting) return;
 
 		setIsSubmitting(true);
+		setErrorMessage(null);
 		try {
 			await addGroup({
 				name: name.trim(),
@@ -63,8 +68,13 @@ export default function AddGroupModal() {
 			setName('');
 			setDescription('');
 			setSelectedFriendIds([]);
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error creating group:', error);
+			const msg =
+				error?.response?.data?.error ||
+				error?.message ||
+				'Failed to create group. Please check your connection and try again.';
+			setErrorMessage(msg);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -84,6 +94,12 @@ export default function AddGroupModal() {
 				<h2 className="font-bold text-lg text-black mb-4 flex items-center gap-2">
 					<Users className="w-5 h-5" /> Create New Group
 				</h2>
+
+				{errorMessage && (
+					<div className="mb-3 p-2.5 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
+						{errorMessage}
+					</div>
+				)}
 
 				<form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1">
 					{/* Group Name */}

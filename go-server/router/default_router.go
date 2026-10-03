@@ -24,4 +24,5 @@ func DefaultRouter(r *gin.RouterGroup) {
 	DashboardRouter(private)
 	GroupRouter(private)
 	FriendshipRouter(private)
+	BudgetRouter(private)
 }
