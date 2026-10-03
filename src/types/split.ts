@@ -15,6 +15,8 @@ export interface Group {
 	avatarColor: string; // Tailwind background / pastel color class
 	simplifyDebts?: boolean;
 	createdAt: number;
+	syncStatus?: 'synced' | 'pending';
+	serverId?: string;
 }
 
 export interface SplitExpense {
@@ -30,6 +32,8 @@ export interface SplitExpense {
 	date: string; // 'YYYY-MM-DD'
 	createdAt: number;
 	isSettlement?: boolean; // true if this is a settle-up transaction
+	syncStatus?: 'synced' | 'pending';
+	serverId?: string;
 }
 
 export interface MemberBalance {

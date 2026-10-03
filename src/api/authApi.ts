@@ -27,3 +27,9 @@ export async function verifyOtpApi(email: string, code: string): Promise<AuthRes
 	const response = await apiClient.post<AuthResponse>('/api/_public/v1/users/verify-otp', { email, code });
 	return response.data;
 }
+
+export async function refreshTokenApi(token: string): Promise<AuthResponse> {
+	const response = await apiClient.post<AuthResponse>('/api/_public/v1/users/refresh', { token });
+	return response.data;
+}
+

@@ -19,7 +19,7 @@ export default function AddSplitModal() {
 	const [error, setError] = useState<string | null>(null);
 
 	const numAmount = parseFloat(amount) || 0;
-	const draft = useSplitDraft({ active: isOpen, allowFriends: false, amount: numAmount });
+	const draft = useSplitDraft({ active: isOpen, allowFriends: true, amount: numAmount });
 
 	if (!isOpen) return null;
 
@@ -46,7 +46,7 @@ export default function AddSplitModal() {
 			<div className="bg-white border-[3px] border-black w-full max-w-md p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative max-h-[92vh] flex flex-col">
 				<div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
 					<h2 className="font-black text-lg text-black uppercase tracking-wide flex items-center gap-2">
-						<Receipt className="w-5 h-5" /> Add Split Expense
+						<Receipt className="w-5 h-5" /> {draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add Group Expense' : 'Add Split Expense'}
 					</h2>
 					<button onClick={() => setOpen(false)} className="p-1 border-2 border-black hover:bg-neutral-100" aria-label="Close modal">
 						<X className="w-5 h-5" />
@@ -85,7 +85,7 @@ export default function AddSplitModal() {
 						disabled={saving || !!draft.error || numAmount <= 0}
 						className="w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase bg-black text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{saving ? 'Saving…' : 'Add Split'}
+						{saving ? 'Saving…' : draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add Expense' : 'Add Split'}
 					</button>
 				</form>
 			</div>

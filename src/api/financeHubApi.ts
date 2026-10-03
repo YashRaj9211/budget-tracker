@@ -372,3 +372,58 @@ export const groupApi = {
 		return res.data;
 	},
 };
+
+// -------------------------------------------------------------
+// BUDGETS APIS
+// -------------------------------------------------------------
+
+export interface ApiBudget {
+	id: string;
+	amount: string | number;
+	period: string;
+	startDate: string;
+	endDate: string;
+	categoryId?: string | null;
+	alertThreshold?: number;
+}
+
+export const budgetApi = {
+	getAll: async (): Promise<ApiBudget[]> => {
+		const res = await apiClient.get<ApiBudget[]>('/api/_private/v1/budgets');
+		return res.data;
+	},
+
+	create: async (payload: {
+		id?: string;
+		amount: number;
+		startDate: string;
+		endDate: string;
+		period?: string;
+		categoryId?: string | null;
+		alertThreshold?: number;
+	}): Promise<ApiBudget> => {
+		const res = await apiClient.post<ApiBudget>('/api/_private/v1/budgets', payload);
+		return res.data;
+	},
+
+	update: async (
+		budgetId: string,
+		payload: Partial<{
+			amount: number;
+			startDate: string;
+			endDate: string;
+			period?: string;
+			categoryId?: string | null;
+			alertThreshold?: number;
+		}>
+	): Promise<ApiBudget> => {
+		const res = await apiClient.put<ApiBudget>(`/api/_private/v1/budgets/${budgetId}`, payload);
+		return res.data;
+	},
+
+	delete: async (budgetId: string): Promise<{ message: string }> => {
+		const res = await apiClient.delete(`/api/_private/v1/budgets/${budgetId}`);
+		return res.data;
+	},
+};
+

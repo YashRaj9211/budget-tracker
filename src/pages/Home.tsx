@@ -6,6 +6,9 @@ import HomePageHeader from '../components/home/HomeHeader';
 import AddTransactionForm from '../components/transaction/AddTransactionForm';
 import { useTransactionStore, useDayGroups } from '../stores/transactionStore';
 import { useBudgetStore } from '../stores/budgetStore';
+import { useAuthStore } from '../stores/authStore';
+import { syncService } from '../services/syncService';
+import { useWebSocket } from '../hooks/useWebSocket';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
 
@@ -21,8 +24,9 @@ function Home() {
 	const loadCategories = useBudgetStore((s) => s.loadCategories);
 	const loadAccounts = useBudgetStore((s) => s.loadAccounts);
 	const dayGroups = useDayGroups();
+	const { onEvent } = useWebSocket();
 
-	// Init DB and load data on mount
+	// Init DB and load data on mount, then sync with cloud
 	useEffect(() => {
 		async function init() {
 			await initDb();
@@ -31,12 +35,33 @@ function Home() {
 			await loadMonth(selectedYear, selectedMonth);
 			await loadAllTransactions();
 			await loadActiveBudget(todayStr());
+
+			// Sync offline records with cloud and pull latest records
+			if (useAuthStore.getState().isAuthenticated && navigator.onLine) {
+				syncService.syncAll();
+			}
+
 			// Hide the initial loading splash screen once initial load is complete
 			window.hideSplashScreen?.();
 		}
 		init();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Listen for live updates and sync home records
+	useEffect(() => {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const unsubscribe = onEvent('REFETCH_EXPENSES', () => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				syncService.syncAll();
+			}, 500);
+		});
+		return () => {
+			clearTimeout(timer);
+			unsubscribe();
+		};
+	}, [onEvent]);
 
 	// At midnight: reload transactions + re-check active budget (the date changed)
 	const handleMidnight = useCallback(() => {

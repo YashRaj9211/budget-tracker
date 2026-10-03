@@ -3,6 +3,9 @@ import type { Budget } from '../types';
 import * as db from '../db';
 import { todayStr } from '../utils/date';
 import { budgetsInitialState } from './initialState';
+import { budgetApi } from '../api/financeHubApi';
+import { useAuthStore } from './authStore';
+import { syncService } from '../services/syncService';
 
 // ── State Shape ──
 
@@ -38,12 +41,69 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 	},
 
 	async loadAllBudgets() {
+		const auth = useAuthStore.getState();
+		if (auth.isAuthenticated && navigator.onLine) {
+			try {
+				const serverBudgets = await budgetApi.getAll();
+				for (const sb of serverBudgets) {
+					const localBudget: Budget = {
+						id: sb.id,
+						startDate: sb.startDate ? sb.startDate.slice(0, 10) : '',
+						endDate: sb.endDate ? sb.endDate.slice(0, 10) : '',
+						totalLimit: parseFloat(String(sb.amount)) || 0,
+						alertThreshold: sb.alertThreshold ?? 80,
+						syncStatus: 'synced',
+						serverId: sb.id,
+					};
+					await db.saveBudget(localBudget);
+				}
+			} catch (err) {
+				console.warn('[budgetStore] Could not fetch server budgets. Using local data:', err);
+			}
+		}
+
 		const budgets = await db.getAllBudgets();
 		set({ allBudgets: budgets });
 	},
 
 	async saveBudget(budget) {
-		await db.saveBudget(budget);
+		const toSave: Budget = {
+			...budget,
+			syncStatus: 'pending',
+		};
+		await db.saveBudget(toSave);
+
+		const auth = useAuthStore.getState();
+		if (auth.isAuthenticated && navigator.onLine) {
+			try {
+				const created = await budgetApi.create({
+					id: budget.id,
+					amount: budget.totalLimit,
+					startDate: budget.startDate,
+					endDate: budget.endDate,
+					alertThreshold: budget.alertThreshold,
+				});
+				toSave.syncStatus = 'synced';
+				toSave.serverId = created.id;
+				await db.saveBudget(toSave);
+			} catch (err) {
+				console.warn('[budgetStore] Cloud save failed. Enqueuing:', err);
+				await syncService.enqueue({
+					entityType: 'budget',
+					action: 'create',
+					recordId: budget.id,
+					payload: budget,
+				});
+			}
+		} else {
+			await syncService.enqueue({
+				entityType: 'budget',
+				action: 'create',
+				recordId: budget.id,
+				payload: budget,
+			});
+		}
+
 		// Refresh both lists
 		await get().loadAllBudgets();
 		// Re-check if the saved budget is now the active one
@@ -51,10 +111,34 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 	},
 
 	async deleteBudget(id) {
+		const existing = (await db.getAllBudgets()).find((b) => b.id === id);
+		const serverId = existing?.serverId || id;
+
+		const auth = useAuthStore.getState();
+		if (auth.isAuthenticated && navigator.onLine) {
+			try {
+				await budgetApi.delete(serverId);
+			} catch (err) {
+				console.warn('[budgetStore] Cloud delete failed. Enqueuing:', err);
+				await syncService.enqueue({
+					entityType: 'budget',
+					action: 'delete',
+					recordId: id,
+					payload: { serverId },
+				});
+			}
+		} else {
+			await syncService.enqueue({
+				entityType: 'budget',
+				action: 'delete',
+				recordId: id,
+				payload: { serverId },
+			});
+		}
+
 		await db.deleteBudget(id);
 		set((s) => ({
 			allBudgets: s.allBudgets.filter((b) => b.id !== id),
-			// If the deleted budget was the active one, clear it
 			activeBudget: s.activeBudget?.id === id ? null : s.activeBudget,
 		}));
 	},

@@ -11,6 +11,7 @@ import {
 import { groupApi, expenseApi, type Group as ApiGroup, type Expense as ApiExpense } from '../api/financeHubApi';
 import { useAuthStore } from './authStore';
 import { calculateGroupBalances } from '../utils/debtSimplification';
+import { syncService } from '../services/syncService';
 
 interface SplitState {
 	groups: Group[];
@@ -137,7 +138,7 @@ const isSettlement = !!exp.isSettlement;
 		amount: numAmount,
 		paidBy: payerName,
 		paidById: exp.userId,
-		splitAmong: splitAmong.length > 0 ? splitAmong : ['You'],
+		splitAmong,
 		splitAmongIds,
 		splitIds,
 		date: exp.expenseDate ? exp.expenseDate.split('T')[0] : new Date(exp.createdAt).toISOString().split('T')[0],
@@ -160,8 +161,7 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		const auth = useAuthStore.getState();
 
-		// Signed in: the server is the source of truth. If it fails we show an error
-		// instead of quietly showing old guest data as if it were the real thing.
+		// Signed in: try server first, but fall back to local IndexedDB if offline
 		if (auth.isAuthenticated && auth.user) {
 			try {
 				const userId = auth.user.id;
@@ -171,12 +171,30 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 				const splits = (overview.expenses || []).map((e) =>
 					transformApiExpense(e, userId, e.groupId ? groupById.get(e.groupId) : undefined)
 				);
+
+				// Cache in local IndexedDB for seamless offline availability
+				for (const g of groups) {
+					await saveGroup({ ...g, syncStatus: 'synced', serverId: g.id });
+				}
+				for (const s of splits) {
+					await saveSplit({ ...s, syncStatus: 'synced', serverId: s.id });
+				}
+
 				set({ groups, splits, isLoading: false });
+				return;
 			} catch (err) {
-				console.error('Failed to load split data from server:', err);
-				set({ isLoading: false, error: 'Could not load your groups. Check your connection and try again.' });
+				console.warn('Could not load from server, falling back to local offline data:', err);
+				// Offline or server unreachable: fall back to local IndexedDB
+				try {
+					const [localGroups, localSplits] = await Promise.all([getAllGroups(), getAllSplits()]);
+					set({ groups: localGroups, splits: localSplits, isLoading: false, error: null });
+					return;
+				} catch (dbErr) {
+					console.error('Failed to load local split data:', dbErr);
+					set({ isLoading: false, error: 'Could not load your groups. Check your connection and try again.' });
+					return;
+				}
 			}
-			return;
 		}
 
 		// Fallback to local IndexedDB (for guest/offline mode)
@@ -197,7 +215,7 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 	addGroup: async ({ name, description = '', memberIds = [], avatarColor = 'pastel-pink' }) => {
 		const auth = useAuthStore.getState();
 
-		if (auth.isAuthenticated && auth.user) {
+		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			try {
 				const created = await groupApi.create({
 					name,
@@ -208,16 +226,16 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 
 				const transformed = transformApiGroup(created, auth.user.id);
 				transformed.avatarColor = avatarColor;
+				await saveGroup({ ...transformed, syncStatus: 'synced', serverId: created.id });
 
 				set((state) => ({ groups: [transformed, ...state.groups] }));
 				return;
 			} catch (err) {
-				console.error('Failed to create group on server:', err);
-				throw err;
+				console.warn('Failed to create group on server. Saving offline:', err);
 			}
 		}
 
-		// Fallback: local group creation
+		// Local / Offline group creation
 		const newGroup: Group = {
 			id: crypto.randomUUID(),
 			name,
@@ -225,24 +243,45 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 			members: ['You'],
 			avatarColor,
 			createdAt: Date.now(),
+			syncStatus: 'pending',
 		};
 		await saveGroup(newGroup);
+		await syncService.enqueue({
+			entityType: 'group',
+			action: 'create',
+			recordId: newGroup.id,
+			payload: { name, description, simplifyDebts: false, memberIds },
+		});
 		set((state) => ({ groups: [newGroup, ...state.groups] }));
 	},
 
 	removeGroup: async (id) => {
 		const auth = useAuthStore.getState();
+		const group = get().groups.find((g) => g.id === id);
+		const serverId = group?.serverId || id;
 
-		if (auth.isAuthenticated && auth.user) {
+		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			try {
-				await groupApi.deleteGroup(id);
+				await groupApi.deleteGroup(serverId);
 			} catch (err) {
-				console.error('Failed to delete group on server:', err);
-				throw err;
+				console.warn('Failed to delete group on server. Enqueuing offline delete:', err);
+				await syncService.enqueue({
+					entityType: 'group',
+					action: 'delete',
+					recordId: id,
+					payload: { serverId },
+				});
 			}
 		} else {
-			await dbDeleteGroup(id);
+			await syncService.enqueue({
+				entityType: 'group',
+				action: 'delete',
+				recordId: id,
+				payload: { serverId },
+			});
 		}
+
+		await dbDeleteGroup(id);
 
 		set((state) => ({
 			groups: state.groups.filter((g) => g.id !== id),
@@ -253,98 +292,117 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 
 	addSplit: async (splitData) => {
 		const auth = useAuthStore.getState();
+		const group = get().groups.find((g) => g.id === splitData.groupId);
+		const myId = auth.user?.id || 'me';
 
-		if (auth.isAuthenticated && auth.user) {
+		// Map participant IDs
+		const memberDetails = group?.memberDetails || [];
+		const idOf = (name: string): string => {
+			if (name === 'You') return myId;
+			return memberDetails.find((m) => m.name === name)?.id || '';
+		};
+
+		const payerId = splitData.paidBy === 'You' ? myId : splitData.paidById || idOf(splitData.paidBy) || myId;
+
+		const targetUserIds = (
+			splitData.splitAmongIds && splitData.splitAmongIds.length === splitData.splitAmong.length
+				? splitData.splitAmongIds
+				: splitData.splitAmong.map(idOf)
+		).filter(Boolean);
+
+		const totalPaise = Math.round(splitData.amount * 100);
+		const count = targetUserIds.length > 0 ? targetUserIds.length : 1;
+		const basePaise = Math.floor(totalPaise / count);
+		let remainderPaise = totalPaise % count;
+
+		const splitsInput = targetUserIds.length === 0 ? [] : targetUserIds.map((uId) => {
+			const sharePaise = basePaise + (remainderPaise > 0 ? 1 : 0);
+			if (remainderPaise > 0) remainderPaise--;
+			return {
+				userId: uId,
+				amount: (sharePaise / 100).toFixed(2),
+				splitType: 'EQUAL' as const,
+				isPaid: uId === payerId,
+			};
+		});
+
+		const expensePayload = {
+			groupId: splitData.groupId,
+			description: splitData.title,
+			amount: splitData.amount,
+			type: 'SPLIT' as const,
+			userId: payerId,
+			isSettlement: !!splitData.isSettlement,
+			expenseDate: splitData.date ? new Date(splitData.date).toISOString() : new Date().toISOString(),
+			splits: splitsInput,
+		};
+
+		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			try {
-				const group = get().groups.find((g) => g.id === splitData.groupId);
-				
-				// Map participant IDs
-				const memberDetails = group?.memberDetails || [];
-const myId = auth.user.id;
-				const idOf = (name: string): string => {
-					if (name === 'You') return myId;
-					return memberDetails.find((m) => m.name === name)?.id || '';
-				};
-
-				const payerId = splitData.paidBy === 'You' ? myId : splitData.paidById || idOf(splitData.paidBy);
-				if (!payerId) throw new Error('Could not find who paid');
-
-				const targetUserIds = (
-					splitData.splitAmongIds && splitData.splitAmongIds.length === splitData.splitAmong.length
-						? splitData.splitAmongIds
-						: splitData.splitAmong.map(idOf)
-				).filter(Boolean);
-				if (targetUserIds.length === 0) throw new Error('Choose at least one person to split with');
-
-				const totalPaise = Math.round(splitData.amount * 100);
-				const count = targetUserIds.length;
-				const basePaise = count > 0 ? Math.floor(totalPaise / count) : 0;
-				let remainderPaise = count > 0 ? totalPaise % count : 0;
-
-				const splitsInput = targetUserIds.map((uId) => {
-					const sharePaise = basePaise + (remainderPaise > 0 ? 1 : 0);
-					if (remainderPaise > 0) remainderPaise--;
-					return {
-						userId: uId,
-						amount: (sharePaise / 100).toFixed(2),
-						splitType: 'EQUAL' as const,
-						isPaid: uId === payerId,
-					};
-				});
-
-				const createdExpense = await expenseApi.create({
-					groupId: splitData.groupId,
-					description: splitData.title,
-					amount: splitData.amount,
-type: 'SPLIT',
-					userId: payerId,
-					isSettlement: !!splitData.isSettlement,
-					expenseDate: splitData.date ? new Date(splitData.date).toISOString() : new Date().toISOString(),
-					splits: splitsInput,
-				});
-
+				const createdExpense = await expenseApi.create(expensePayload);
 				const transformed = transformApiExpense(createdExpense, auth.user.id, group);
+				await saveSplit({ ...transformed, syncStatus: 'synced', serverId: createdExpense.id });
 				set((state) => ({ splits: [transformed, ...state.splits] }));
 				return;
 			} catch (err) {
-				console.error('Failed to create split on server:', err);
-				throw err;
+				console.warn('Failed to create split on server. Saving offline:', err);
 			}
 		}
 
-		// Fallback: local IndexedDB
+		// Fallback: local IndexedDB + sync queue
 		const localSplit: SplitExpense = {
 			id: crypto.randomUUID(),
 			groupId: splitData.groupId,
 			title: splitData.title,
 			amount: splitData.amount,
 			paidBy: splitData.paidBy,
-			paidById: splitData.paidById,
+			paidById: payerId,
 			splitAmong: splitData.splitAmong,
-			splitAmongIds: splitData.splitAmongIds,
+			splitAmongIds: targetUserIds,
 			date: splitData.date,
 			createdAt: Date.now(),
 			isSettlement: splitData.isSettlement,
+			syncStatus: 'pending',
 		};
 
 		await saveSplit(localSplit);
+		await syncService.enqueue({
+			entityType: 'split',
+			action: 'create',
+			recordId: localSplit.id,
+			payload: expensePayload,
+		});
+
 		set((state) => ({ splits: [localSplit, ...state.splits] }));
 	},
 
 	removeSplit: async (id) => {
 		const auth = useAuthStore.getState();
+		const split = get().splits.find((s) => s.id === id);
+		const serverId = split?.serverId || id;
 
-		if (auth.isAuthenticated && auth.user) {
+		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			try {
-				await expenseApi.delete(id);
+				await expenseApi.delete(serverId);
 			} catch (err) {
-				console.error('Failed to delete expense on server:', err);
-				throw err;
+				console.warn('Failed to delete expense on server. Enqueuing offline delete:', err);
+				await syncService.enqueue({
+					entityType: 'split',
+					action: 'delete',
+					recordId: id,
+					payload: { serverId },
+				});
 			}
 		} else {
-			await dbDeleteSplit(id);
+			await syncService.enqueue({
+				entityType: 'split',
+				action: 'delete',
+				recordId: id,
+				payload: { serverId },
+			});
 		}
 
+		await dbDeleteSplit(id);
 		set((state) => ({ splits: state.splits.filter((s) => s.id !== id) }));
 	},
 
