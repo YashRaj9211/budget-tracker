@@ -1,7 +1,7 @@
-import { Layers, User, Users } from 'lucide-react';
+import { Layers, User, Users, ChevronDown } from 'lucide-react';
 import type { SplitDraft } from '../../hooks/useSplitDraft';
 import type { SplitType } from '../../api/financeHubApi';
-import { SearchableSelect, SearchableMultiSelect } from '../common/SearchableSelect';
+import { SearchableMultiSelect, SearchableSelect } from '../common/SearchableSelect';
 
 const TYPES: { id: SplitType; label: string; hint: string; unit: string }[] = [
 	{ id: 'EQUAL', label: 'Equally', hint: 'Everyone pays the same', unit: '' },
@@ -11,6 +11,7 @@ const TYPES: { id: SplitType; label: string; hint: string; unit: string }[] = [
 ];
 
 const labelStyle = 'block text-[12px] font-medium text-text-muted mb-1.5';
+const selectStyle = "w-full bg-surface rounded-full h-11 px-4 pr-10 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 appearance-none";
 
 /**
  * The "who shares this expense" part of the form: group or friends, who paid,
@@ -61,13 +62,20 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 							You are not in any group yet. Create one on the Split screen.
 						</p>
 					) : (
-						<SearchableSelect 
-							ariaLabel="Group" 
-							value={draft.groupId} 
-							onChange={draft.switchGroup}
-							options={groups.map(g => ({ id: g.id, label: g.name }))}
-							placeholder="Select a group..."
-						/>
+						<div className="relative">
+							<select
+								value={draft.groupId}
+								onChange={(e) => draft.switchGroup(e.target.value)}
+								className={selectStyle}
+								aria-label="Group"
+							>
+								<option value="" disabled>Select a group...</option>
+								{groups.map(g => (
+									<option key={g.id} value={g.id}>{g.name}</option>
+								))}
+							</select>
+							<ChevronDown className="w-4 h-4 text-text-muted absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+						</div>
 					)}
 				</div>
 			)}
@@ -126,25 +134,26 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 							<ul className="space-y-1.5">
 								{people.filter(p => selectedIds.includes(p.id)).map((p) => {
 									return (
-										<li key={p.id} className="flex items-center gap-2 p-2.5 rounded-[16px] bg-surface">
+										<li key={p.id} className="flex items-center gap-2 p-2.5 rounded-[16px] border border-ink/10 bg-surface/50">
 											<span className="text-sm font-medium text-text truncate flex-1">{p.name}</span>
 											{splitType !== 'EQUAL' && (
-												<span className="flex items-center gap-1">
+												<div className="flex items-center justify-end gap-2">
 													<input
 														aria-label={`${current.label} for ${p.name}`}
 														type="number"
 														inputMode="decimal"
 														min="0"
 														step="any"
+														placeholder="0"
 														value={draft.values[p.id] ?? (splitType === 'SHARES' ? '1' : '')}
 														onChange={(e) => draft.setValue(p.id, e.target.value)}
-														className="w-20 bg-card rounded-full px-2.5 py-1 text-right text-sm font-medium text-text border border-ink/10 focus:outline-none"
+														className="w-24 bg-card rounded-full px-3 py-1.5 text-right text-sm font-medium text-text border border-ink/10 focus:outline-none focus:border-ink/30"
 													/>
-													<span className="text-xs text-text-muted w-3">{current.unit}</span>
-												</span>
+													<span className="text-xs text-text-muted w-4 font-medium">{current.unit}</span>
+												</div>
 											)}
-											{perPerson.get(p.id) && (
-												<span className="text-xs font-medium text-text w-20 text-right">
+											{perPerson.get(p.id) && splitType === 'EQUAL' && (
+												<span className="text-[13px] font-medium text-text-muted text-right">
 													₹{perPerson.get(p.id)}
 												</span>
 											)}
@@ -167,13 +176,20 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 			{draft.categories.length > 0 && (
 				<div>
 					<label className={labelStyle}>Category</label>
-					<SearchableSelect 
-						ariaLabel="Category" 
-						value={draft.categoryId} 
-						onChange={draft.setCategoryId}
-						options={[{ id: '', label: 'No category' }, ...draft.categories.map(c => ({ id: c.id, label: c.name }))]}
-						placeholder="Select a category..."
-					/>
+					<div className="relative">
+						<select
+							value={draft.categoryId}
+							onChange={(e) => draft.setCategoryId(e.target.value)}
+							className={selectStyle}
+							aria-label="Category"
+						>
+							<option value="">No category</option>
+							{draft.categories.map(c => (
+								<option key={c.id} value={c.id}>{c.name}</option>
+							))}
+						</select>
+						<ChevronDown className="w-4 h-4 text-text-muted absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+					</div>
 				</div>
 			)}
 		</div>

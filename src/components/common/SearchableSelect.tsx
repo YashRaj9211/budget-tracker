@@ -41,7 +41,7 @@ export function SearchableSelect({
 	}, []);
 
 	return (
-		<div className="relative" ref={containerRef}>
+		<div className={`relative ${isOpen ? 'z-50' : 'z-auto'}`} ref={containerRef}>
 			<div
 				className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text cursor-pointer flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-ink/20"
 				onClick={() => setIsOpen(!isOpen)}
@@ -136,7 +136,7 @@ export function SearchableMultiSelect({
 	const selectNone = () => onChange([]);
 
 	return (
-		<div className="relative" ref={containerRef}>
+		<div className={`relative ${isOpen ? 'z-50' : 'z-auto'}`} ref={containerRef}>
 			<div
 				className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text cursor-pointer flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-ink/20"
 				onClick={() => setIsOpen(!isOpen)}

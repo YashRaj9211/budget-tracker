@@ -15,7 +15,7 @@ export default function BottomNav() {
 
 	return (
 		<nav
-			className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between p-2 rounded-[32px] bg-ink w-[calc(100%-32px)] max-w-[420px]"
+			className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center justify-between p-2 rounded-[32px] bg-ink w-[calc(100%-32px)] max-w-[420px]"
 			role="navigation"
 			aria-label="Bottom Navigation"
 		>

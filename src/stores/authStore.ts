@@ -4,6 +4,27 @@ import { loginApi, signUpApi, requestOtpApi, verifyOtpApi } from '../api/authApi
 import { socketService } from '../api/socketService';
 import { isBeyondGracePeriod } from '../utils/jwt';
 import { toast } from './toastStore';
+import { clearUserData } from '../db';
+
+async function resetAllStores(): Promise<void> {
+	try {
+		await clearUserData();
+	} catch (e) {
+		console.warn('Failed to clear user data from IndexedDB:', e);
+	}
+	try {
+		const { useTransactionStore } = await import('./transactionStore');
+		useTransactionStore.setState({ transactions: [], allTransactions: [] });
+	} catch {}
+	try {
+		const { useBudgetStore } = await import('./budgetStore');
+		useBudgetStore.setState({ activeBudget: null, allBudgets: [] });
+	} catch {}
+	try {
+		const { useSplitStore } = await import('./splitStore');
+		useSplitStore.setState({ groups: [], splits: [] });
+	} catch {}
+}
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -88,6 +109,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			const res = await loginApi(credentials);
+			await resetAllStores();
 			localStorage.setItem(TOKEN_KEY, res.token);
 			localStorage.setItem(USER_KEY, JSON.stringify(res.user));
 			set({
@@ -110,6 +132,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		try {
 			const res = await signUpApi(userData);
 			if (res.token && res.user) {
+				await resetAllStores();
 				localStorage.setItem(TOKEN_KEY, res.token);
 				localStorage.setItem(USER_KEY, JSON.stringify(res.user));
 				set({
@@ -149,6 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			const res = await verifyOtpApi(email, code);
+			await resetAllStores();
 			localStorage.setItem(TOKEN_KEY, res.token);
 			localStorage.setItem(USER_KEY, JSON.stringify(res.user));
 			set({
@@ -170,6 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		socketService.disconnect();
 		localStorage.removeItem(TOKEN_KEY);
 		localStorage.removeItem(USER_KEY);
+		resetAllStores();
 		set({
 			token: null,
 			user: null,

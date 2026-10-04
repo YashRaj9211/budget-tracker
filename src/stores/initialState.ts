@@ -6,6 +6,7 @@ export const transactionsInitialState = {
 	selectedYear: new Date().getFullYear(),
 	selectedMonth: new Date().getMonth(),
 	isLoading: false,
+	loadError: null as string | null,
 };
 
 export const budgetsInitialState = {

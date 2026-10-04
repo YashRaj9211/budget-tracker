@@ -174,6 +174,28 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 					transformApiExpense(e, userId, e.groupId ? groupById.get(e.groupId) : undefined)
 				);
 
+				const serverGroupIds = new Set(groups.map((g) => g.id));
+				const serverSplitIds = new Set(splits.map((s) => s.id));
+
+				// Prune local groups and splits that were deleted remotely
+				const [localGroups, localSplits] = await Promise.all([getAllGroups(), getAllSplits()]);
+				for (const lg of localGroups) {
+					if (!lg.id.startsWith('demo-') && (lg.serverId || lg.syncStatus === 'synced')) {
+						const match = (lg.serverId && serverGroupIds.has(lg.serverId)) || serverGroupIds.has(lg.id);
+						if (!match && lg.syncStatus !== 'pending') {
+							await dbDeleteGroup(lg.id);
+						}
+					}
+				}
+				for (const ls of localSplits) {
+					if (!ls.id.startsWith('demo-') && (ls.serverId || ls.syncStatus === 'synced')) {
+						const match = (ls.serverId && serverSplitIds.has(ls.serverId)) || serverSplitIds.has(ls.id);
+						if (!match && ls.syncStatus !== 'pending') {
+							await dbDeleteSplit(ls.id);
+						}
+					}
+				}
+
 				// Cache in local IndexedDB for seamless offline availability
 				for (const g of groups) {
 					await saveGroup({ ...g, syncStatus: 'synced', serverId: g.id });
@@ -262,6 +284,9 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 		const group = get().groups.find((g) => g.id === id);
 		const serverId = group?.serverId || id;
 
+		// Collect all splits belonging to this group BEFORE deleting
+		const groupSplits = get().splits.filter((s) => s.groupId === id);
+
 		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			try {
 				await groupApi.deleteGroup(serverId);
@@ -284,6 +309,22 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 		}
 
 		await dbDeleteGroup(id);
+
+		// BUG FIX #2: Delete the mirrored Transaction records for every split in this group
+		// so they stop showing in Home feed, Stats charts, and Budget calculations.
+		if (groupSplits.length > 0) {
+			const { deleteTransaction } = await import('../db');
+			for (const s of groupSplits) {
+				try {
+					await deleteTransaction(s.id);
+				} catch {
+					// best-effort — transaction mirror may not exist for old/demo splits
+				}
+			}
+			// Reload transaction store so Home + Stats + Budget update immediately
+			const { useTransactionStore } = await import('./transactionStore');
+			await useTransactionStore.getState().reloadAll();
+		}
 
 		set((state) => ({
 			groups: state.groups.filter((g) => g.id !== id),
@@ -449,21 +490,28 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 	removeSplit: async (id) => {
 		const auth = useAuthStore.getState();
 		const split = get().splits.find((s) => s.id === id);
-		const serverId = split?.serverId || id;
+		// BUG FIX #5: only use serverId if it actually came from the server;
+		// never pass a local UUID to the remote API.
+		const serverId = split?.serverId;
 
 		if (auth.isAuthenticated && auth.user && navigator.onLine) {
-			try {
-				await expenseApi.delete(serverId);
-			} catch (err) {
-				console.warn('Failed to delete expense on server. Enqueuing offline delete:', err);
-				await syncService.enqueue({
-					entityType: 'split',
-					action: 'delete',
-					recordId: id,
-					payload: { serverId },
-				});
+			if (serverId) {
+				// Only call the API when we have a confirmed server-side ID
+				try {
+					await expenseApi.delete(serverId);
+				} catch (err) {
+					console.warn('Failed to delete expense on server. Enqueuing offline delete:', err);
+					await syncService.enqueue({
+						entityType: 'split',
+						action: 'delete',
+						recordId: id,
+						payload: { serverId },
+					});
+				}
 			}
-		} else {
+			// If no serverId the expense was never synced to the server, nothing to delete remotely.
+		} else if (serverId) {
+			// Offline but has a server record — queue the delete for later
 			await syncService.enqueue({
 				entityType: 'split',
 				action: 'delete',
@@ -473,6 +521,20 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 		}
 
 		await dbDeleteSplit(id);
+
+		// BUG FIX #1: Also delete the mirrored Transaction record that was created by addSplit.
+		// Without this, the expense keeps showing in Home feed, Stats charts, and Budget.
+		try {
+			const { deleteTransaction } = await import('../db');
+			await deleteTransaction(id); // split id === transaction id (set in addSplit)
+		} catch {
+			// best-effort — transaction mirror may not exist for demo/old splits
+		}
+
+		// Reload transaction store so Home + Stats + Budget update immediately
+		const { useTransactionStore } = await import('./transactionStore');
+		await useTransactionStore.getState().reloadAll();
+
 		set((state) => ({ splits: state.splits.filter((s) => s.id !== id) }));
 	},
 

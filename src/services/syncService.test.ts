@@ -38,7 +38,11 @@ vi.mock('../db', () => ({
 	getAllGroups: vi.fn().mockResolvedValue([]),
 	getAllSplits: vi.fn().mockResolvedValue([]),
 	addTransaction: vi.fn().mockResolvedValue(undefined),
+	deleteTransaction: vi.fn().mockResolvedValue(undefined),
+	deleteSplit: vi.fn().mockResolvedValue(undefined),
 	saveBudget: vi.fn().mockResolvedValue(undefined),
+	deleteBudget: vi.fn().mockResolvedValue(undefined),
+	clearUserData: vi.fn().mockResolvedValue(undefined),
 	getAllBudgets: vi.fn().mockResolvedValue([]),
 	getActiveBudget: vi.fn().mockResolvedValue(undefined),
 }));
@@ -287,5 +291,80 @@ describe('syncService', () => {
 		);
 		expect(db.markBudgetSynced).toHaveBeenCalledWith('local-budget-1', 'server-budget-1');
 		expect(db.removeSyncQueueItem).toHaveBeenCalledWith('q-budget-1');
+	});
+
+	it('prunes locally cached transactions that were deleted remotely on another device', async () => {
+		useAuthStore.setState({
+			isAuthenticated: true,
+			user: { id: 'u1', name: 'User 1', email: 'u1@example.com', username: 'u1' },
+			token: 'test-token',
+		});
+
+		// Local IndexedDB has 2 transactions:
+		// 1. tx-active (exists on server)
+		// 2. tx-deleted (deleted on another device, no longer in server expenses)
+		// 3. tx-offline-pending (created offline locally, not yet synced)
+		vi.mocked(db.getAllTransactions).mockResolvedValueOnce([
+			{
+				id: 'local-1',
+				serverId: 'server-tx-active',
+				type: 'expense',
+				amount: 100,
+				category: 'Food',
+				account: 'Default',
+				description: 'Lunch',
+				date: '2026-10-01',
+				createdAt: 1000,
+				syncStatus: 'synced',
+			},
+			{
+				id: 'local-2',
+				serverId: 'server-tx-deleted-remotely',
+				type: 'expense',
+				amount: 500,
+				category: 'Shopping',
+				account: 'Default',
+				description: 'Shoes',
+				date: '2026-10-02',
+				createdAt: 2000,
+				syncStatus: 'synced',
+			},
+			{
+				id: 'local-3',
+				type: 'expense',
+				amount: 50,
+				category: 'Snack',
+				account: 'Default',
+				description: 'Tea',
+				date: '2026-10-03',
+				createdAt: 3000,
+				syncStatus: 'pending',
+			},
+		]);
+
+		// Server only returns server-tx-active (server-tx-deleted-remotely was deleted!)
+		vi.mocked(expenseApi.getUserExpenses).mockResolvedValueOnce([
+			{
+				id: 'server-tx-active',
+				amount: '100',
+				currency: 'INR',
+				description: 'Lunch',
+				type: 'PERSONAL',
+				expenseDate: '2026-10-01T00:00:00.000Z',
+				userId: 'u1',
+				createdAt: '2026-10-01T00:00:00.000Z',
+				updatedAt: '2026-10-01T00:00:00.000Z',
+			},
+		]);
+
+		const res = await syncService.syncAll();
+		expect(res.errors).toEqual([]);
+
+		// Verify that the remotely deleted transaction was purged from local IndexedDB
+		expect(db.deleteTransaction).toHaveBeenCalledWith('local-2');
+		// The active one is retained/updated
+		expect(db.deleteTransaction).not.toHaveBeenCalledWith('local-1');
+		// The offline pending one is not purged
+		expect(db.deleteTransaction).not.toHaveBeenCalledWith('local-3');
 	});
 });

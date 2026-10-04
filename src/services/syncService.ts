@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import * as db from '../db';
 import { expenseApi, groupApi, categoryApi, budgetApi, type ApiCategory } from '../api/financeHubApi';
 import { useAuthStore } from '../stores/authStore';
@@ -352,11 +352,27 @@ class SyncService {
 			// ── STEP 3: Downstream Sync — pull user's cloud expenses and budgets into IndexedDB ──
 			try {
 				const userExpenses = await expenseApi.getUserExpenses();
-				const localTxMap = new Map<string, Transaction>();
+				const serverExpenseIds = new Set<string>(userExpenses.map((exp) => exp.id));
+
+				const queueAfterUpload = await db.getSyncQueue();
+				const pendingTxRecordIds = new Set(
+					queueAfterUpload.filter((q) => q.entityType === 'transaction').map((q) => q.recordId)
+				);
+
 				const allLocal = await db.getAllTransactions();
+
+				// Reconcile deletions: remove any locally cached transactions that were deleted remotely
 				for (const lt of allLocal) {
-					if (lt.serverId) localTxMap.set(lt.serverId, lt);
-					localTxMap.set(lt.id, lt);
+					const isSyncedOrHasServerRef = !!lt.serverId || lt.syncStatus === 'synced';
+					const matchesServer = (lt.serverId && serverExpenseIds.has(lt.serverId)) || serverExpenseIds.has(lt.id);
+					const isPending = pendingTxRecordIds.has(lt.id) || lt.syncStatus === 'pending';
+
+					if (isSyncedOrHasServerRef && !matchesServer && !isPending) {
+						await db.deleteTransaction(lt.id);
+						if (lt.isSplit) {
+							await db.deleteSplit(lt.serverId || lt.id);
+						}
+					}
 				}
 
 				const categoryById = new Map<string, string>();
@@ -364,72 +380,101 @@ class SyncService {
 					categoryById.set(c.id, c.name);
 				}
 
+				// BUG FIX #3: Build a set of split IDs queued for remote deletion.
+				// The server still returns these briefly after we enqueue the delete,
+				// so skip re-importing them — otherwise the deleted expense reappears
+				// in Home / Stats on the next sync cycle.
+				const pendingDeleteSplitServerIds = new Set<string>(
+					queueAfterUpload
+						.filter((q) => q.entityType === 'split' && q.action === 'delete')
+						.flatMap((q) => [q.recordId, q.payload?.serverId].filter(Boolean) as string[])
+				);
+
 				for (const exp of userExpenses) {
+					const existingLocal = allLocal.find((lt) => lt.serverId === exp.id || lt.id === exp.id);
+
 					if (exp.type === 'PERSONAL' || exp.type === 'INCOME') {
-						if (!localTxMap.has(exp.id)) {
-							const newLocal: Transaction = {
-								id: exp.id,
-								type: exp.type === 'INCOME' ? 'income' : 'expense',
-								amount: parseFloat(exp.amount) || 0,
-								description: exp.description || '',
-								category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Other',
-								account: 'Default',
-								date: exp.expenseDate
-									? exp.expenseDate.split('T')[0]
-									: exp.createdAt.split('T')[0],
-								createdAt: new Date(exp.createdAt).getTime(),
-								syncStatus: 'synced',
-								serverId: exp.id,
-							};
-							await db.addTransaction(newLocal);
-						}
+						const newLocal: Transaction = {
+							id: existingLocal ? existingLocal.id : exp.id,
+							type: exp.type === 'INCOME' ? 'income' : 'expense',
+							amount: parseFloat(exp.amount) || 0,
+							description: exp.description || '',
+							category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Other',
+							account: existingLocal?.account || 'Default',
+							date: exp.expenseDate
+								? exp.expenseDate.split('T')[0]
+								: exp.createdAt.split('T')[0],
+							createdAt: existingLocal?.createdAt || new Date(exp.createdAt).getTime(),
+							syncStatus: 'synced',
+							serverId: exp.id,
+						};
+						await db.addTransaction(newLocal);
 					} else if (exp.type === 'SPLIT' && !exp.isSettlement) {
-						if (!localTxMap.has(exp.id)) {
-							const totalAmount = parseFloat(exp.amount) || 0;
-							let myShare = 0;
-							const paidByMe = exp.userId === auth.user?.id;
-							let lentAmount = 0;
-							
-							if (exp.splits) {
-								const mySplit = exp.splits.find(s => s.userId === auth.user?.id);
-								if (mySplit) {
-									myShare = parseFloat(mySplit.amount) || 0;
-								}
+						// Skip splits queued for deletion - server still returns them briefly.
+						if (pendingDeleteSplitServerIds.has(exp.id)) continue;
+						const totalAmount = parseFloat(exp.amount) || 0;
+						let myShare = 0;
+						const paidByMe = exp.userId === auth.user?.id;
+						let lentAmount = 0;
+						
+						if (exp.splits) {
+							const mySplit = exp.splits.find(s => s.userId === auth.user?.id);
+							if (mySplit) {
+								myShare = parseFloat(mySplit.amount) || 0;
 							}
-							
-							if (paidByMe) {
-								lentAmount = totalAmount - myShare;
-							}
-							
-							const newLocal: Transaction = {
-								id: exp.id,
-								type: 'expense',
-								amount: myShare,
-								description: exp.description || '',
-								category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Split',
-								account: 'Default',
-								date: exp.expenseDate
-									? exp.expenseDate.split('T')[0]
-									: exp.createdAt.split('T')[0],
-								createdAt: new Date(exp.createdAt).getTime(),
-								syncStatus: 'synced',
-								serverId: exp.id,
-								isSplit: true,
-								groupId: exp.groupId || undefined,
-								paidByMe,
-								totalAmount,
-								lentAmount,
-							};
-							await db.addTransaction(newLocal);
 						}
+						
+						if (paidByMe) {
+							lentAmount = totalAmount - myShare;
+						}
+						
+						const newLocal: Transaction = {
+							id: existingLocal ? existingLocal.id : exp.id,
+							type: 'expense',
+							amount: myShare,
+							description: exp.description || '',
+							category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Split',
+							account: existingLocal?.account || 'Default',
+							date: exp.expenseDate
+								? exp.expenseDate.split('T')[0]
+								: exp.createdAt.split('T')[0],
+							createdAt: existingLocal?.createdAt || new Date(exp.createdAt).getTime(),
+							syncStatus: 'synced',
+							serverId: exp.id,
+							isSplit: true,
+							groupId: exp.groupId || undefined,
+							paidByMe,
+							totalAmount,
+							lentAmount,
+						};
+						await db.addTransaction(newLocal);
 					}
 				}
-			} catch (downstreamErr) {
+			} catch (downstreamErr: unknown) {
 				console.warn('[SyncService] Downstream expenses sync skipped:', downstreamErr);
+				const msg = downstreamErr instanceof Error ? downstreamErr.message : String(downstreamErr);
+				errors.push(msg);
 			}
 
 			try {
 				const serverBudgets = await budgetApi.getAll();
+				const serverBudgetIds = new Set<string>(serverBudgets.map((b) => b.id));
+				const localBudgets = await db.getAllBudgets();
+				const queueAfterUpload = await db.getSyncQueue();
+				const pendingBudgetIds = new Set(
+					queueAfterUpload.filter((q) => q.entityType === 'budget').map((q) => q.recordId)
+				);
+
+				for (const lb of localBudgets) {
+					const isSynced = !!lb.serverId || lb.syncStatus === 'synced';
+					const matchesServer = (lb.serverId && serverBudgetIds.has(lb.serverId)) || serverBudgetIds.has(lb.id);
+					const isPending = pendingBudgetIds.has(lb.id) || lb.syncStatus === 'pending';
+
+					if (isSynced && !matchesServer && !isPending) {
+						await db.deleteBudget(lb.id);
+					}
+				}
+
 				for (const sb of serverBudgets) {
 					const localBudget: Budget = {
 						id: sb.id,
@@ -442,8 +487,10 @@ class SyncService {
 					};
 					await db.saveBudget(localBudget);
 				}
-			} catch (downstreamBudgetErr) {
+			} catch (downstreamBudgetErr: unknown) {
 				console.warn('[SyncService] Downstream budgets sync skipped:', downstreamBudgetErr);
+				const msg = downstreamBudgetErr instanceof Error ? downstreamBudgetErr.message : String(downstreamBudgetErr);
+				errors.push(msg);
 			}
 
 			// ── STEP 4: Instantly reload active frontend stores (Home, Budget, Split) ──
