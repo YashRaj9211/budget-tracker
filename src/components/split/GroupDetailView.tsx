@@ -10,6 +10,8 @@ import {
 	CheckCircle2,
 } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
+import { Card } from '../ui/Card';
+import { Button } from '../common/Button';
 
 interface GroupDetailViewProps {
 	groupId: string;
@@ -41,33 +43,33 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 	return (
 		<div className="space-y-4">
 			{/* Detail View Header */}
-			<div className="flex items-center justify-between border-2 border-black p-3 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+			<Card variant="white" className="p-4 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<button
 						onClick={onBack}
-						className="p-1.5 border border-black hover:bg-gray-100 transition-colors"
+						className="w-9 h-9 rounded-full bg-surface flex items-center justify-center text-text hover:bg-surface/80 transition-colors"
 						title="Back to Groups"
 					>
-						<ArrowLeft className="w-5 h-5" />
+						<ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
 					</button>
 					<div>
-						<h2 className="font-bold text-lg text-black leading-tight">{group.name}</h2>
-						<p className="text-xs text-gray-600">{group.members.length} Members</p>
+						<h2 className="font-medium text-[17px] text-text leading-tight">{group.name}</h2>
+						<p className="text-[12px] text-text-muted mt-0.5">{group.members.length} Members: {group.members.join(', ')}</p>
 					</div>
 				</div>
 
 				<div className="flex items-center gap-2">
 					{confirmDelete ? (
-						<div className="flex items-center gap-1">
+						<div className="flex items-center gap-1.5">
 							<button
 								onClick={handleDeleteGroup}
-								className="px-2 py-1 bg-red-600 text-white font-bold text-xs border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+								className="px-3 py-1 bg-danger text-white font-medium text-xs rounded-full hover:bg-danger/90 transition-colors"
 							>
 								Confirm
 							</button>
 							<button
 								onClick={() => setConfirmDelete(false)}
-								className="px-2 py-1 bg-gray-200 text-black font-bold text-xs border border-black"
+								className="px-3 py-1 bg-surface text-text font-medium text-xs rounded-full hover:bg-surface/80 transition-colors"
 							>
 								Cancel
 							</button>
@@ -75,43 +77,45 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 					) : (
 						<button
 							onClick={() => setConfirmDelete(true)}
-							className="p-1.5 border border-black hover:bg-red-50 text-red-600 transition-colors"
+							className="w-9 h-9 rounded-full bg-surface hover:bg-danger-soft text-text-muted hover:text-danger flex items-center justify-center transition-colors"
 							title="Delete Group"
 						>
-							<Trash2 className="w-4 h-4" />
+							<Trash2 className="w-4 h-4" strokeWidth={1.5} />
 						</button>
 					)}
 				</div>
-			</div>
+			</Card>
 
 			{/* Action Buttons: Add Split & Settle Up */}
 			<div className="grid grid-cols-2 gap-3">
-				<button
+				<Button
+					variant="primary"
 					onClick={() => setAddSplitOpen(true)}
-					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-yellow font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 transition-all"
+					className="flex items-center justify-center gap-2 py-3"
 				>
-					<Plus className="w-4 h-4" />
+					<Plus className="w-4 h-4" strokeWidth={1.5} />
 					<span>Add Expense</span>
-				</button>
+				</Button>
 
-				<button
+				<Button
+					variant="accent"
 					onClick={() => setSettleUpOpen(true)}
-					className="flex items-center justify-center gap-2 border-2 border-black p-3 bg-pastel-green font-bold text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 transition-all"
+					className="flex items-center justify-center gap-2 py-3"
 				>
-					<Handshake className="w-4 h-4" />
+					<Handshake className="w-4 h-4" strokeWidth={1.5} />
 					<span>Settle Up</span>
-				</button>
+				</Button>
 			</div>
 
 			{/* Summary / Who Owes Whom Section */}
-			<div className="border-2 border-black p-4 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-				<h3 className="font-bold text-sm text-black uppercase tracking-wider mb-3 flex items-center gap-1.5">
-					<UserCheck className="w-4 h-4" /> Member Balances & Settlement
+			<Card variant="white" className="p-5">
+				<h3 className="font-medium text-[14px] text-text mb-3 flex items-center gap-2">
+					<UserCheck className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Member Balances & Settlement
 				</h3>
 
 				{debts.length === 0 ? (
-					<div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-medium">
-						<CheckCircle2 className="w-5 h-5 text-emerald-600" />
+					<div className="flex items-center gap-2 p-3.5 rounded-[16px] bg-mint/30 text-mint-deep text-[13px] font-medium">
+						<CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={1.5} />
 						<span>Everyone is all settled up in this group!</span>
 					</div>
 				) : (
@@ -119,25 +123,25 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 						{debts.map((debt, idx) => (
 							<div
 								key={idx}
-								className="flex items-center justify-between p-2.5 bg-gray-50 border border-black text-sm font-medium"
+								className="flex items-center justify-between p-3 rounded-[16px] bg-surface text-[13px] font-medium text-text"
 							>
 								<div className="flex items-center gap-2">
-									<span className={debt.from === 'You' ? 'font-bold text-rose-600' : 'text-gray-800'}>
+									<span className={debt.from === 'You' ? 'font-medium text-danger' : 'text-text'}>
 										{debt.from}
 									</span>
-									<ArrowRight className="w-4 h-4 text-gray-400" />
-									<span className={debt.to === 'You' ? 'font-bold text-emerald-600' : 'text-gray-800'}>
+									<ArrowRight className="w-3.5 h-3.5 text-text-muted" strokeWidth={1.5} />
+									<span className={debt.to === 'You' ? 'font-medium text-mint-deep' : 'text-text'}>
 										{debt.to}
 									</span>
 								</div>
-								<div className="flex items-center gap-2">
-									<span className="font-bold text-black bg-white px-2 py-0.5 border border-black">
+								<div className="flex items-center gap-2.5">
+									<span className="font-medium text-text bg-card px-2.5 py-1 rounded-full text-xs shadow-2xs">
 										₹{debt.amount.toLocaleString()}
 									</span>
 									{(debt.from === 'You' || debt.to === 'You') && (
 										<button
 											onClick={() => setSettleUpOpen(true)}
-											className="px-2 py-0.5 bg-pastel-green border border-black text-xs font-bold hover:bg-emerald-200 transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-x-px active:translate-y-px"
+											className="px-3 py-1 bg-mint text-ink text-xs font-medium rounded-full hover:bg-mint/80 transition-colors"
 										>
 											Settle
 										</button>
@@ -149,102 +153,102 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 				)}
 
 				{/* Individual Member Net Status Badges */}
-				<div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200">
+				<div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-surface">
 					{memberBalances.map((b) => (
 						<div
 							key={b.member}
-							className={`text-xs px-2.5 py-1 border border-black font-medium ${
+							className={`text-[12px] px-3 py-1 rounded-full font-medium ${
 								b.netAmount > 0
-									? 'bg-emerald-100 text-emerald-900 border-emerald-400'
+									? 'bg-mint/30 text-mint-deep'
 									: b.netAmount < 0
-									? 'bg-rose-100 text-rose-900 border-rose-400'
-									: 'bg-gray-100 text-gray-600'
+									? 'bg-danger-soft text-danger'
+									: 'bg-surface text-text-muted'
 							}`}
 						>
 							{b.member}:{' '}
-							<span className="font-bold">
+							<span>
 								{b.netAmount > 0 ? `+₹${b.netAmount}` : b.netAmount < 0 ? `-₹${Math.abs(b.netAmount)}` : '₹0'}
 							</span>
 						</div>
 					))}
 				</div>
-			</div>
+			</Card>
 
 			{/* Group Expenses Activity Feed */}
-			<div className="border-2 border-black p-4 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-				<h3 className="font-bold text-sm text-black uppercase tracking-wider mb-3 flex items-center gap-1.5">
-					<Receipt className="w-4 h-4" /> Group Expenses ({groupSplits.length})
+			<Card variant="white" className="p-5">
+				<h3 className="font-medium text-[14px] text-text mb-3 flex items-center gap-2">
+					<Receipt className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Group Expenses ({groupSplits.length})
 				</h3>
 
 				{groupSplits.length === 0 ? (
-					<p className="text-sm text-gray-500 italic text-center py-4">
+					<p className="text-[13px] text-text-muted text-center py-6">
 						No split expenses recorded in this group yet.
 					</p>
 				) : (
-					<div className="space-y-3">
+					<div className="space-y-2.5">
 						{groupSplits.map((split) => {
 							const totalPaise = Math.round(split.amount * 100);
 							const count = split.splitAmong.length || 1;
 							const baseSharePaise = Math.floor(totalPaise / count);
 							const isUserPayer = split.paidBy === 'You';
 							const isUserInvolved = split.splitAmong.includes('You');
-							const userShareAmount = (baseSharePaise / 100);
+							const userShareAmount = baseSharePaise / 100;
 
 							return (
 								<div
 									key={split.id}
-									className={`p-3 border border-black flex items-center justify-between ${
-										split.isSettlement ? 'bg-emerald-50 border-emerald-400' : 'bg-gray-50'
+									className={`p-3.5 rounded-[16px] flex items-center justify-between ${
+										split.isSettlement ? 'bg-mint/20' : 'bg-surface'
 									}`}
 								>
 									<div>
 										<div className="flex items-center gap-2">
-											<span className="font-bold text-sm text-black">{split.title}</span>
+											<span className="font-medium text-[14px] text-text">{split.title}</span>
 											{split.isSettlement && (
-												<span className="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5">
+												<span className="text-[10px] bg-mint text-ink font-medium px-2 py-0.5 rounded-full">
 													Settlement
 												</span>
 											)}
 										</div>
-										<p className="text-xs text-gray-600 mt-0.5">
-											<span className="font-semibold text-black">{split.paidBy}</span> paid ₹
+										<p className="text-[12px] text-text-muted mt-0.5">
+											<span className="text-text font-medium">{split.paidBy}</span> paid ₹
 											{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
 											{split.splitAmong && split.splitAmong.length > 0
 												? ` • split among ${split.splitAmong.join(', ')}`
 												: ' • not split'}
 										</p>
-										<p className="text-[11px] text-gray-400 mt-0.5">{split.date}</p>
+										<p className="text-[11px] text-text-muted mt-0.5">{split.date}</p>
 									</div>
 
 									<div className="flex items-center gap-3">
 										<div className="text-right">
 											{!split.splitAmong || split.splitAmong.length === 0 ? (
 												isUserPayer ? (
-													<span className="text-xs font-bold text-gray-700 block">
+													<span className="text-xs font-medium text-text block">
 														You paid ₹{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
 													</span>
 												) : (
-													<span className="text-xs text-gray-500 block">No split</span>
+													<span className="text-xs text-text-muted block">No split</span>
 												)
 											) : isUserPayer ? (
-												<span className="text-xs font-bold text-emerald-700 block">
+												<span className="text-xs font-medium text-mint-deep block">
 													You lent ₹{(split.amount - (isUserInvolved ? userShareAmount : 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
 												</span>
 											) : isUserInvolved ? (
-												<span className="text-xs font-bold text-rose-700 block">
+												<span className="text-xs font-medium text-danger block">
 													You owe ₹{userShareAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
 												</span>
 											) : (
-												<span className="text-xs text-gray-500 block">Not involved</span>
+												<span className="text-xs text-text-muted block">Not involved</span>
 											)}
 										</div>
 
 										<button
 											onClick={() => removeSplit(split.id)}
-											className="p-1 hover:bg-rose-100 text-gray-400 hover:text-rose-600 border border-transparent hover:border-black transition-colors"
+											className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-soft transition-colors"
 											title="Delete split expense"
 										>
-											<Trash2 className="w-3.5 h-3.5" />
+											<Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
 										</button>
 									</div>
 								</div>
@@ -252,7 +256,7 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 						})}
 					</div>
 				)}
-			</div>
+			</Card>
 		</div>
 	);
 }

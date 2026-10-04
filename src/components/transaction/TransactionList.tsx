@@ -1,7 +1,7 @@
-import "../../App.css"
 import TransactionCard from './TransactionCard';
 import TransactionsHeader from './TransactionsHeader';
 import type { DayGroup } from '../../types';
+import { Card } from '../ui/Card';
 
 interface TransactionListProps {
 	group: DayGroup;
@@ -9,18 +9,18 @@ interface TransactionListProps {
 
 function TransactionList({ group }: TransactionListProps) {
 	return (
-		<div className="transaction-list">
+		<div className="mb-4 last:mb-0">
 			<TransactionsHeader
 				dayNum={group.dayNum}
 				dayName={group.dayName}
 				income={group.income}
 				expense={group.expense}
 			/>
-			<ul className="px-4">
+			<Card variant="white" nested className="p-2 shadow-sm divide-y divide-surface">
 				{group.transactions.map((t) => (
 					<TransactionCard key={t.id} transaction={t} />
 				))}
-			</ul>
+			</Card>
 		</div>
 	);
 }

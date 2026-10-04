@@ -58,15 +58,16 @@ export default function ExcelTools({ className = '' }: ExcelToolsProps) {
 	};
 
 	return (
-		<div className={`flex items-center gap-2 shrink-0 ${className}`}>
+		<div className={`grid grid-cols-2 gap-2 w-full ${className}`}>
 			<button
+				type="button"
 				onClick={handleExport}
 				disabled={isProcessing}
-				className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-100 border border-black text-black text-xs font-bold uppercase tracking-wider shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
+				className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-full border border-ink/20 text-ink bg-surface hover:bg-surface/80 text-xs font-medium active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
 				title="Export transactions to Excel"
 			>
-				<Download size={13} />
-				<span>{isProcessing ? '...' : 'Export'}</span>
+				<Download size={14} strokeWidth={1.5} />
+				<span>{isProcessing ? 'Exporting…' : 'Export'}</span>
 			</button>
 
 			<input
@@ -78,12 +79,13 @@ export default function ExcelTools({ className = '' }: ExcelToolsProps) {
 			/>
 
 			<button
+				type="button"
 				onClick={handleImportClick}
 				disabled={isProcessing}
-				className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#fefed4] hover:bg-yellow-200 border border-black text-black text-xs font-bold uppercase tracking-wider shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer disabled:opacity-50"
+				className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-ink text-white hover:bg-ink-soft text-xs font-medium active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
 				title="Import transactions from Excel"
 			>
-				<Upload size={13} />
+				<Upload size={14} strokeWidth={1.5} />
 				<span>Import</span>
 			</button>
 		</div>

@@ -5,10 +5,10 @@ import SyncStatusBanner from './components/common/SyncStatusBanner';
 import './styles/gradient.css';
 import { Outlet } from 'react-router';
 import ToastContainer from './components/common/ToastContainer';
+import { StatusActionSheet } from './components/ui/StatusActionSheet';
 import { useAuthStore } from './stores/authStore';
 import { useWebSocket } from './hooks/useWebSocket';
 import { syncService } from './services/syncService';
-
 import { toast } from './stores/toastStore';
 
 function App() {
@@ -22,7 +22,6 @@ function App() {
 		}
 	}, [isAuthenticated]);
 
-	// Global live notification toasts
 	useEffect(() => {
 		if (!isAuthenticated) return;
 
@@ -41,10 +40,15 @@ function App() {
 	}, [isAuthenticated, onEvent]);
 
 	return (
-		<div className="w-full max-w-md mx-auto min-h-screen bg-white text-black relative flex flex-col overflow-x-hidden">
+		<div
+			className={`w-full max-w-md mx-auto min-h-screen relative flex flex-col overflow-x-hidden ${
+				isAuthenticated ? 'bg-canvas text-text' : 'bg-card text-text'
+			}`}
+		>
 			<ToastContainer />
-			<main className={`flex-1 w-full ${isAuthenticated ? 'px-3.5 pt-3 pb-24' : 'px-3.5 py-4 flex items-center justify-center'}`}>
-				<SyncStatusBanner />
+			<StatusActionSheet />
+			{isAuthenticated && <SyncStatusBanner />}
+			<main className={`flex-1 w-full ${isAuthenticated ? 'px-4 pt-4 pb-28' : 'p-0 flex flex-col'}`}>
 				<Outlet />
 			</main>
 			{isAuthenticated && <BottomNav />}
@@ -53,4 +57,3 @@ function App() {
 }
 
 export default App;
-

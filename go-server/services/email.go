@@ -111,7 +111,7 @@ func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail stri
 		return err
 	}
 
-	subject := fmt.Sprintf("%s sent you a friend request on Dekhkar", displayName)
+	subject := fmt.Sprintf("%s sent you a friend request on Divvit", displayName)
 	params := &resend.SendEmailRequest{
 		From:    "noreply@dekhkar.prjly.org",
 		To:      []string{toEmail},

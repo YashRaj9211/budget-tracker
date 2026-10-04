@@ -1,12 +1,35 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ArrowUpRight, ArrowDownRight, Activity, TrendingUp, PieChart as PieIcon, Users, Scale } from 'lucide-react';
-import { dashboardApi, type AnalyticsResponse, type ExpensesSummary, type FriendsBalanceResponse, type DailySpendStat } from '../api/financeHubApi';
+import {
+	LayoutDashboard,
+	ArrowUpRight,
+	ArrowDownRight,
+	Activity,
+	TrendingUp,
+	PieChart as PieIcon,
+	Users,
+	Scale,
+} from 'lucide-react';
+import {
+	dashboardApi,
+	type AnalyticsResponse,
+	type ExpensesSummary,
+	type FriendsBalanceResponse,
+	type DailySpendStat,
+} from '../api/financeHubApi';
 import { useAuthStore } from '../stores/authStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import ChartCard from '../components/charts/ChartCard';
 import ChangeBadge from '../components/charts/ChangeBadge';
 import { CategoryDonut } from '../components/charts/StatsCharts';
-import { DailyTimelineChart, FriendBalanceChart, GroupSpendChart, ServerTrendChart } from '../components/charts/HubCharts';
+import {
+	DailyTimelineChart,
+	FriendBalanceChart,
+	GroupSpendChart,
+	ServerTrendChart,
+} from '../components/charts/HubCharts';
+import { Card } from '../components/ui/Card';
+import SegmentedTabs from '../components/ui/SegmentedTabs';
+import { ListRow } from '../components/ui/ListRow';
 
 export default function HubDashboard() {
 	const user = useAuthStore((s) => s.user);
@@ -19,6 +42,8 @@ export default function HubDashboard() {
 	const [error, setError] = useState<string | null>(null);
 
 	const { onEvent } = useWebSocket();
+
+	const [chartView, setChartView] = useState<'CATEGORY' | 'GROUP' | 'SPLIT'>('CATEGORY');
 
 	const loadDashboardData = async () => {
 		if (!user?.id) return;
@@ -47,7 +72,6 @@ export default function HubDashboard() {
 		window.hideSplashScreen?.();
 	}, [user?.id, period]);
 
-	// Auto-refresh when someone adds or settles an expense over WebSocket
 	useEffect(() => {
 		const unsub = onEvent('REFETCH_EXPENSES', () => {
 			loadDashboardData();
@@ -56,196 +80,221 @@ export default function HubDashboard() {
 	}, [onEvent, user?.id, period]);
 
 	return (
-		<div className="w-full space-y-4 pb-28">
-			{/* Top Bar Banner */}
-			<div className="border-[3px] border-black p-4 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="text-xl font-black text-black uppercase tracking-wider flex items-center gap-1.5">
-							<LayoutDashboard className="w-6 h-6" /> Finance Hub
-						</h1>
-						<p className="text-[10px] text-black/60 font-bold mt-0.5">
-							Live synced Splitwise & Cashflow
-						</p>
-					</div>
-					<div className="text-right">
-						{isLoading && <span className="text-[9px] font-black uppercase text-amber-600 block animate-pulse">Syncing</span>}
-					</div>
+		<div className="w-full space-y-3 pb-28">
+			{/* Title block */}
+			<div className="flex items-center justify-between mb-4">
+				<div>
+					<h1 className="text-[20px] font-medium text-text flex items-center gap-2">
+						<LayoutDashboard className="w-5 h-5 text-text-muted" strokeWidth={1.5} /> Finance hub
+					</h1>
+					<p className="text-[12px] text-text-muted">Live synced cashflow</p>
 				</div>
+				{isLoading && (
+					<span className="text-[12px] text-text-muted animate-pulse">Syncing…</span>
+				)}
 			</div>
 
 			{error && (
-				<div className="p-3 border-[3px] border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+				<div className="p-3 bg-danger-soft text-danger rounded-[20px] text-sm">
 					{error}
 				</div>
 			)}
 
-			{/* Metric KPI Cards */}
-			<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-				<div className="border-[3px] border-black p-3 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-					<span className="text-[10px] font-black uppercase text-black/60 block">Total Spent</span>
-					<span className="text-lg font-black text-black">
-						₹{summary ? Number(summary.totalExpenses).toLocaleString() : '0'}
-					</span>
-				</div>
-				<div className="border-[3px] border-black p-3 bg-yellow-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-					<span className="text-[10px] font-black uppercase text-black/60 block">Personal</span>
-					<span className="text-lg font-black text-black">
-						₹{summary ? Number(summary.personalExpenses).toLocaleString() : '0'}
-					</span>
-				</div>
-				<div className="border-[3px] border-black p-3 bg-emerald-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-					<span className="text-[10px] font-black uppercase text-emerald-900 flex items-center gap-0.5">
-						<ArrowUpRight className="w-3 h-3" /> Lent (Owed)
-					</span>
-					<span className="text-lg font-black text-emerald-800">
-						+₹{summary ? Number(summary.totalLent).toLocaleString() : '0'}
-					</span>
-				</div>
-				<div className="border-[3px] border-black p-3 bg-rose-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-					<span className="text-[10px] font-black uppercase text-rose-900 flex items-center gap-0.5">
+			{/* 2×2 KPI grid */}
+			<div className="grid grid-cols-2 gap-3">
+				<Card variant="mint" nested>
+					<p className="text-[12px] text-text-muted mb-1">Total spent</p>
+					<p className="text-[22px] font-medium text-text">₹{summary ? Number(summary.totalExpenses).toLocaleString() : '0'}</p>
+				</Card>
+				<Card variant="lavender" nested>
+					<p className="text-[12px] text-text-muted mb-1">Personal</p>
+					<p className="text-[22px] font-medium text-text">₹{summary ? Number(summary.personalExpenses).toLocaleString() : '0'}</p>
+				</Card>
+				<Card variant="white" nested>
+					<p className="text-[12px] text-text-muted mb-1 flex items-center gap-1">
+						<ArrowUpRight className="w-3 h-3" /> Lent
+					</p>
+					<p className="text-[22px] font-medium text-mint-deep">+₹{summary ? Number(summary.totalLent).toLocaleString() : '0'}</p>
+				</Card>
+				<Card variant="white" nested>
+					<p className="text-[12px] text-text-muted mb-1 flex items-center gap-1">
 						<ArrowDownRight className="w-3 h-3" /> Borrowed
-					</span>
-					<span className="text-lg font-black text-rose-800">
-						-₹{summary ? Number(summary.totalBorrowed).toLocaleString() : '0'}
-					</span>
-				</div>
+					</p>
+					<p className="text-[22px] font-medium text-danger">-₹{summary ? Number(summary.totalBorrowed).toLocaleString() : '0'}</p>
+				</Card>
 			</div>
 
-			{/* Spending trend: last 6 months */}
+			{/* Monthly spending chart */}
 			<ChartCard
 				className="mb-0"
 				title="Monthly spending"
 				subtitle="What you paid for yourself + your share of split bills"
-				icon={<TrendingUp className="w-4 h-4" />}
-				action={analytics ? <ChangeBadge change={analytics.comparison.lastMonth > 0 ? analytics.comparison.changePercent : null} /> : undefined}
+				icon={<TrendingUp className="w-4 h-4" strokeWidth={1.5} />}
+				action={
+					analytics ? (
+						<ChangeBadge
+							change={
+								analytics.comparison.lastMonth > 0 ? analytics.comparison.changePercent : null
+							}
+						/>
+					) : undefined
+				}
 				empty={!analytics || analytics.trend.every((m) => m.spent === 0 && m.lent === 0)}
 				emptyText="No spending in the last 6 months"
 			>
 				{analytics && <ServerTrendChart data={analytics.trend} />}
 			</ChartCard>
 
-			<div className="grid grid-cols-1 gap-4">
-				<ChartCard className="mb-0" title="By category" subtitle="Last 6 months" icon={<PieIcon className="w-4 h-4" />} empty={!analytics || analytics.categories.length === 0} emptyText="No categorised spending yet">
-					{analytics && <CategoryDonut data={analytics.categories.map((c) => ({ name: c.name, amount: c.amount, color: c.color || undefined }))} centerLabel="Spent" />}
-				</ChartCard>
-
-				<ChartCard className="mb-0" title="Groups" subtitle="Your share vs what the group spent" icon={<Users className="w-4 h-4" />} empty={!analytics || analytics.groups.length === 0} emptyText="No group spending yet">
-					{analytics && <GroupSpendChart data={analytics.groups} />}
-				</ChartCard>
-
-				<ChartCard
-					className="mb-0"
-					title="Who owes whom"
-					subtitle="Green: they owe you · Red: you owe them"
-					icon={<Scale className="w-4 h-4" />}
-					empty={!friendsBalance || (friendsBalance.owesYou.length === 0 && friendsBalance.youOwe.length === 0)}
-					emptyText="You are all settled up"
-				>
-					{friendsBalance && (
-						<FriendBalanceChart
-							data={[
-								...friendsBalance.owesYou.map((f) => ({ name: f.name, balance: Number(f.amount) })),
-								...friendsBalance.youOwe.map((f) => ({ name: f.name, balance: -Number(f.amount) })),
-							]}
-						/>
-					)}
-				</ChartCard>
+			<div className="mt-4">
+				<SegmentedTabs
+					tabs={[
+						{ id: 'CATEGORY', label: 'Category' },
+						{ id: 'GROUP', label: 'Groups' },
+						{ id: 'SPLIT', label: 'Splits' },
+					]}
+					activeId={chartView}
+					onChange={(id) => setChartView(id as 'CATEGORY' | 'GROUP' | 'SPLIT')}
+				/>
 			</div>
 
-			{/* Friend Debt Balances */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				{/* Owes You */}
-				<div className="border-[3px] border-black p-4 bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] space-y-3">
-					<div className="flex items-center justify-between border-b-2 border-black pb-2">
-						<h2 className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-							<ArrowUpRight className="w-4 h-4" /> Friends Who Owe You
+			<div className="grid grid-cols-1 gap-3">
+				{chartView === 'CATEGORY' && (
+					<ChartCard
+						className="mb-0"
+						title="By category"
+						subtitle="Last 6 months"
+						icon={<PieIcon className="w-4 h-4" strokeWidth={1.5} />}
+						empty={!analytics || analytics.categories.length === 0}
+						emptyText="No categorised spending yet"
+					>
+						{analytics && (
+							<CategoryDonut
+								data={analytics.categories.map((c) => ({
+									name: c.name,
+									amount: c.amount,
+									color: c.color || undefined,
+								}))}
+								centerLabel="Spent"
+							/>
+						)}
+					</ChartCard>
+				)}
+
+				{chartView === 'GROUP' && (
+					<ChartCard
+						className="mb-0"
+						title="Groups"
+						subtitle="Your share vs what the group spent"
+						icon={<Users className="w-4 h-4" strokeWidth={1.5} />}
+						empty={!analytics || analytics.groups.length === 0}
+						emptyText="No group spending yet"
+					>
+						{analytics && <GroupSpendChart data={analytics.groups} />}
+					</ChartCard>
+				)}
+
+				{chartView === 'SPLIT' && (
+					<ChartCard
+						className="mb-0"
+						title="Who owes whom"
+						subtitle="Green: they owe you · Red: you owe them"
+						icon={<Scale className="w-4 h-4" strokeWidth={1.5} />}
+						empty={
+							!friendsBalance ||
+							(friendsBalance.owesYou.length === 0 && friendsBalance.youOwe.length === 0)
+						}
+						emptyText="You are all settled up"
+					>
+						{friendsBalance && (
+							<FriendBalanceChart
+								data={[
+									...friendsBalance.owesYou.map((f) => ({ name: f.name, balance: Number(f.amount) })),
+									...friendsBalance.youOwe.map((f) => ({ name: f.name, balance: -Number(f.amount) })),
+								]}
+							/>
+						)}
+					</ChartCard>
+				)}
+			</div>
+
+			{/* Friend debt balances */}
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+				<Card variant="white">
+					<div className="flex items-center justify-between mb-3">
+						<h2 className="text-[15px] font-medium text-text flex items-center gap-1.5">
+							<ArrowUpRight className="w-4 h-4 text-mint-deep" strokeWidth={1.5} /> Owed to you
 						</h2>
-						<span className="text-xs font-black bg-emerald-100 border border-emerald-500 text-emerald-800 px-1.5">
+						<span className="text-[12px] font-medium bg-mint text-ink px-2 py-0.5 rounded-full">
 							{friendsBalance?.owesYou.length || 0}
 						</span>
 					</div>
-
 					{friendsBalance?.owesYou.length === 0 ? (
-						<p className="text-xs text-black/40 font-bold py-2">No one owes you money right now.</p>
+						<p className="text-[12px] text-text-muted py-2">No one owes you money right now.</p>
 					) : (
-						friendsBalance?.owesYou.map((f) => (
-							<div
-								key={f.id}
-								className="flex items-center justify-between p-2 border-2 border-black bg-emerald-50/60"
-							>
-								<div>
-									<h4 className="font-black text-sm text-black">{f.name}</h4>
-									<span className="text-[11px] font-bold text-black/50">@{f.username}</span>
-								</div>
-								<span className="font-black text-emerald-700 text-sm">
-									+₹{Number(f.amount).toLocaleString()}
-								</span>
-							</div>
-						))
+						<div className="divide-y divide-black/5">
+							{friendsBalance?.owesYou.map((f) => (
+								<ListRow
+									key={f.id}
+									icon={<span className="font-medium text-[14px]">{f.name.slice(0, 1)}</span>}
+									title={f.name}
+									caption={`@${f.username}`}
+									amount={`+₹${Number(f.amount).toLocaleString()}`}
+									amountColor="mint-deep"
+								/>
+							))}
+						</div>
 					)}
-				</div>
+				</Card>
 
-				{/* You Owe */}
-				<div className="border-[3px] border-black p-4 bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] space-y-3">
-					<div className="flex items-center justify-between border-b-2 border-black pb-2">
-						<h2 className="text-xs font-black uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-							<ArrowDownRight className="w-4 h-4" /> Friends You Owe
+				<Card variant="white">
+					<div className="flex items-center justify-between mb-3">
+						<h2 className="text-[15px] font-medium text-text flex items-center gap-1.5">
+							<ArrowDownRight className="w-4 h-4 text-danger" strokeWidth={1.5} /> You owe
 						</h2>
-						<span className="text-xs font-black bg-rose-100 border border-rose-500 text-rose-800 px-1.5">
+						<span className="text-[12px] font-medium bg-danger-soft text-danger px-2 py-0.5 rounded-full">
 							{friendsBalance?.youOwe.length || 0}
 						</span>
 					</div>
-
 					{friendsBalance?.youOwe.length === 0 ? (
-						<p className="text-xs text-black/40 font-bold py-2">You don't owe any money to friends!</p>
+						<p className="text-[12px] text-text-muted py-2">You don't owe any money!</p>
 					) : (
-						friendsBalance?.youOwe.map((f) => (
-							<div
-								key={f.id}
-								className="flex items-center justify-between p-2 border-2 border-black bg-rose-50/60"
-							>
-								<div>
-									<h4 className="font-black text-sm text-black">{f.name}</h4>
-									<span className="text-[11px] font-bold text-black/50">@{f.username}</span>
-								</div>
-								<span className="font-black text-rose-700 text-sm">
-									-₹{Number(f.amount).toLocaleString()}
-								</span>
-							</div>
-						))
+						<div className="divide-y divide-black/5">
+							{friendsBalance?.youOwe.map((f) => (
+								<ListRow
+									key={f.id}
+									icon={<span className="font-medium text-[14px]">{f.name.slice(0, 1)}</span>}
+									title={f.name}
+									caption={`@${f.username}`}
+									amount={`-₹${Number(f.amount).toLocaleString()}`}
+									amountColor="danger"
+								/>
+							))}
+						</div>
 					)}
-				</div>
+				</Card>
 			</div>
 
-			{/* Spend Overview Graph / Timeline */}
-			<div className="border-[3px] border-black p-5 bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4">
-				<div className="flex items-center justify-between border-b-2 border-black pb-2">
-					<h2 className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-black">
-						<Activity className="w-5 h-5" /> Daily Spend Timeline
+			{/* Daily spend timeline */}
+			<Card variant="white">
+				<div className="flex items-center justify-between mb-3">
+					<h2 className="text-[15px] font-medium text-text flex items-center gap-2">
+						<Activity className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Daily timeline
 					</h2>
-					<div className="flex border-2 border-black text-xs font-black">
-						<button
-							onClick={() => setPeriod('WEEK')}
-							className={`px-3 py-1 ${period === 'WEEK' ? 'bg-yellow-300' : 'bg-white hover:bg-neutral-100'}`}
-						>
-							7D
-						</button>
-						<button
-							onClick={() => setPeriod('MONTH')}
-							className={`px-3 py-1 border-l-2 border-black ${period === 'MONTH' ? 'bg-yellow-300' : 'bg-white hover:bg-neutral-100'}`}
-						>
-							30D
-						</button>
-					</div>
+					<SegmentedTabs
+						tabs={[{ id: 'WEEK', label: '7D' }, { id: 'MONTH', label: '30D' }]}
+						activeId={period}
+						onChange={(id) => setPeriod(id as 'WEEK' | 'MONTH')}
+						className="w-20"
+					/>
 				</div>
-
 				{graphData.every((d) => d.total === 0) ? (
-					<p className="text-xs text-black/40 font-bold py-4 text-center">No transactions recorded in this period.</p>
+					<p className="text-[12px] text-text-muted py-4 text-center">
+						No transactions recorded in this period.
+					</p>
 				) : (
 					<DailyTimelineChart data={graphData} />
 				)}
-			</div>
+			</Card>
 		</div>
 	);
 }

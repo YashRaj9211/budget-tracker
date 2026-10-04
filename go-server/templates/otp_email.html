@@ -6,164 +6,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light only">
     <meta name="supported-color-schemes" content="light only">
-    <title>Login Verification - Dekhkar</title>
+    <title>Login Verification</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: #fefed4;
+            background: #F4F6F3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
 
         @media only screen and (max-width:620px) {
             .wrap {
                 width: 100% !important;
+                border-radius: 20px !important;
             }
 
             .pad {
-                padding-left: 18px !important;
-                padding-right: 18px !important;
+                padding-left: 20px !important;
+                padding-right: 20px !important;
             }
 
-            .otp {
+            .otp-code {
                 font-size: 32px !important;
                 letter-spacing: 6px !important;
+                padding: 10px 16px !important;
             }
         }
     </style>
 </head>
 
-<body style="margin:0;padding:0;background:#fefed4;">
+<body style="margin:0;padding:0;background:#F4F6F3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
     <!-- Hidden preheader (inbox preview only) -->
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#fefed4;font-size:1px;line-height:1px;">
-        {{.OTP}} is your Dekhkar code. Valid for 10 minutes. Tell no one, not even your best friend.
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F4F6F3;font-size:1px;line-height:1px;">
+        {{.OTP}} is your login verification code. Valid for 10 minutes.
         &#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;
     </div>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fefed4;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F6F3;">
         <tr>
-            <td align="center" style="padding:32px 14px;">
+            <td align="center" style="padding:40px 16px;">
 
-                <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0"
-                    style="width:600px;max-width:600px;background:#ffffff;border:2px solid #000000;box-shadow:6px 6px 0px 0px rgba(0,0,0,1);">
+                <table role="presentation" class="wrap" width="560" cellpadding="0" cellspacing="0" border="0"
+                    style="width:560px;max-width:560px;background:#ffffff;border-radius:24px;border:1px solid #E2E6E0;box-shadow:0 8px 24px rgba(30,30,30,0.04);overflow:hidden;">
 
-                    <!-- Header -->
+                    <!-- Brand Header -->
                     <tr>
-                        <td class="pad" style="background:#fecaca;border-bottom:2px solid #000000;padding:20px 28px;">
+                        <td class="pad" style="background:#FFFFFF;border-bottom:1px solid #EEF0EC;padding:24px 32px;">
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
                                     <td style="vertical-align:middle;">
-                                        <img src="{{.LogoURL}}" alt="Dekhkar" width="40" height="40"
-                                            style="vertical-align:middle;border:2px solid #000000;background:#ffffff;">
-                                        <span
-                                            style="font-size:22px;font-weight:800;color:#000000;vertical-align:middle;margin-left:10px;letter-spacing:-0.5px;">Dekhkar</span>
+                                        <div style="display:inline-block;vertical-align:middle;width:36px;height:36px;border-radius:50%;background:#A8F5A2;text-align:center;line-height:36px;">
+                                            <span style="font-size:18px;line-height:36px;">💰</span>
+                                        </div>
+                                        <span style="font-size:18px;font-weight:600;color:#1E1E1E;vertical-align:middle;margin-left:12px;letter-spacing:-0.3px;">Divvit Budget</span>
                                     </td>
                                     <td align="right" style="vertical-align:middle;">
-                                        <span
-                                            style="display:inline-block;background:#000000;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 10px;">Login
-                                            check</span>
+                                        <span style="display:inline-block;background:#EEF0EC;color:#555A54;font-size:11px;font-weight:600;letter-spacing:0.5px;padding:6px 12px;border-radius:9999px;">
+                                            Security
+                                        </span>
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
 
-                    <!-- Intro -->
+                    <!-- Title & Greeting -->
                     <tr>
-                        <td class="pad" style="padding:32px 28px 8px 28px;">
-                            <h1
-                                style="margin:0 0 12px 0;font-size:24px;line-height:30px;font-weight:800;color:#000000;">
-                                Verify your login</h1>
-                            <p style="margin:0;font-size:16px;line-height:24px;color:#374151;">
-                                Someone is knocking on your Dekhkar door. If that's you, punch in the code below and
-                                you're in.
+                        <td class="pad" style="padding:32px 32px 12px 32px;">
+                            <h1 style="margin:0 0 10px 0;font-size:22px;line-height:28px;font-weight:600;color:#1E1E1E;">
+                                Verify your sign in
+                            </h1>
+                            <p style="margin:0;font-size:15px;line-height:24px;color:#555A54;">
+                                We received a request to access your budget tracker account. Use the code below to complete your sign in.
                             </p>
                         </td>
                     </tr>
 
-                    <!-- OTP card -->
+                    <!-- OTP Code Card (Soft Mint) -->
                     <tr>
-                        <td class="pad" style="padding:24px 28px 8px 28px;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                                style="background:#e4b5fe;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
-                                <tr>
-                                    <td align="center" style="padding:20px 16px 8px 16px;">
-                                        <span
-                                            style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#581c87;">Your
-                                            one-time code</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="center" style="padding:4px 16px 22px 16px;">
-                                        <div class="otp"
-                                            style="display:inline-block;background:#ffffff;border:2px solid #000000;padding:12px 10px 12px 20px;font-family:'SFMono-Regular',Menlo,Consolas,'Courier New',monospace;font-size:42px;line-height:48px;font-weight:800;letter-spacing:10px;color:#000000;">
-                                            {{.OTP}}</div>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td class="pad" style="padding:16px 32px 20px 32px;">
+                            <div style="background:#F2FAF1;border:1px solid #C8E8C5;border-radius:20px;padding:24px 20px;text-align:center;">
+                                <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#2E7D32;margin-bottom:12px;">
+                                    Your 6-digit verification code
+                                </div>
+                                <div class="otp-code" style="display:inline-block;background:#ffffff;border:1px solid #D1E5CF;border-radius:14px;padding:12px 24px;font-family:'SFMono-Regular',Menlo,Consolas,'Courier New',monospace;font-size:36px;line-height:42px;font-weight:700;letter-spacing:8px;color:#1E1E1E;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+                                    {{.OTP}}
+                                </div>
+                                <div style="font-size:12px;color:#555A54;margin-top:12px;">
+                                    ⏱️ Expires in <strong style="color:#1E1E1E;">10 minutes</strong>
+                                </div>
+                            </div>
                         </td>
                     </tr>
 
-                    <!-- Expiry bar (full = 10 minutes left) -->
+                    <!-- Security Alert Note -->
                     <tr>
-                        <td class="pad" style="padding:20px 28px 8px 28px;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td
-                                        style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8c6239;padding-bottom:6px;">
-                                        Time left on this code</td>
-                                    <td align="right"
-                                        style="font-size:12px;font-weight:700;color:#000000;padding-bottom:6px;">10 min
-                                    </td>
-                                </tr>
-                            </table>
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                                style="border:2px solid #000000;background:#f9fafb;">
-                                <tr>
-                                    <td style="height:16px;line-height:16px;font-size:1px;background:#bde2ff;border-right:2px solid #000000;"
-                                        width="100%">&nbsp;</td>
-                                </tr>
-                            </table>
+                        <td class="pad" style="padding:0 32px 24px 32px;">
+                            <div style="background:#F9FAF8;border:1px solid #EEF0EC;border-radius:16px;padding:14px 18px;">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="vertical-align:top;width:24px;font-size:16px;line-height:22px;">🔒</td>
+                                        <td style="vertical-align:top;padding-left:8px;">
+                                            <div style="font-size:13px;line-height:20px;color:#555A54;">
+                                                <strong style="color:#1E1E1E;">Security tip:</strong> Never share this code with anyone. Divvit will never ask for your code via phone, chat, or external message.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
                         </td>
                     </tr>
 
-                    <!-- Heads up card -->
+                    <!-- If not you -->
                     <tr>
-                        <td class="pad" style="padding:24px 28px 8px 28px;">
-                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-                                style="background:#fef3c7;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
-                                <tr>
-                                    <td style="padding:14px 16px;">
-                                        <div
-                                            style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#92400e;margin-bottom:6px;">
-                                            Heads up</div>
-                                        <div style="font-size:14px;line-height:21px;color:#000000;">
-                                            We will never ask for this code on a call, chat, or text. If someone does,
-                                            they are the real expense. Walk away.
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Ignore note -->
-                    <tr>
-                        <td class="pad" style="padding:20px 28px 32px 28px;">
-                            <p style="margin:0;font-size:14px;line-height:21px;color:#9f8569;">
-                                Didn't request this? Ignore this email. Nothing gets opened and your budget stays
-                                untouched.
+                        <td class="pad" style="padding:0 32px 32px 32px;">
+                            <p style="margin:0;font-size:13px;line-height:20px;color:#888E86;">
+                                Didn't make this request? You can safely ignore this email. Your account remains protected.
                             </p>
                         </td>
                     </tr>
 
                     <!-- Footer -->
                     <tr>
-                        <td class="pad" align="center"
-                            style="background:#f9fafb;border-top:2px solid #000000;padding:18px 28px;">
-                            <p style="margin:0;font-size:13px;line-height:20px;color:#9f8569;">
-                                &copy; {{.Year}} Dekhkar. All rights reserved.<br>
-                                This is an automated message, please do not reply.
+                        <td class="pad" align="center" style="background:#F9FAF8;border-top:1px solid #EEF0EC;padding:20px 32px;">
+                            <p style="margin:0;font-size:12px;line-height:18px;color:#888E86;">
+                                &copy; {{.Year}} Divvit Budget. All rights reserved.<br>
+                                Automated security message · Please do not reply directly to this email.
                             </p>
                         </td>
                     </tr>

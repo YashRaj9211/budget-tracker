@@ -17,6 +17,14 @@ const router = createBrowserRouter([
 				Component: Auth,
 			},
 			{
+				path: "/auth",
+				Component: Auth,
+			},
+			{
+				path: "/signup",
+				Component: Auth,
+			},
+			{
 				Component: ProtectedRoute,
 				children: [
 					{

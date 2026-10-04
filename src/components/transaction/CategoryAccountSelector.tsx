@@ -35,7 +35,7 @@ export const CategoryAccountSelector: React.FC<CategoryAccountSelectorProps> = (
 		<div className="space-y-4">
 			{/* Account Field */}
 			<div>
-				<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">
+				<label className="block text-[12px] font-medium text-text-muted mb-1.5">
 					Account / Method
 				</label>
 				<div className="flex flex-wrap gap-1.5">
@@ -44,10 +44,10 @@ export const CategoryAccountSelector: React.FC<CategoryAccountSelectorProps> = (
 							key={acc}
 							type="button"
 							onClick={() => onSelectAccount(acc)}
-							className={`px-2.5 py-1 text-xs border border-black font-semibold transition-all cursor-pointer ${
+							className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all cursor-pointer ${
 								selectedAccount === acc
-									? 'bg-[#eedcc2] text-black font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]'
-									: 'bg-white text-gray-600 hover:bg-gray-50'
+									? 'bg-ink text-white shadow-2xs'
+									: 'bg-surface text-text-muted hover:text-text hover:bg-surface/80'
 							}`}
 						>
 							{acc}
@@ -58,21 +58,21 @@ export const CategoryAccountSelector: React.FC<CategoryAccountSelectorProps> = (
 
 			{/* Category Selection with Custom Category Add Option */}
 			<div>
-				<label className="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+				<label className="block text-[12px] font-medium text-text-muted mb-1.5">
 					Category
 				</label>
 
 				{/* Badges Selection Grid */}
-				<div className="flex flex-wrap gap-1.5 mb-2">
+				<div className="flex flex-wrap gap-1.5 mb-2.5">
 					{categories.map((cat) => (
 						<button
 							key={cat}
 							type="button"
 							onClick={() => onSelectCategory(cat)}
-							className={`px-2.5 py-1 text-xs border border-black font-semibold transition-all cursor-pointer ${
+							className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all cursor-pointer ${
 								selectedCategory === cat
-									? 'bg-[#eedcc2] text-black font-bold shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]'
-									: 'bg-white text-gray-600 hover:bg-gray-50'
+									? 'bg-ink text-white shadow-2xs'
+									: 'bg-surface text-text-muted hover:text-text hover:bg-surface/80'
 							}`}
 						>
 							{cat}
@@ -81,21 +81,21 @@ export const CategoryAccountSelector: React.FC<CategoryAccountSelectorProps> = (
 				</div>
 
 				{/* Add custom category input */}
-				<div className="flex gap-1">
+				<div className="flex gap-2 items-center">
 					<input
 						type="text"
 						value={newCategoryInput}
 						onChange={(e) => setNewCategoryInput(e.target.value)}
 						placeholder="Add custom category..."
-						className="flex-1 border border-black px-2 py-1 text-xs bg-white focus:outline-none"
+						className="flex-1 bg-surface rounded-full px-3.5 py-1.5 text-xs text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
 					/>
 					<button
 						onClick={handleAdd}
 						type="button"
-						className="px-2.5 bg-black text-white border border-black hover:bg-gray-900 transition-all flex items-center justify-center cursor-pointer"
+						className="w-7 h-7 rounded-full bg-ink text-white hover:bg-ink-soft transition-all flex items-center justify-center shrink-0 cursor-pointer"
 						aria-label="Add custom category"
 					>
-						<Plus size={14} />
+						<Plus size={14} strokeWidth={1.5} />
 					</button>
 				</div>
 			</div>

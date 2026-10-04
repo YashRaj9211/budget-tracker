@@ -6,6 +6,7 @@ import ChangeBadge from './ChangeBadge';
 import { CategoryDonut } from './StatsCharts';
 import { GroupSpendChart, ServerTrendChart } from './HubCharts';
 import { inr } from './format';
+import { Card } from '../ui/Card';
 
 const RANGES = [3, 6, 12] as const;
 
@@ -33,32 +34,36 @@ export default function AccountAnalytics() {
 		};
 	}, [months]);
 
-	if (error) return <div className="border-2 border-black bg-rose-50 p-3 text-xs font-bold text-rose-800">{error}</div>;
-	if (!data) return <div className="py-10 text-center text-sm text-gray-400">Loading…</div>;
+	if (error) return <div className="rounded-[16px] bg-danger-soft p-3 text-xs font-medium text-danger">{error}</div>;
+	if (!data) return <div className="py-10 text-center text-sm text-text-muted">Loading…</div>;
 
 	const total = data.trend.reduce((s, m) => s + m.spent, 0);
 	const empty = data.trend.every((m) => m.spent === 0 && m.lent === 0);
 
 	return (
 		<>
-			<div role="group" aria-label="Period" className="grid grid-cols-3 border border-black mb-4 bg-white">
-				{RANGES.map((r, i) => (
+			<div role="group" aria-label="Period" className="flex bg-surface p-1 rounded-full gap-1 mb-4">
+				{RANGES.map((r) => (
 					<button
 						key={r}
 						aria-pressed={months === r}
 						onClick={() => setMonths(r)}
-						className={`py-1.5 text-[11px] font-bold uppercase cursor-pointer ${i > 0 ? 'border-l border-black' : ''} ${months === r ? 'bg-yellow-200' : 'bg-white hover:bg-gray-50'}`}
+						className={`flex-1 py-1.5 text-xs font-medium rounded-full cursor-pointer transition-all ${
+							months === r ? 'bg-ink text-white shadow-2xs' : 'text-text-muted hover:text-text'
+						}`}
 					>
 						{r} months
 					</button>
 				))}
 			</div>
 
-			<div className="border border-black p-4 bg-rose-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-5">
-				<span className="text-xs font-bold uppercase tracking-wider text-rose-800">Spent in {months} months</span>
-				<div className="text-xl font-black text-black">{inr(total)}</div>
-				<ChangeBadge change={data.comparison.lastMonth > 0 ? data.comparison.changePercent : null} />
-			</div>
+			<Card variant="mint" className="mb-5 p-5">
+				<span className="text-[12px] text-text-muted block mb-1">Spent in {months} months</span>
+				<div className="flex items-end justify-between">
+					<div className="text-[26px] font-medium text-text">{inr(total)}</div>
+					<ChangeBadge change={data.comparison.lastMonth > 0 ? data.comparison.changePercent : null} />
+				</div>
+			</Card>
 
 			<ChartCard title="Monthly spending" subtitle="Paid for yourself + your share of split bills" icon={<TrendingUp size={16} />} empty={empty} emptyText="No spending in this period">
 				<ServerTrendChart data={data.trend} />

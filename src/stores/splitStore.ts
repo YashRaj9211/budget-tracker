@@ -7,11 +7,13 @@ import {
 	getAllSplits,
 	saveSplit,
 	deleteSplit as dbDeleteSplit,
+	addTransaction,
 } from '../db';
 import { groupApi, expenseApi, type Group as ApiGroup, type Expense as ApiExpense } from '../api/financeHubApi';
 import { useAuthStore } from './authStore';
 import { calculateGroupBalances } from '../utils/debtSimplification';
 import { syncService } from '../services/syncService';
+import type { Transaction } from '../types';
 
 interface SplitState {
 	groups: Group[];
@@ -342,6 +344,41 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 				const createdExpense = await expenseApi.create(expensePayload);
 				const transformed = transformApiExpense(createdExpense, auth.user.id, group);
 				await saveSplit({ ...transformed, syncStatus: 'synced', serverId: createdExpense.id });
+				
+				if (!splitData.isSettlement) {
+					const totalAmount = parseFloat(createdExpense.amount) || 0;
+					let myShare = 0;
+					const paidByMe = createdExpense.userId === auth.user?.id;
+					let lentAmount = 0;
+					if (createdExpense.splits) {
+						const mySplit = createdExpense.splits.find((s: any) => s.userId === auth.user?.id);
+						if (mySplit) myShare = parseFloat(mySplit.amount) || 0;
+					}
+					if (paidByMe) lentAmount = totalAmount - myShare;
+					
+					const newLocal: Transaction = {
+						id: createdExpense.id,
+						type: 'expense',
+						amount: myShare,
+						description: createdExpense.description || '',
+						category: 'Split',
+						account: 'Default',
+						date: splitData.date,
+						createdAt: new Date(createdExpense.createdAt).getTime(),
+						syncStatus: 'synced',
+						serverId: createdExpense.id,
+						isSplit: true,
+						groupId: splitData.groupId,
+						paidByMe,
+						totalAmount,
+						lentAmount,
+					};
+					await addTransaction(newLocal);
+					// trigger transaction load
+					const { useTransactionStore } = await import('./transactionStore');
+					await useTransactionStore.getState().reloadAll();
+				}
+
 				set((state) => ({ splits: [transformed, ...state.splits] }));
 				return;
 			} catch (err) {
@@ -372,6 +409,39 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 			recordId: localSplit.id,
 			payload: expensePayload,
 		});
+
+		if (!splitData.isSettlement) {
+			const totalAmount = splitData.amount;
+			let myShare = 0;
+			const paidByMe = payerId === myId;
+			let lentAmount = 0;
+
+			const mySplitIndex = targetUserIds.indexOf(myId);
+			if (mySplitIndex !== -1 && splitsInput[mySplitIndex]) {
+				myShare = parseFloat(splitsInput[mySplitIndex].amount as string) || 0;
+			}
+			if (paidByMe) lentAmount = totalAmount - myShare;
+
+			const newLocal: Transaction = {
+				id: localSplit.id,
+				type: 'expense',
+				amount: myShare,
+				description: splitData.title,
+				category: 'Split',
+				account: 'Default',
+				date: splitData.date,
+				createdAt: Date.now(),
+				syncStatus: 'pending',
+				isSplit: true,
+				groupId: splitData.groupId,
+				paidByMe,
+				totalAmount,
+				lentAmount,
+			};
+			await addTransaction(newLocal);
+			const { useTransactionStore } = await import('./transactionStore');
+			await useTransactionStore.getState().reloadAll();
+		}
 
 		set((state) => ({ splits: [localSplit, ...state.splits] }));
 	},

@@ -10,7 +10,7 @@ const TYPES: { id: SplitType; label: string; hint: string; unit: string }[] = [
 	{ id: 'SHARES', label: 'Shares', hint: 'e.g. 2 shares vs 1 share', unit: '×' },
 ];
 
-const label = 'block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1.5';
+const labelStyle = 'block text-[12px] font-medium text-text-muted mb-1.5';
 
 /**
  * The "who shares this expense" part of the form: group or friends, who paid,
@@ -23,11 +23,15 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 
 	return (
 		<div className="space-y-4">
-			{draft.loadError && <p className="border-2 border-rose-400 bg-rose-50 p-2 text-xs font-bold text-rose-800">{draft.loadError}</p>}
+			{draft.loadError && (
+				<p className="rounded-[16px] bg-danger-soft p-2.5 text-xs font-medium text-danger">
+					{draft.loadError}
+				</p>
+			)}
 
-			{/* Group or friends */}
+			{/* Group or friends switch */}
 			{allowFriends && (
-				<div className="grid grid-cols-2 gap-2" role="group" aria-label="Split with">
+				<div className="flex bg-surface p-1 rounded-full gap-1" role="group" aria-label="Split with">
 					{(
 						[
 							['group', 'A group', Layers],
@@ -39,11 +43,11 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 							type="button"
 							aria-pressed={mode === id}
 							onClick={() => draft.switchMode(id)}
-							className={`py-2 text-xs font-bold border-2 border-black flex items-center justify-center gap-1.5 cursor-pointer ${
-								mode === id ? 'bg-purple-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-px -translate-y-px' : 'bg-white text-gray-500 hover:bg-gray-50'
+							className={`flex-1 py-2 text-xs font-medium rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+								mode === id ? 'bg-ink text-white shadow-2xs' : 'text-text-muted hover:text-text'
 							}`}
 						>
-							<Icon size={14} /> {text}
+							<Icon size={14} strokeWidth={1.5} /> {text}
 						</button>
 					))}
 				</div>
@@ -51,9 +55,11 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 
 			{mode === 'group' && (
 				<div>
-					<label className={label}>Group</label>
+					<label className={labelStyle}>Group</label>
 					{groups.length === 0 ? (
-						<p className="text-xs text-gray-500 border border-dashed border-black/40 p-2">You are not in any group yet. Create one on the Split screen.</p>
+						<p className="text-xs text-text-muted rounded-[16px] bg-surface p-3">
+							You are not in any group yet. Create one on the Split screen.
+						</p>
 					) : (
 						<SearchableSelect 
 							ariaLabel="Group" 
@@ -68,8 +74,8 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 
 			{/* Who paid */}
 			<div>
-				<label className={`${label} flex items-center gap-1`}>
-					<User size={12} /> Paid by
+				<label className={`${labelStyle} flex items-center gap-1`}>
+					<User size={12} strokeWidth={1.5} /> Paid by
 				</label>
 				<SearchableSelect 
 					ariaLabel="Paid by" 
@@ -83,31 +89,33 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 			{/* How to divide */}
 			{selectedIds.length > 0 && (
 				<div>
-					<label className={label}>Split</label>
-					<div className="grid grid-cols-4 border-2 border-black" role="group" aria-label="Split type">
-						{TYPES.map((t, i) => (
+					<label className={labelStyle}>Split method</label>
+					<div className="flex bg-surface p-1 rounded-full gap-1" role="group" aria-label="Split type">
+						{TYPES.map((t) => (
 							<button
 								key={t.id}
 								type="button"
 								aria-pressed={splitType === t.id}
 								onClick={() => draft.setSplitType(t.id)}
-								className={`py-1.5 text-[11px] font-bold cursor-pointer ${i > 0 ? 'border-l-2 border-black' : ''} ${splitType === t.id ? 'bg-black text-white' : 'bg-white hover:bg-gray-50'}`}
+								className={`flex-1 py-1.5 text-xs font-medium rounded-full cursor-pointer transition-all ${
+									splitType === t.id ? 'bg-ink text-white shadow-2xs' : 'text-text-muted hover:text-text'
+								}`}
 							>
 								{t.label}
 							</button>
 						))}
 					</div>
-					<p className="text-[10px] text-gray-500 mt-1">{current.hint}</p>
+					<p className="text-[11px] text-text-muted mt-1 px-1">{current.hint}</p>
 				</div>
 			)}
 
 			{/* Who is included */}
 			<div>
-				<label className={label}>{mode === 'friends' ? 'Split with friends' : 'Shared by'}</label>
+				<label className={labelStyle}>{mode === 'friends' ? 'Split with friends' : 'Shared by'}</label>
 				{people.length === 0 ? (
-					<p className="text-xs text-gray-500">No one to show yet.</p>
+					<p className="text-xs text-text-muted rounded-[16px] bg-surface p-3">No one to show yet.</p>
 				) : (
-					<div className="space-y-3">
+					<div className="space-y-2.5">
 						<SearchableMultiSelect 
 							options={people.map(p => ({ id: p.id, label: p.name }))}
 							selectedIds={selectedIds}
@@ -118,8 +126,8 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 							<ul className="space-y-1.5">
 								{people.filter(p => selectedIds.includes(p.id)).map((p) => {
 									return (
-										<li key={p.id} className="flex items-center gap-2 border-2 border-black p-1.5 bg-white">
-											<span className="text-sm font-bold truncate flex-1">{p.name}</span>
+										<li key={p.id} className="flex items-center gap-2 p-2.5 rounded-[16px] bg-surface">
+											<span className="text-sm font-medium text-text truncate flex-1">{p.name}</span>
 											{splitType !== 'EQUAL' && (
 												<span className="flex items-center gap-1">
 													<input
@@ -130,12 +138,16 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 														step="any"
 														value={draft.values[p.id] ?? (splitType === 'SHARES' ? '1' : '')}
 														onChange={(e) => draft.setValue(p.id, e.target.value)}
-														className="w-20 border border-black p-1 text-right text-sm font-semibold focus:outline-none"
+														className="w-20 bg-card rounded-full px-2.5 py-1 text-right text-sm font-medium text-text border border-ink/10 focus:outline-none"
 													/>
-													<span className="text-xs text-gray-500 w-3">{current.unit}</span>
+													<span className="text-xs text-text-muted w-3">{current.unit}</span>
 												</span>
 											)}
-											{perPerson.get(p.id) && <span className="text-xs font-black w-20 text-right">₹{perPerson.get(p.id)}</span>}
+											{perPerson.get(p.id) && (
+												<span className="text-xs font-medium text-text w-20 text-right">
+													₹{perPerson.get(p.id)}
+												</span>
+											)}
 										</li>
 									);
 								})}
@@ -144,15 +156,17 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 					</div>
 				)}
 				{mode === 'group' && selectedIds.length === 0 && (
-					<p className="text-[11px] text-gray-500 mt-1.5 italic">No members selected — will be added as a group expense without splits.</p>
+					<p className="text-[11px] text-text-muted mt-1.5 italic">
+						No members selected — will be added as a group expense without splits.
+					</p>
 				)}
-				{draft.error && <p className="text-xs font-bold text-amber-700 mt-1.5" role="status">{draft.error}</p>}
+				{draft.error && <p className="text-xs font-medium text-amber-700 mt-1.5" role="status">{draft.error}</p>}
 			</div>
 
 			{/* Category (shared list from the server, so charts can group by it) */}
 			{draft.categories.length > 0 && (
 				<div>
-					<label className={label}>Category</label>
+					<label className={labelStyle}>Category</label>
 					<SearchableSelect 
 						ariaLabel="Category" 
 						value={draft.categoryId} 

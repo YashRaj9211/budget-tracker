@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { X, Receipt, Calendar } from 'lucide-react';
+import { Receipt, Calendar } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
 import { errorMessage, useSplitDraft } from '../../hooks/useSplitDraft';
 import SplitExpenseFields from './SplitExpenseFields';
+import { Button } from '../common/Button';
+import { BottomSheet } from '../ui/BottomSheet';
+import { statusSheet } from '../../stores/statusSheetStore';
 
-const input =
-	'w-full border-2 border-black p-2.5 text-sm font-semibold focus:outline-none focus:bg-yellow-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]';
+const inputStyle =
+	'w-full bg-surface rounded-full h-11 px-4 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20';
 
 /** "Add split expense" on the Split screen: same fields as the home form, limited to a group. */
 export default function AddSplitModal() {
@@ -15,7 +18,6 @@ export default function AddSplitModal() {
 	const [title, setTitle] = useState('');
 	const [amount, setAmount] = useState('');
 	const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const numAmount = parseFloat(amount) || 0;
@@ -23,72 +25,109 @@ export default function AddSplitModal() {
 
 	if (!isOpen) return null;
 
+	const handleClose = () => {
+		setOpen(false);
+		setError(null);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!title.trim() || numAmount <= 0 || saving) return;
-		setSaving(true);
+		if (!title.trim() || numAmount <= 0) return;
 		setError(null);
-		try {
-			await draft.submit({ description: title.trim(), date, amount: numAmount });
-			setOpen(false);
-			setTitle('');
-			setAmount('');
-			draft.reset();
-		} catch (err) {
-			setError(errorMessage(err));
-		} finally {
-			setSaving(false);
-		}
+
+		const currentTitle = title.trim();
+		const currentDate = date;
+		const currentAmount = numAmount;
+
+		setOpen(false);
+		setTitle('');
+		setAmount('');
+
+		await statusSheet.execute({
+			action: async () => {
+				await draft.submit({ description: currentTitle, date: currentDate, amount: currentAmount });
+				draft.reset();
+			},
+			processingTitle: 'Processing...',
+			processingMessage: `Splitting ₹${currentAmount.toLocaleString()} among members`,
+			successTitle: 'Success!',
+			successMessage: `₹${currentAmount.toLocaleString()} split recorded for "${currentTitle}"`,
+			buttonText: 'Nice one!',
+			onError: (err) => {
+				setError(errorMessage(err));
+			},
+		});
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-			<div className="bg-white border-[3px] border-black w-full max-w-md p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative max-h-[92vh] flex flex-col">
-				<div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
-					<h2 className="font-black text-lg text-black uppercase tracking-wide flex items-center gap-2">
-						<Receipt className="w-5 h-5" /> {draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add Group Expense' : 'Add Split Expense'}
-					</h2>
-					<button onClick={() => setOpen(false)} className="p-1 border-2 border-black hover:bg-neutral-100" aria-label="Close modal">
-						<X className="w-5 h-5" />
-					</button>
+		<BottomSheet
+			isOpen={isOpen}
+			onClose={handleClose}
+			title={
+				<span className="flex items-center gap-2">
+					<Receipt className="w-5 h-5 text-text-muted" strokeWidth={1.5} />{' '}
+					{draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add group expense' : 'Add split expense'}
+				</span>
+			}
+		>
+			<form onSubmit={handleSubmit} className="space-y-4 text-left">
+				<div>
+					<label className="block text-[12px] font-medium text-text-muted mb-1.5">Description</label>
+					<input
+						type="text"
+						placeholder="e.g. Weekend Villa, Team Lunch, Uber"
+						value={title}
+						onChange={(e) => setTitle(e.target.value)}
+						required
+						className={inputStyle}
+					/>
 				</div>
 
-				<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 space-y-4 text-left">
+				<div className="grid grid-cols-2 gap-3">
 					<div>
-						<label className="block text-xs font-black uppercase mb-1.5">Description</label>
-						<input type="text" placeholder="e.g. Weekend Villa, Team Lunch, Uber" value={title} onChange={(e) => setTitle(e.target.value)} required className={input} />
+						<label className="block text-[12px] font-medium text-text-muted mb-1.5">Total amount (₹)</label>
+						<input
+							type="number"
+							step="any"
+							min="0"
+							placeholder="0.00"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							required
+							className={inputStyle}
+						/>
 					</div>
-
-					<div className="grid grid-cols-2 gap-3">
-						<div>
-							<label className="block text-xs font-black uppercase mb-1.5">Total Amount (₹)</label>
-							<input type="number" step="any" min="0" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} required className={input} />
-						</div>
-						<div>
-							<label className="block text-xs font-black uppercase mb-1.5 flex items-center gap-1">
-								<Calendar className="w-3.5 h-3.5" /> Date
-							</label>
-							<input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={input} />
-						</div>
+					<div>
+						<label className="block text-[12px] font-medium text-text-muted mb-1.5 flex items-center gap-1">
+							<Calendar className="w-3.5 h-3.5 text-text-muted" strokeWidth={1.5} /> Date
+						</label>
+						<input
+							type="date"
+							value={date}
+							onChange={(e) => setDate(e.target.value)}
+							required
+							className={inputStyle}
+						/>
 					</div>
+				</div>
 
-					<SplitExpenseFields draft={draft} />
+				<SplitExpenseFields draft={draft} />
 
-					{error && (
-						<p role="alert" className="border-2 border-rose-400 bg-rose-50 p-2 text-xs font-bold text-rose-800">
-							{error}
-						</p>
-					)}
+				{error && (
+					<p role="alert" className="rounded-[16px] bg-danger-soft p-3 text-xs font-medium text-danger">
+						{error}
+					</p>
+				)}
 
-					<button
-						type="submit"
-						disabled={saving || !!draft.error || numAmount <= 0}
-						className="w-full py-2.5 border-2 border-black font-bold text-xs tracking-wider uppercase bg-black text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{saving ? 'Saving…' : draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add Expense' : 'Add Split'}
-					</button>
-				</form>
-			</div>
-		</div>
+				<Button
+					type="submit"
+					variant="primary"
+					disabled={!!draft.error || numAmount <= 0}
+					className="w-full py-3 font-medium"
+				>
+					{draft.mode === 'group' && draft.selectedIds.length === 0 ? 'Add expense' : 'Add split'}
+				</Button>
+			</form>
+		</BottomSheet>
 	);
 }

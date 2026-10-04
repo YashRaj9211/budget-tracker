@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Check, Save } from 'lucide-react';
 import { getTotalDays, todayStr } from '../../utils/date';
+import { Card } from '../ui/Card';
+import { Button } from '../common/Button';
 import type { Budget } from '../../types';
 
 interface BudgetFormProps {
@@ -62,138 +64,141 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ onSave }) => {
 	};
 
 	return (
-		<form onSubmit={handleFormSubmit} className="border border-black bg-white p-6 shadow-box mb-6">
-			<div className="flex items-center gap-2 mb-4">
-				<PlusCircle size={18} />
-				<h3 className="text-lg font-bold text-black">New Budget</h3>
-			</div>
+		<Card variant="white" className="mb-6 p-6">
+			<form onSubmit={handleFormSubmit}>
+				<div className="flex items-center gap-2 mb-5">
+					<PlusCircle size={18} className="text-text-muted" strokeWidth={1.5} />
+					<h3 className="text-[17px] font-medium text-text">New budget</h3>
+				</div>
 
-			<div className="space-y-4">
-				{/* Date Range */}
-				<div className="grid grid-cols-2 gap-3">
+				<div className="space-y-4">
+					{/* Date Range */}
+					<div className="grid grid-cols-2 gap-3">
+						<div>
+							<label
+								htmlFor="budget-start"
+								className="block text-[12px] font-medium text-text-muted mb-1.5"
+							>
+								Start date
+							</label>
+							<input
+								id="budget-start"
+								type="date"
+								value={startDate}
+								onChange={(e) => setStartDate(e.target.value)}
+								className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
+								required
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="budget-end"
+								className="block text-[12px] font-medium text-text-muted mb-1.5"
+							>
+								End date
+							</label>
+							<input
+								id="budget-end"
+								type="date"
+								value={endDate}
+								min={startDate}
+								onChange={(e) => setEndDate(e.target.value)}
+								className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
+								required
+							/>
+						</div>
+					</div>
+
+					{/* Total Budget Input */}
 					<div>
 						<label
-							htmlFor="budget-start"
-							className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+							htmlFor="total-budget"
+							className="block text-[12px] font-medium text-text-muted mb-1.5"
 						>
-							Start Date
+							Total budget limit (₹)
 						</label>
-						<input
-							id="budget-start"
-							type="date"
-							value={startDate}
-							onChange={(e) => setStartDate(e.target.value)}
-							className="w-full border-2 border-black p-2.5 text-sm font-semibold bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
-							required
-						/>
+						<div className="relative">
+							<span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">₹</span>
+							<input
+								id="total-budget"
+								type="number"
+								value={totalLimit}
+								onChange={(e) => setTotalLimit(e.target.value)}
+								className="w-full bg-surface rounded-full h-11 pl-8 pr-4 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
+								placeholder="0.00"
+								min="0"
+								required
+							/>
+						</div>
 					</div>
+
+					{/* Alert Threshold */}
 					<div>
 						<label
-							htmlFor="budget-end"
-							className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
+							htmlFor="threshold"
+							className="block text-[12px] font-medium text-text-muted mb-1.5"
 						>
-							End Date
+							Alert threshold (%)
 						</label>
-						<input
-							id="budget-end"
-							type="date"
-							value={endDate}
-							min={startDate}
-							onChange={(e) => setEndDate(e.target.value)}
-							className="w-full border-2 border-black p-2.5 text-sm font-semibold bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
-							required
-						/>
+						<select
+							id="threshold"
+							value={alertThreshold}
+							onChange={(e) => setAlertThreshold(e.target.value)}
+							className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
+						>
+							<option value="50">50% used</option>
+							<option value="80">80% used</option>
+							<option value="90">90% used</option>
+							<option value="100">100% used</option>
+						</select>
 					</div>
+
+					{/* Summary */}
+					{totalDays > 0 && (
+						<div className="rounded-[20px] bg-surface p-4 text-xs text-text-muted space-y-2">
+							<div className="flex justify-between">
+								<span>Budget period</span>
+								<span className="font-medium text-text">{totalDays} days</span>
+							</div>
+							<div className="flex justify-between">
+								<span>Daily allowance</span>
+								<span className="font-medium text-text">₹{calculatedDaily.toFixed(2)} / day</span>
+							</div>
+							<div className="flex justify-between">
+								<span>Alert trigger at</span>
+								<span className="font-medium text-text">
+									₹{Math.round(Number(totalLimit || 0) * (Number(alertThreshold) / 100)).toFixed(2)} spent
+								</span>
+							</div>
+						</div>
+					)}
+
+					{error && (
+						<p className="text-xs font-medium text-danger rounded-[16px] bg-danger-soft p-3">
+							{error}
+						</p>
+					)}
 				</div>
 
-				{/* Total Budget Input */}
-				<div>
-					<label
-						htmlFor="total-budget"
-						className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
-					>
-						Total Budget Limit (₹)
-					</label>
-					<div className="relative">
-						<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
-						<input
-							id="total-budget"
-							type="number"
-							value={totalLimit}
-							onChange={(e) => setTotalLimit(e.target.value)}
-							className="w-full border-2 border-black p-2.5 pl-8 text-base font-medium bg-white focus:outline-none focus:bg-[#fafbfe] transition-all"
-							placeholder="0.00"
-							min="0"
-							required
-						/>
-					</div>
-				</div>
-
-				{/* Alert Threshold */}
-				<div>
-					<label
-						htmlFor="threshold"
-						className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5"
-					>
-						Alert Threshold (%)
-					</label>
-					<select
-						id="threshold"
-						value={alertThreshold}
-						onChange={(e) => setAlertThreshold(e.target.value)}
-						className="w-full border-2 border-black p-2.5 text-sm font-medium bg-white focus:outline-none focus:bg-[#fafbfe] cursor-pointer"
-					>
-						<option value="50">50% used</option>
-						<option value="80">80% used</option>
-						<option value="90">90% used</option>
-						<option value="100">100% used</option>
-					</select>
-				</div>
-
-				{/* Summary */}
-				{totalDays > 0 && (
-					<div className="border border-black bg-[#fef8f0] p-4 text-xs text-gray-700 space-y-1.5">
-						<div className="flex justify-between">
-							<span>Budget Period:</span>
-							<span className="font-bold text-black">{totalDays} days</span>
-						</div>
-						<div className="flex justify-between">
-							<span>Daily Allowance:</span>
-							<span className="font-bold text-black">₹{calculatedDaily.toFixed(2)} / day</span>
-						</div>
-						<div className="flex justify-between">
-							<span>Alert Trigger at:</span>
-							<span className="font-bold text-black">
-								₹{Math.round(Number(totalLimit || 0) * (Number(alertThreshold) / 100)).toFixed(2)} spent
-							</span>
-						</div>
-					</div>
-				)}
-
-				{error && (
-					<p className="text-xs font-bold text-rose-600 border border-rose-300 bg-rose-50 px-3 py-2">
-						{error}
-					</p>
-				)}
-			</div>
-
-			{/* Save Button */}
-			<button
-				type="submit"
-				className="w-full mt-6 py-2.5 px-4 bg-black text-white font-bold text-sm tracking-wide border-2 border-black flex items-center justify-center gap-2 hover:bg-gray-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all"
-			>
-				{saved ? (
-					<>
-						<Check size={16} className="text-emerald-400" />
-						Saved!
-					</>
-				) : (
-					<>
-						<Save size={16} />
-						Save Budget
-					</>
-				)}
-			</button>
-		</form>
+				{/* Save Button */}
+				<Button
+					type="submit"
+					variant="primary"
+					className="w-full mt-6 py-3 flex items-center justify-center gap-2"
+				>
+					{saved ? (
+						<>
+							<Check size={16} strokeWidth={2} className="text-mint" />
+							Saved!
+						</>
+					) : (
+						<>
+							<Save size={16} strokeWidth={1.5} />
+							Save budget
+						</>
+					)}
+				</Button>
+			</form>
+		</Card>
 	);
 };
