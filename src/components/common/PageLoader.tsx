@@ -1,4 +1,4 @@
-import { Wallet } from 'lucide-react';
+
 
 interface PageLoaderProps {
 	message?: string;

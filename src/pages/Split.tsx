@@ -15,7 +15,7 @@ export default function Split() {
 	const selectedGroupId = useSplitStore((s) => s.selectedGroupId);
 	const setSelectedGroupId = useSplitStore((s) => s.setSelectedGroupId);
 	const setAddGroupOpen = useSplitStore((s) => s.setAddGroupOpen);
-	const setAddSplitOpen = useSplitStore((s) => s.setAddSplitOpen);
+
 	const loadData = useSplitStore((s) => s.loadData);
 	const getTotalUserBalance = useSplitStore((s) => s.getTotalUserBalance);
 	const isLoading = useSplitStore((s) => s.isLoading);

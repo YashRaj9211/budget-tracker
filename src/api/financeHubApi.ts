@@ -114,6 +114,8 @@ export interface DailyExpenseBreakdownResponse {
 export interface FriendItem {
 	user_id: string;
 	name: string;
+	id: string;
+	username?: string;
 }
 
 export interface Friendship {

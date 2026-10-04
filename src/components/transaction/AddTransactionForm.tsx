@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Calendar as CalendarIcon, Check } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { useSplitDraft, errorMessage } from '../../hooks/useSplitDraft';
 import CustomCalendar from '../common/Calendar';
@@ -40,8 +40,6 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 
 	const accounts = ['Personal', 'HDFC Bank', 'Cash', 'Credit Card'];
 
-	const [isSubmitted, setIsSubmitted] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 
 	const addTransaction = useTransactionStore((s) => s.addTransaction);
@@ -124,7 +122,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 				} else {
 					await addTransaction({
 						amount: finalAmount,
-						type: currentType,
+						type: currentType as 'income' | 'expense',
 						category: currentCategory,
 						account: currentAccount,
 						date: currentDate,

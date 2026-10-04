@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
-	Wallet,
 	Lock,
 	Mail,
 	ArrowRight,
@@ -16,7 +15,6 @@ import {
 	ShieldCheck,
 	AlertCircle,
 	RefreshCw,
-	CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 
@@ -49,11 +47,6 @@ export default function Auth() {
 	const [otpState, setOtpState] = useState<'idle' | 'requested'>('idle');
 	const [resendCooldown, setResendCooldown] = useState(0);
 	const [hasPasswordFailed, setHasPasswordFailed] = useState(false);
-
-	// Image fallback detection
-	const [hasCustomHeroImage, setHasCustomHeroImage] = useState(false);
-	const [hasCustomOtpImage, setHasCustomOtpImage] = useState(false);
-	const [hasCustomWatermarkImage, setHasCustomWatermarkImage] = useState(false);
 
 	// Form fields
 	const [email, setEmail] = useState('');
@@ -209,22 +202,16 @@ export default function Auth() {
 				src={CUSTOM_HERO_IMAGE}
 				alt="test-hero"
 				className="hidden"
-				onLoad={() => setHasCustomHeroImage(true)}
-				onError={() => setHasCustomHeroImage(false)}
 			/>
 			<img
 				src={CUSTOM_OTP_IMAGE}
 				alt="test-otp"
 				className="hidden"
-				onLoad={() => setHasCustomOtpImage(true)}
-				onError={() => setHasCustomOtpImage(false)}
 			/>
 			<img
 				src={CUSTOM_WATERMARK_IMAGE}
 				alt="test-watermark"
 				className="hidden"
-				onLoad={() => setHasCustomWatermarkImage(true)}
-				onError={() => setHasCustomWatermarkImage(false)}
 			/>
 				{/* ========================================================= */}
 				{/* MODE 1: WELCOME SCREEN (Eye-Soothing Soft Mint Organic Wave) */}
