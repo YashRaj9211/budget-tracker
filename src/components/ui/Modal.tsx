@@ -34,7 +34,7 @@ export const Modal = ({ isOpen, onClose, title, children, asBottomSheet = true }
 
 	return (
 		<div
-			className={`fixed inset-0 z-50 flex bg-ink/40 backdrop-blur-xs animate-in fade-in duration-200 ${
+			className={`fixed inset-0 z-[60] flex bg-ink/40 backdrop-blur-xs animate-in fade-in duration-200 ${
 				asBottomSheet ? 'items-end sm:items-center justify-center p-0 sm:p-4' : 'items-center justify-center p-4'
 			}`}
 		>

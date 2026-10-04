@@ -428,4 +428,21 @@ export async function initDb(): Promise<void> {
 	await seedSplitData();
 }
 
+/** Clear all user data from IndexedDB (transactions, budgets, splits, sync queue). */
+export async function clearUserData(): Promise<void> {
+	const db = await getDb();
+	const tx = db.transaction(
+		[TRANSACTIONS, BUDGETS, SPLIT_GROUPS, SPLIT_EXPENSES, SYNC_QUEUE],
+		'readwrite'
+	);
+	await Promise.all([
+		tx.objectStore(TRANSACTIONS).clear(),
+		tx.objectStore(BUDGETS).clear(),
+		tx.objectStore(SPLIT_GROUPS).clear(),
+		tx.objectStore(SPLIT_EXPENSES).clear(),
+		tx.objectStore(SYNC_QUEUE).clear(),
+	]);
+	await tx.done;
+}
+
 

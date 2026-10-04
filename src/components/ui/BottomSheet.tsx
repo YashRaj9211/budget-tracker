@@ -47,7 +47,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-xs animate-in fade-in duration-200">
+		<div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-xs animate-in fade-in duration-200">
 			{/* Backdrop click dismiss */}
 			<div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 

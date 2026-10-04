@@ -189,7 +189,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 				onClose={() => setIsOpen(false)}
 				title={isSplit ? 'Split an expense' : 'Add transaction'}
 			>
-				<form onSubmit={handleSubmit} className="space-y-4 text-left">
+				<form onSubmit={handleSubmit} className="space-y-4 text-left pb-20">
 					{/* Transaction Type Selector */}
 					<div className="flex bg-surface p-1 rounded-full gap-1" role="group" aria-label="Transaction type">
 						{(

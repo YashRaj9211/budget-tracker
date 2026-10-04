@@ -28,6 +28,7 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 	const getGroupBalances = useSplitStore((s) => s.getGroupBalances);
 
 	const [confirmDelete, setConfirmDelete] = useState(false);
+	const [deletingSplitId, setDeletingSplitId] = useState<string | null>(null);
 
 	const group = groups.find((g) => g.id === groupId);
 	if (!group) return null;
@@ -244,9 +245,21 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 										</div>
 
 										<button
-											onClick={() => removeSplit(split.id)}
-											className="w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-soft transition-colors"
-											title="Delete split expense"
+											onClick={() => {
+												if (deletingSplitId === split.id) {
+													setDeletingSplitId(null);
+													removeSplit(split.id);
+												} else {
+													setDeletingSplitId(split.id);
+													setTimeout(() => setDeletingSplitId(null), 3000);
+												}
+											}}
+											className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+												deletingSplitId === split.id
+													? 'bg-danger text-white'
+													: 'text-text-muted hover:text-danger hover:bg-danger-soft'
+											}`}
+											title={deletingSplitId === split.id ? 'Tap again to confirm delete' : 'Delete split expense'}
 										>
 											<Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
 										</button>

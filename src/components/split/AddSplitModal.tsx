@@ -70,7 +70,7 @@ export default function AddSplitModal() {
 				</span>
 			}
 		>
-			<form onSubmit={handleSubmit} className="space-y-4 text-left">
+			<form onSubmit={handleSubmit} className="space-y-4 text-left pb-12">
 				<div>
 					<label className="block text-[12px] font-medium text-text-muted mb-1.5">Description</label>
 					<input

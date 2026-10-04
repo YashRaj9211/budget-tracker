@@ -15,6 +15,7 @@ interface TransactionState {
 	selectedYear: number;
 	selectedMonth: number; // 0-indexed
 	isLoading: boolean;
+	loadError: string | null;
 
 
 	// Actions
@@ -39,7 +40,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 		const transactions = await db.getTransactionsByMonth(monthKey);
 		// Sort newest first within each day, days descending
 		transactions.sort((a, b) => b.createdAt - a.createdAt);
-		set({ transactions, selectedYear: year, selectedMonth: month, isLoading: false });
+		set({ transactions, selectedYear: year, selectedMonth: month, isLoading: false, loadError: null });
 	},
 
 	async loadAllTransactions() {

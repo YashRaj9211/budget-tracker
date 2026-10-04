@@ -45,6 +45,17 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 		if (auth.isAuthenticated && navigator.onLine) {
 			try {
 				const serverBudgets = await budgetApi.getAll();
+				const serverBudgetIds = new Set<string>(serverBudgets.map((sb) => sb.id));
+				const localBudgets = await db.getAllBudgets();
+
+				for (const lb of localBudgets) {
+					const isSynced = !!lb.serverId || lb.syncStatus === 'synced';
+					const matchesServer = (lb.serverId && serverBudgetIds.has(lb.serverId)) || serverBudgetIds.has(lb.id);
+					if (isSynced && !matchesServer && lb.syncStatus !== 'pending') {
+						await db.deleteBudget(lb.id);
+					}
+				}
+
 				for (const sb of serverBudgets) {
 					const localBudget: Budget = {
 						id: sb.id,
