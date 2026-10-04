@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { LoginRequest, SignUpRequest, AuthResponse, User } from '../types/auth';
+import type { LoginRequest, SignUpRequest, AuthResponse } from '../types/auth';
 
 /**
  * Authenticates a user with email and password.
@@ -13,8 +13,8 @@ export async function loginApi(credentials: LoginRequest): Promise<AuthResponse>
 /**
  * Registers a new user account.
  */
-export async function signUpApi(userData: SignUpRequest): Promise<User> {
-	const response = await apiClient.post<User>('/api/_public/v1/users/signup', userData);
+export async function signUpApi(userData: SignUpRequest): Promise<AuthResponse> {
+	const response = await apiClient.post<AuthResponse>('/api/_public/v1/users/signup', userData);
 	return response.data;
 }
 

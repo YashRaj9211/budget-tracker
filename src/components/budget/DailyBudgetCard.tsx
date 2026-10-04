@@ -1,133 +1,88 @@
-import { Settings, TrendingDown, TrendingUp, CalendarRange, PlusCircle } from 'lucide-react';
+import { Settings, CalendarRange, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router';
+import { Card } from '../ui/Card';
+import ProgressBar from '../ui/ProgressBar';
+import Chip from '../ui/Chip';
 import { useDailyBudget } from '../../hooks/useDailyBudget';
 import { formatDisplayDate } from '../../utils/date';
 
 function DailyBudgetCard() {
 	const budgetData = useDailyBudget();
 
-	// ── No active budget state ──
 	if (!budgetData.hasBudget) {
 		return (
-			<div className="border-2 border-dashed border-black/40 bg-white p-5 my-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-center gap-3 text-center">
-				<CalendarRange size={28} className="text-gray-400" />
+			<Card variant="white" className="flex flex-col items-center justify-center gap-3 text-center my-4 py-8">
+				<CalendarRange size={28} className="text-text-muted" />
 				<div>
-					<p className="text-sm font-black uppercase text-black">No active budget</p>
-					<p className="text-xs text-gray-500 font-bold mt-0.5">
+					<p className="text-[15px] font-medium text-text">No active budget</p>
+					<p className="text-[12px] text-text-muted mt-1">
 						Set up a budget with a date range to track your spending.
 					</p>
 				</div>
 				<Link
 					to="/budget"
-					className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider border-2 border-black px-4 py-2 bg-black text-white hover:bg-gray-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+					className="flex items-center gap-1.5 text-sm font-medium bg-ink text-white rounded-full px-5 py-2.5 mt-2 active:scale-[0.98] transition-transform"
 				>
-					<PlusCircle size={14} />
+					<PlusCircle size={16} />
 					Create Budget
 				</Link>
-			</div>
+			</Card>
 		);
 	}
 
 	const {
 		budget,
-		today,
 		totalLimit,
-		totalDays,
 		daysRemaining,
 		dailyAllowance,
 		progressPercent,
-		isAlert,
-		todayDelta,
 		isOverToday,
 		isActive,
 		rangeExpense,
-		todayExpense,
 	} = budgetData;
 
 	return (
-		<div className="border-2 border-black bg-white p-4 pb-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] my-2">
-			{/* Header */}
-			<div className="flex justify-between items-center mb-1">
-				<h3 className="text-xl font-bold text-black">Budget</h3>
+		<Card variant="ink" className="pb-5 my-4">
+			<div className="flex justify-between items-start mb-5">
+				<div>
+					<h3 className="text-[15px] font-medium text-white mb-1">Budget</h3>
+					<p className="text-[12px] text-text-on-ink-muted flex items-center gap-1">
+						<CalendarRange size={12} />
+						{formatDisplayDate(budget.startDate)} → {formatDisplayDate(budget.endDate)}
+					</p>
+				</div>
 				<Link
 					to="/budget"
-					className="text-gray-500 hover:text-black transition-colors cursor-pointer flex items-center"
+					className="text-text-on-ink-muted hover:text-white transition-colors flex items-center"
 					aria-label="Budget settings"
 				>
-					<Settings size={18} />
+					<Settings size={20} />
 				</Link>
 			</div>
 
-			{/* Date range label */}
-			<p className="text-xs text-gray-500 font-medium mb-3 flex items-center gap-1">
-				<CalendarRange size={12} />
-				{formatDisplayDate(budget.startDate)} → {formatDisplayDate(budget.endDate)}
-				<span className="ml-1 text-gray-400">({totalDays} days)</span>
-			</p>
-
-			{/* Progress label row */}
-			<div className="flex justify-between items-baseline mb-2 text-sm">
-				<span className="text-gray-600">Progress</span>
-				<span
-					className={`font-bold text-base ${isAlert ? 'text-rose-600' : 'text-black'}`}
-				>
-					{progressPercent}%
-				</span>
-			</div>
-
-			{/* Progress bar */}
-			<div className="w-full h-3 bg-[#eedcc2] border border-black mb-4">
-				<div
-					className={`h-full transition-all ${isAlert ? 'bg-rose-500' : 'bg-[#9f8569]'}`}
-					style={{ width: `${progressPercent}%` }}
-				/>
-			</div>
-
-			{/* Mini Stats Row */}
-			<div className="flex justify-between items-center">
-				<div className="border border-black px-3 py-1.5 text-xs font-bold bg-white text-black tracking-tight">
-					{formatDisplayDate(today)}
-				</div>
-				<div className="flex flex-col text-xs font-medium text-gray-600 text-right">
-					<span>
-						Daily Allowance:{' '}
-						<span className="font-bold text-black">
-							₹{dailyAllowance > 0 ? dailyAllowance.toFixed(2) : '0.00'}
-						</span>
+			<div className="flex flex-col gap-1 mb-5">
+				<span className="text-[12px] text-text-on-ink-muted">Today's allowance</span>
+				<div className="flex items-end justify-between">
+					<span className="text-[36px] leading-none font-medium text-white">
+						₹{dailyAllowance > 0 ? dailyAllowance.toFixed(0) : '0'}
 					</span>
-					<span>
-						Today's Spent:{' '}
-						<span className="font-bold text-black">₹{todayExpense.toFixed(2)}</span>
-					</span>
+					{isActive && totalLimit > 0 && (
+						<Chip variant={isOverToday ? 'negative' : 'positive'}>
+							{isOverToday ? "Over budget" : "Under budget"}
+						</Chip>
+					)}
 				</div>
 			</div>
 
-			{/* Today's over/under indicator — only shown while budget is active */}
-			{isActive && totalLimit > 0 && (
-				<div
-					className={`flex items-center justify-between mt-3 px-3 py-2 border text-xs font-bold ${
-						isOverToday
-							? 'border-rose-400 bg-rose-50 text-rose-700'
-							: 'border-emerald-400 bg-emerald-50 text-emerald-700'
-					}`}
-				>
-					<span className="flex items-center gap-1.5">
-						{isOverToday ? <TrendingDown size={13} /> : <TrendingUp size={13} />}
-						{isOverToday ? "Over today's budget" : "Under today's budget"}
-					</span>
-					<span>
-						{isOverToday ? '−' : '+'}₹{Math.abs(todayDelta).toFixed(2)}
-					</span>
-				</div>
-			)}
+			<div className="mb-4">
+				<ProgressBar progress={progressPercent} variant="ink" />
+			</div>
 
-			{/* Footer totals */}
-			<div className="flex justify-between text-[11px] text-gray-400 mt-4 px-0.5 font-medium">
-				<span>Total: ₹{totalLimit.toFixed(2)}</span>
-				<span>Used: ₹{rangeExpense.toFixed(2)}</span>
+			<div className="flex justify-between items-center text-[12px] text-text-on-ink-muted">
+				<span>₹{rangeExpense.toFixed(0)} of ₹{totalLimit.toFixed(0)}</span>
 				<span>{daysRemaining} days left</span>
 			</div>
-		</div>
+		</Card>
 	);
 }
 

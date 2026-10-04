@@ -1,21 +1,25 @@
-interface ButtonProps {
+import React from 'react';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'accent';
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 	text?: string;
-	type: 'primary' | 'secondary';
-	className?: string;
-	children?: React.ReactNode;
-	onClick?: () => void;
+	variant?: ButtonVariant;
 }
 
-function Button({ className = '', text, type, children, onClick }: ButtonProps) {
-	const buttonType = {
-		primary: 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]',
-		secondary: 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50',
+export function Button({ className = '', text, variant = 'primary', children, ...props }: ButtonProps) {
+	const variantClasses = {
+		primary: 'bg-ink text-white',
+		secondary: 'border border-ink text-ink bg-transparent',
+		accent: 'bg-mint text-ink',
 	};
+
+	const baseClasses = `rounded-full px-5 py-2.5 text-sm font-medium transition-transform active:scale-[0.98] ${variantClasses[variant]}`;
 
 	return (
 		<button
-			className={`border-2 border-black font-black text-xs py-2 px-1 text-center transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer tracking-wider uppercase ${buttonType[type]} ${className}`}
-			onClick={onClick}
+			className={`${baseClasses} ${className}`}
+			{...props}
 		>
 			{text}
 			{children}

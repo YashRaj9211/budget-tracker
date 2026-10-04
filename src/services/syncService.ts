@@ -33,6 +33,7 @@ export const useSyncStore = create<SyncStore>((set) => ({
 class SyncService {
 	private isInitialized = false;
 	private syncLock = false;
+	private nextAllowedSyncTime = 0;
 
 	/** Initialize event listeners for online/offline changes */
 	public init(): void {
@@ -103,9 +104,14 @@ class SyncService {
 	 * Perform full synchronization of all offline-saved records to the server,
 	 * and pull latest server expenses down into local IndexedDB.
 	 */
-	public async syncAll(): Promise<{ syncedCount: number; errors: string[] }> {
+	public async syncAll(options?: { force?: boolean }): Promise<{ syncedCount: number; errors: string[] }> {
 		if (this.syncLock) {
 			console.log('[SyncService] Sync already in progress. Skipping.');
+			return { syncedCount: 0, errors: [] };
+		}
+
+		if (!options?.force && Date.now() < this.nextAllowedSyncTime) {
+			console.log('[SyncService] Sync cooling down after previous failure. Skipping.');
 			return { syncedCount: 0, errors: [] };
 		}
 
@@ -359,7 +365,6 @@ class SyncService {
 				}
 
 				for (const exp of userExpenses) {
-					// We store PERSONAL & INCOME expenses in local transactions
 					if (exp.type === 'PERSONAL' || exp.type === 'INCOME') {
 						if (!localTxMap.has(exp.id)) {
 							const newLocal: Transaction = {
@@ -375,6 +380,45 @@ class SyncService {
 								createdAt: new Date(exp.createdAt).getTime(),
 								syncStatus: 'synced',
 								serverId: exp.id,
+							};
+							await db.addTransaction(newLocal);
+						}
+					} else if (exp.type === 'SPLIT' && !exp.isSettlement) {
+						if (!localTxMap.has(exp.id)) {
+							const totalAmount = parseFloat(exp.amount) || 0;
+							let myShare = 0;
+							const paidByMe = exp.userId === auth.user?.id;
+							let lentAmount = 0;
+							
+							if (exp.splits) {
+								const mySplit = exp.splits.find(s => s.userId === auth.user?.id);
+								if (mySplit) {
+									myShare = parseFloat(mySplit.amount) || 0;
+								}
+							}
+							
+							if (paidByMe) {
+								lentAmount = totalAmount - myShare;
+							}
+							
+							const newLocal: Transaction = {
+								id: exp.id,
+								type: 'expense',
+								amount: myShare,
+								description: exp.description || '',
+								category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Split',
+								account: 'Default',
+								date: exp.expenseDate
+									? exp.expenseDate.split('T')[0]
+									: exp.createdAt.split('T')[0],
+								createdAt: new Date(exp.createdAt).getTime(),
+								syncStatus: 'synced',
+								serverId: exp.id,
+								isSplit: true,
+								groupId: exp.groupId || undefined,
+								paidByMe,
+								totalAmount,
+								lentAmount,
 							};
 							await db.addTransaction(newLocal);
 						}
@@ -429,12 +473,16 @@ class SyncService {
 			store.setLastSyncTime(Date.now());
 			if (errors.length > 0) {
 				store.setLastError(errors[0]);
+				this.nextAllowedSyncTime = Date.now() + 15000;
+			} else {
+				this.nextAllowedSyncTime = 0;
 			}
 		} catch (globalErr: unknown) {
 			console.error('[SyncService] Global sync error:', globalErr);
 			const msg = globalErr instanceof Error ? globalErr.message : String(globalErr);
 			store.setLastError(msg);
 			errors.push(msg);
+			this.nextAllowedSyncTime = Date.now() + 15000;
 		} finally {
 			this.syncLock = false;
 			store.setSyncing(false);

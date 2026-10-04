@@ -64,7 +64,18 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, user)
+	token := utils.GenerateToken(user.ID)
+	c.JSON(200, gin.H{
+		"user": gin.H{
+			"id":        user.ID,
+			"email":     user.Email,
+			"name":      user.Name,
+			"username":  user.Username,
+			"phone":     user.Phone,
+			"avatarUrl": user.AvatarURL,
+		},
+		"token": token,
+	})
 }
 
 func LoginUser(c *gin.Context) {
@@ -126,18 +137,18 @@ func RequestOTP(c *gin.Context) {
 	}
 
 	templateName := "otp_email.html"
-	subject := "Your Login OTP - Dekhkar"
-	
+	subject := "Your Login OTP - Divvit Budget"
+
 	if !userExists {
 		templateName = "signup_verification.html"
-		subject = "Verify your email - Dekhkar"
+		subject = "Verify your email - Divvit Budget"
 	}
 
 	// Generate a 6-digit OTP
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
 	expiresAt := time.Now().Add(10 * time.Minute)
 
-	// Invalidate previous OTPs for this email by deleting them or we can just keep adding (we will delete for simplicity)
+	// Invalidate previous OTPs for this email by deleting them
 	database.DB.Where("email = ?", body.Email).Delete(&models.OTP{})
 
 	otp := models.OTP{
@@ -177,13 +188,52 @@ func VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	// OTP is valid. Now find the user or login.
+	// OTP is valid. Find user or auto-create account for new users
 	var user models.User
 	if err := database.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
-		// If you want OTP to also sign up a user, you could create a minimal user here, 
-		// but since we need a name/username, we might just return a message saying "User not found, please sign up".
-		c.JSON(404, gin.H{"error": "User not found. Please sign up first."})
-		return
+		emailPrefix := strings.Split(body.Email, "@")[0]
+		cleanPrefix := strings.ToLower(emailPrefix)
+		cleanPrefix = strings.Map(func(r rune) rune {
+			if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
+				return r
+			}
+			return -1
+		}, cleanPrefix)
+		if cleanPrefix == "" {
+			cleanPrefix = "user"
+		}
+
+		parts := strings.FieldsFunc(emailPrefix, func(r rune) bool {
+			return r == '.' || r == '_' || r == '-' || r == '+'
+		})
+		for i, p := range parts {
+			if len(p) > 0 {
+				parts[i] = strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
+			}
+		}
+		displayName := strings.Join(parts, " ")
+		if displayName == "" {
+			displayName = emailPrefix
+		}
+
+		uniqueUsername := cleanPrefix
+		var count int64
+		database.DB.Model(&models.User{}).Where("username = ?", uniqueUsername).Count(&count)
+		if count > 0 {
+			uniqueUsername = fmt.Sprintf("%s%d", cleanPrefix, rand.Intn(9000)+1000)
+		}
+
+		dummyPassword, _ := utils.GeneratePasswordHash(fmt.Sprintf("otp_pwd_%d", time.Now().UnixNano()))
+		user = models.User{
+			Email:    body.Email,
+			Name:     displayName,
+			Username: uniqueUsername,
+			Password: dummyPassword,
+		}
+		if err := database.DB.Create(&user).Error; err != nil {
+			c.JSON(500, gin.H{"error": "Failed to create user account"})
+			return
+		}
 	}
 
 	// Delete the OTP after successful verification

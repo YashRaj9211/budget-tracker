@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, LoginRequest, SignUpRequest, AuthResponse } from '../types/auth';
+import type { User, LoginRequest, SignUpRequest } from '../types/auth';
 import { loginApi, signUpApi, requestOtpApi, verifyOtpApi } from '../api/authApi';
 import { socketService } from '../api/socketService';
 import { isBeyondGracePeriod } from '../utils/jwt';
@@ -109,21 +109,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		set({ isLoading: true, error: null });
 		try {
 			const res = await signUpApi(userData);
-			const maybeAuth = res as unknown as Partial<AuthResponse>;
-			// If backend returns token on signup, store it directly.
-			// If not, perform auto-login with email/password.
-			if (maybeAuth.token && maybeAuth.user) {
-				localStorage.setItem(TOKEN_KEY, maybeAuth.token);
-				localStorage.setItem(USER_KEY, JSON.stringify(maybeAuth.user));
+			if (res.token && res.user) {
+				localStorage.setItem(TOKEN_KEY, res.token);
+				localStorage.setItem(USER_KEY, JSON.stringify(res.user));
 				set({
-					token: maybeAuth.token,
-					user: maybeAuth.user,
+					token: res.token,
+					user: res.user,
 					isAuthenticated: true,
 					isLoading: false,
 				});
 				toast.success('Your account has been created!', { title: 'Welcome to Divvit' });
 			} else {
-				// Auto login after signup
+				// Auto login after signup fallback
 				await get().login({ email: userData.email, password: userData.password });
 			}
 		} catch (err: unknown) {

@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, BarChart3 } from 'lucide-react';
 import { useTransactionStore } from '../../stores/transactionStore';
 import { categoryTotals, dailySeries, expensesOf, inMonth, percentChange, previousMonth, sum } from '../../utils/analytics';
 import SpendSparkline from '../charts/SpendSparkline';
-import ChangeBadge from '../charts/ChangeBadge';
-import { colorFor } from '../charts/palette';
+import Chip from '../ui/Chip';
+import { Card } from '../ui/Card';
 import { inr } from '../charts/format';
 
-/** "This month at a glance" card on the home page. Loaded lazily so charts do not slow the first screen. */
 export default function HomeSnapshot() {
 	const all = useTransactionStore((s) => s.allTransactions);
 	const year = useTransactionStore((s) => s.selectedYear);
@@ -34,35 +32,50 @@ export default function HomeSnapshot() {
 	if (data.spent === 0) return null;
 	const top = data.categories.slice(0, 3);
 
+	const isIncrease = (data.change ?? 0) > 0;
+	const changeText =
+		data.change === null
+			? `vs ${data.prevLabel}`
+			: data.change === 0
+			? `Same as ${data.prevLabel}`
+			: `${Math.abs(data.change).toFixed(0)}% ${isIncrease ? 'higher' : 'lower'} vs ${data.prevLabel}`;
+
 	return (
-		<section className="border-2 border-black bg-white p-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-			<div className="flex items-start justify-between">
+		<Card variant="light" className="mb-4">
+			<div className="flex items-start justify-between mb-4">
 				<div>
-					<p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Spent this month</p>
-					<p className="text-xl font-black text-black">{inr(data.spent)}</p>
-					<ChangeBadge change={data.change} label={`vs ${data.prevLabel}`} />
+					<p className="text-[12px] text-text-muted mb-1">Spent this month</p>
+					<p className="text-[26px] font-medium text-text mb-2">{inr(data.spent)}</p>
+					<Chip variant={data.change === null ? 'neutral' : isIncrease ? 'negative' : 'positive'}>
+						{changeText}
+					</Chip>
 				</div>
-				<Link to="/stats" className="flex items-center gap-1 text-[10px] font-black uppercase border border-black px-2 py-1 bg-[#fefed4] shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
-					<BarChart3 size={12} /> Analytics <ArrowRight size={12} />
+				<Link to="/stats" className="text-text-muted hover:text-ink transition-colors flex items-center gap-1 text-[12px] font-medium bg-card px-3 py-1.5 rounded-full shadow-sm">
+					Analytics
 				</Link>
 			</div>
 
 			<SpendSparkline data={data.daily} lastDay={data.lastDay} />
 
-			{/* Category split as one stacked bar */}
-			<div className="flex h-3 w-full border border-black overflow-hidden mt-1" role="img" aria-label="Spending by category">
-				{data.categories.map((c, i) => (
-					<div key={c.name} style={{ width: `${c.share}%`, background: colorFor(c.name, i) }} title={`${c.name}: ${inr(c.amount)}`} />
-				))}
+			<div className="flex h-3 w-full rounded-full overflow-hidden mt-4 bg-card" role="img" aria-label="Spending by category">
+				{data.categories.map((c, i) => {
+					// Use mint and lavender for the first two, surface for the rest
+					const bg = i === 0 ? 'var(--color-mint)' : i === 1 ? 'var(--color-lavender)' : 'var(--color-text-muted)';
+					return <div key={c.name} style={{ width: `${c.share}%`, background: bg }} title={`${c.name}: ${inr(c.amount)}`} />;
+				})}
 			</div>
-			<div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-				{top.map((c, i) => (
-					<span key={c.name} className="flex items-center gap-1 text-[10px] font-bold text-gray-700">
-						<span className="w-2.5 h-2.5 border border-black/30" style={{ background: colorFor(c.name, i) }} />
-						{c.name} {c.share.toFixed(0)}%
-					</span>
-				))}
+			
+			<div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
+				{top.map((c, i) => {
+					const bg = i === 0 ? 'var(--color-mint)' : i === 1 ? 'var(--color-lavender)' : 'var(--color-text-muted)';
+					return (
+						<span key={c.name} className="flex items-center gap-1.5 text-[12px] font-medium text-text-muted">
+							<span className="w-2.5 h-2.5 rounded-full" style={{ background: bg }} />
+							{c.name} {c.share.toFixed(0)}%
+						</span>
+					);
+				})}
 			</div>
-		</section>
+		</Card>
 	);
 }

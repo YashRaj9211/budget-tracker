@@ -13,6 +13,13 @@ export interface Transaction {
 	createdAt: number; // Date.now()
 	syncStatus?: 'synced' | 'pending';
 	serverId?: string;
+	
+	// Split fields
+	isSplit?: boolean;
+	groupId?: string;
+	paidByMe?: boolean;
+	totalAmount?: number;
+	lentAmount?: number;
 }
 
 export * from './sync';

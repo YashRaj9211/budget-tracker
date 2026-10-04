@@ -20,44 +20,44 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onParsed, className = '' }) => 
 			<button
 				onClick={isListening ? () => {} : startListening}
 				disabled={isProcessing}
-				className={`relative flex items-center justify-center p-4 rounded-full transition-all duration-300 shadow-lg
+				className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 shadow-md active:scale-[0.95]
 					${
 						isListening
-							? 'bg-red-500 text-white animate-pulse shadow-red-500/50'
-							: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/30'
+							? 'bg-danger text-white animate-pulse'
+							: 'bg-mint text-ink hover:bg-mint/80'
 					}
 					${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
 				`}
 				aria-label="Add transaction with voice"
 			>
 				{isProcessing ? (
-					<Loader2 className="w-6 h-6 animate-spin" />
+					<Loader2 className="w-5 h-5 animate-spin" strokeWidth={2} />
 				) : isListening ? (
-					<MicOff className="w-6 h-6" />
+					<MicOff className="w-5 h-5" strokeWidth={2} />
 				) : (
-					<Mic className="w-6 h-6" />
+					<Mic className="w-5 h-5" strokeWidth={2} />
 				)}
 				{isListening && (
 					<span className="absolute -top-1 -right-1 flex h-3 w-3">
-						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-						<span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+						<span className="relative inline-flex rounded-full h-3 w-3 bg-danger"></span>
 					</span>
 				)}
 			</button>
 
 			{error && (
-				<div className="text-red-500 text-sm mt-2 text-center bg-red-100 dark:bg-red-900/20 px-3 py-1 rounded-md">
+				<div className="text-danger text-xs mt-1 text-center bg-danger-soft px-3 py-1 rounded-full">
 					{error}
 				</div>
 			)}
 			{isListening && (
-				<div className="text-emerald-500 text-sm mt-2 font-medium animate-pulse">
-					Listening...
+				<div className="text-text text-xs mt-1 font-medium bg-card px-3 py-1 rounded-full shadow-sm animate-pulse">
+					Listening…
 				</div>
 			)}
 			{isProcessing && (
-				<div className="text-emerald-500 text-sm mt-2 font-medium">
-					Processing...
+				<div className="text-text text-xs mt-1 font-medium bg-card px-3 py-1 rounded-full shadow-sm">
+					Processing…
 				</div>
 			)}
 		</div>

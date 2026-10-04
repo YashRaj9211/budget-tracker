@@ -1,14 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Link } from 'react-router';
 import {
-	ArrowDownRight,
-	ArrowUpRight,
 	BarChart3,
 	CalendarDays,
 	CalendarRange,
-	ChevronLeft,
-	ChevronRight,
-	Lightbulb,
+	LightbulbIcon,
 	PieChart as PieIcon,
 	PlusCircle,
 	Scale,
@@ -49,8 +45,14 @@ import {
 } from '../components/charts/StatsCharts';
 import { inr } from '../components/charts/format';
 import AccountAnalytics from '../components/charts/AccountAnalytics';
+import { Card } from '../components/ui/Card';
+import SegmentedTabs from '../components/ui/SegmentedTabs';
+import { MonthNavigator } from '../components/common/MonthNavigator';
+import Chip from '../components/ui/Chip';
+import ProgressBar from '../components/ui/ProgressBar';
 
 type Tab = 'overview' | 'trends' | 'budget';
+type Source = 'device' | 'account';
 
 const TABS: { id: Tab; label: string }[] = [
 	{ id: 'overview', label: 'Overview' },
@@ -58,28 +60,23 @@ const TABS: { id: Tab; label: string }[] = [
 	{ id: 'budget', label: 'Budget' },
 ];
 
-type Source = 'device' | 'account';
 
-const INSIGHT_STYLE = {
-	good: 'bg-emerald-50 border-emerald-300 text-emerald-900',
-	warn: 'bg-amber-50 border-amber-300 text-amber-900',
-	info: 'bg-sky-50 border-sky-200 text-sky-900',
-} as const;
-
-const STATUS_STYLE = {
-	safe: { label: 'On track', cls: 'bg-emerald-100 text-emerald-800 border-emerald-400', bar: '#8fd1a8' },
-	watch: { label: 'Watch out', cls: 'bg-amber-100 text-amber-800 border-amber-400', bar: '#f6bd60' },
-	over: { label: 'Over budget', cls: 'bg-rose-100 text-rose-800 border-rose-400', bar: '#f08a8a' },
-} as const;
+const INSIGHT_BG = {
+	good: 'bg-mint/20',
+	warn: 'bg-warning-soft',
+	info: 'bg-surface',
+};
 
 function Stats() {
 	const allTransactions = useTransactionStore((s) => s.allTransactions);
 	const loadAllTransactions = useTransactionStore((s) => s.loadAllTransactions);
 	const activeBudget = useBudgetStore((s) => s.activeBudget);
 	const loadActiveBudget = useBudgetStore((s) => s.loadActiveBudget);
-	const { selectedYear, selectedMonth, formattedMonth, handlePrevMonth, handleNextMonth } = useMonthNavigation();
+	const { selectedYear, selectedMonth, formattedMonth, handlePrevMonth, handleNextMonth } =
+		useMonthNavigation();
 	const [tab, setTab] = useState<Tab>('overview');
-	const [source, setSource] = useState<Source | null>(null); // null = pick automatically
+	const [source, setSource] = useState<Source | null>(null);
+	const [, startTransition] = useTransition();
 
 	useEffect(() => {
 		loadAllTransactions();
@@ -87,7 +84,6 @@ function Stats() {
 		window.hideSplashScreen?.();
 	}, [loadAllTransactions, loadActiveBudget]);
 
-	// Everything below is derived from the list of transactions — no extra requests.
 	const data = useMemo(() => {
 		const prev = previousMonth(selectedYear, selectedMonth);
 		const current = inMonth(allTransactions, selectedYear, selectedMonth);
@@ -120,38 +116,28 @@ function Stats() {
 	}, [allTransactions, selectedYear, selectedMonth, activeBudget]);
 
 	const hasExpenses = data.expense > 0;
-
-	// Two data sources: this device's own tracker, and the synced account (server).
-	// If nothing is saved on this device, start on the account view so the page is never empty.
 	const hasDeviceData = allTransactions.length > 0;
 	const activeSource: Source = source ?? (hasDeviceData ? 'device' : 'account');
 
 	const sourceSwitch = (
-			<div role="group" aria-label="Data source" className="grid grid-cols-2 border border-black mb-4 bg-white">
-				{(
-					[
-						['device', 'This device'],
-						['account', 'My account'],
-					] as const
-				).map(([id, label], i) => (
-					<button
-						key={id}
-						aria-pressed={activeSource === id}
-						onClick={() => setSource(id)}
-						className={`py-1.5 text-[11px] font-bold uppercase cursor-pointer ${i > 0 ? 'border-l border-black' : ''} ${activeSource === id ? 'bg-yellow-200' : 'bg-white hover:bg-gray-50'}`}
-					>
-						{label}
-					</button>
-				))}
-			</div>
+		<SegmentedTabs
+			tabs={[
+				{ id: 'device', label: 'This device' },
+				{ id: 'account', label: 'My account' },
+			]}
+			activeId={activeSource}
+			onChange={(id) => startTransition(() => setSource(id as Source))}
+			className="mb-4"
+		/>
 	);
 
 	if (activeSource === 'account') {
 		return (
 			<div className="relative pb-24">
-				<h2 className="text-base font-bold text-black tracking-tight flex items-center gap-2 mb-3">
-					<BarChart3 size={18} /> Analytics
-				</h2>
+				<div className="flex items-center gap-2 mb-4">
+					<BarChart3 size={20} className="text-text-muted" strokeWidth={1.5} />
+					<h2 className="text-[20px] font-medium text-text">Analytics</h2>
+				</div>
 				{sourceSwitch}
 				<AccountAnalytics />
 			</div>
@@ -160,110 +146,103 @@ function Stats() {
 
 	return (
 		<div className="relative pb-24">
+			<div className="flex items-center gap-2 mb-4">
+				<BarChart3 size={20} className="text-text-muted" strokeWidth={1.5} />
+				<h2 className="text-[20px] font-medium text-text">Analytics</h2>
+			</div>
+
 			{sourceSwitch}
 
-			{/* Month Header */}
-			<header className="flex items-center justify-between border border-black p-3 bg-white mb-4">
-				<button
-					onClick={handlePrevMonth}
-					className="p-1.5 hover:bg-gray-50 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-					aria-label="Previous month"
-				>
-					<ChevronLeft size={18} />
-				</button>
-				<div className="flex items-center gap-2">
-					<BarChart3 size={18} />
-					<h2 className="text-base font-bold text-black tracking-tight">{formattedMonth}</h2>
-				</div>
-				<button
-					onClick={handleNextMonth}
-					className="p-1.5 hover:bg-gray-50 border border-black transition-all cursor-pointer flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-					aria-label="Next month"
-				>
-					<ChevronRight size={18} />
-				</button>
-			</header>
+			<MonthNavigator
+				formattedMonth={formattedMonth}
+				onPrev={handlePrevMonth}
+				onNext={handleNextMonth}
+				className="mb-4"
+			/>
 
-			{/* Tabs */}
-			<div role="tablist" className="grid grid-cols-3 border border-black mb-5 bg-white">
-				{TABS.map((t, i) => (
-					<button
-						key={t.id}
-						role="tab"
-						aria-selected={tab === t.id}
-						onClick={() => setTab(t.id)}
-						className={`py-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${i > 0 ? 'border-l border-black' : ''} ${
-							tab === t.id ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-50'
-						}`}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
+			<SegmentedTabs
+				tabs={TABS}
+				activeId={tab}
+				onChange={(id) => startTransition(() => setTab(id as Tab))}
+				className="mb-5"
+			/>
 
 			{tab === 'overview' && (
 				<>
-					{/* Summary cards with comparison to last month */}
-					<div className="grid grid-cols-1 gap-3 mb-5">
-						<div className="border border-black p-4 bg-rose-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-							<div className="flex justify-between items-center mb-1">
-								<span className="text-xs font-bold uppercase tracking-wider text-rose-800">Spent</span>
-								<ArrowDownRight size={16} className="text-rose-700" />
+					{/* Summary cards */}
+					<div className="space-y-3 mb-5">
+						<Card variant="mint">
+							<p className="text-[12px] text-text-muted mb-1">Spent</p>
+							<div className="flex items-end justify-between">
+								<p className="text-[28px] font-medium text-text">{inr(data.expense)}</p>
+								<ChangeBadge change={data.expenseChange} label={`vs ${data.prevLabel}`} />
 							</div>
-							<div className="text-xl font-black text-black">{inr(data.expense)}</div>
-							<ChangeBadge change={data.expenseChange} label={`vs ${data.prevLabel}`} />
-						</div>
+						</Card>
 						<div className="grid grid-cols-2 gap-3">
-							<div className="border border-black p-3 bg-emerald-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-								<div className="flex justify-between items-center mb-1">
-									<span className="text-xs font-bold uppercase tracking-wider text-emerald-800">Income</span>
-									<ArrowUpRight size={16} className="text-emerald-700" />
-								</div>
-								<div className="text-lg font-black text-black">{inr(data.income)}</div>
+							<Card variant="white" nested>
+								<p className="text-[12px] text-text-muted mb-1">Income</p>
+								<p className="text-[22px] font-medium text-text">{inr(data.income)}</p>
 								<ChangeBadge change={data.incomeChange} higherIsBetter label={`vs ${data.prevLabel}`} />
-							</div>
-							<div className={`border border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${data.savings >= 0 ? 'bg-purple-100' : 'bg-amber-100'}`}>
-								<div className="flex justify-between items-center mb-1">
-									<span className="text-xs font-bold uppercase tracking-wider text-gray-800">Saved</span>
-									<Wallet size={16} className="text-gray-700" />
-								</div>
-								<div className="text-lg font-black text-black">
-									{data.savings < 0 ? '-' : ''}
-									{inr(Math.abs(data.savings))}
-								</div>
-								<span className="text-[10px] font-bold text-gray-700">
-									{data.income > 0 ? `${((data.savings / data.income) * 100).toFixed(0)}% of income` : 'No income yet'}
+							</Card>
+							<Card variant="lavender" nested>
+								<p className="text-[12px] text-text-muted mb-1">Saved</p>
+								<p className="text-[22px] font-medium text-text">
+									{data.savings < 0 ? '-' : ''}{inr(Math.abs(data.savings))}
+								</p>
+								<span className="text-[12px] text-text-muted">
+									{data.income > 0
+										? `${((data.savings / data.income) * 100).toFixed(0)}% of income`
+										: 'No income yet'}
 								</span>
-							</div>
+							</Card>
 						</div>
 					</div>
 
-					{/* Plain-English insights */}
-					<ChartCard title="What stands out" icon={<Lightbulb size={16} />}>
+					{/* Insights */}
+					<ChartCard title="What stands out" icon={<LightbulbIcon size={16} strokeWidth={1.5} />}>
 						<ul className="space-y-2">
 							{data.insights.map((i) => (
-								<li key={i.text} className={`border px-3 py-2 text-xs font-medium ${INSIGHT_STYLE[i.tone]}`}>
+								<li
+									key={i.text}
+									className={`rounded-[16px] px-3 py-2 text-[13px] font-medium text-text ${INSIGHT_BG[i.tone]}`}
+								>
 									{i.text}
 								</li>
 							))}
 						</ul>
 					</ChartCard>
 
-					<ChartCard title="Where the money went" subtitle="Share of this month's spending" icon={<PieIcon size={16} />} empty={!hasExpenses} emptyText="No expenses this month">
+					<ChartCard
+						title="Where the money went"
+						subtitle="Share of this month's spending"
+						icon={<PieIcon size={16} strokeWidth={1.5} />}
+						empty={!hasExpenses}
+						emptyText="No expenses this month"
+					>
 						<CategoryDonut data={data.categories} centerLabel="Spent" />
 					</ChartCard>
 
 					<ChartCard
 						title={`${data.curLabel} vs ${data.prevLabel}`}
 						subtitle="Which categories went up or down"
-						icon={<Scale size={16} />}
+						icon={<Scale size={16} strokeWidth={1.5} />}
 						empty={data.categoryCompare.length === 0}
 						emptyText="Add expenses to compare months"
 					>
-						<CategoryCompareChart data={data.categoryCompare} currentLabel={data.curLabel} previousLabel={data.prevLabel} />
+						<CategoryCompareChart
+							data={data.categoryCompare}
+							currentLabel={data.curLabel}
+							previousLabel={data.prevLabel}
+						/>
 					</ChartCard>
 
-					<ChartCard title="Accounts" subtitle="Money in and out of each account" icon={<Wallet size={16} />} empty={data.accounts.length === 0} emptyText="No transactions this month">
+					<ChartCard
+						title="Accounts"
+						subtitle="Money in and out of each account"
+						icon={<Wallet size={16} strokeWidth={1.5} />}
+						empty={data.accounts.length === 0}
+						emptyText="No transactions this month"
+					>
 						<AccountChart data={data.accounts} />
 					</ChartCard>
 				</>
@@ -271,24 +250,48 @@ function Stats() {
 
 			{tab === 'trends' && (
 				<>
-					<ChartCard title="Last 6 months" subtitle="Income, expenses and what you kept" icon={<TrendingUp size={16} />} empty={data.trend.every((m) => m.income === 0 && m.expense === 0)} emptyText="Not enough history yet">
+					<ChartCard
+						title="Last 6 months"
+						subtitle="Income, expenses and what you kept"
+						icon={<TrendingUp size={16} strokeWidth={1.5} />}
+						empty={data.trend.every((m) => m.income === 0 && m.expense === 0)}
+						emptyText="Not enough history yet"
+					>
 						<MonthlyTrendChart data={data.trend} />
 						<div className="grid grid-cols-6 gap-1 mt-2 text-center">
 							{data.trend.map((m) => (
 								<div key={m.key} className="text-[10px]">
-									<div className="text-gray-500 font-bold">{m.label}</div>
-									<div className={`font-black ${m.savingsRate >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{m.income > 0 ? `${m.savingsRate.toFixed(0)}%` : '–'}</div>
+									<div className="text-text-muted">{m.label}</div>
+									<div
+										className={`font-medium ${m.savingsRate >= 0 ? 'text-mint-deep' : 'text-danger'}`}
+									>
+										{m.income > 0 ? `${m.savingsRate.toFixed(0)}%` : '–'}
+									</div>
 								</div>
 							))}
 						</div>
-						<p className="text-[10px] text-gray-500 text-center mt-1">Share of income saved each month</p>
+						<p className="text-[12px] text-text-muted text-center mt-1">
+							Share of income saved each month
+						</p>
 					</ChartCard>
 
-					<ChartCard title="Day by day" subtitle="Bars = spent that day, line = running total" icon={<CalendarDays size={16} />} empty={!hasExpenses} emptyText="No expenses this month">
+					<ChartCard
+						title="Day by day"
+						subtitle="Bars = spent that day, line = running total"
+						icon={<CalendarDays size={16} strokeWidth={1.5} />}
+						empty={!hasExpenses}
+						emptyText="No expenses this month"
+					>
 						<DailySpendChart data={data.daily} />
 					</ChartCard>
 
-					<ChartCard title="Which days cost most" subtitle="Average spending by weekday (highest is highlighted)" icon={<BarChart3 size={16} />} empty={!hasExpenses} emptyText="No expenses this month">
+					<ChartCard
+						title="Which days cost most"
+						subtitle="Average spending by weekday (highest is highlighted)"
+						icon={<BarChart3 size={16} strokeWidth={1.5} />}
+						empty={!hasExpenses}
+						emptyText="No expenses this month"
+					>
 						<WeekdayChart data={data.weekdays} />
 					</ChartCard>
 				</>
@@ -297,56 +300,66 @@ function Stats() {
 			{tab === 'budget' &&
 				(data.budget && activeBudget ? (
 					<>
-						<section className="border border-black bg-white shadow-box p-4 mb-5">
-							<div className="flex items-center justify-between mb-3">
-								<h3 className="text-sm font-bold uppercase tracking-wider">Your budget</h3>
-								<span className={`text-[10px] font-bold uppercase border px-2 py-0.5 ${STATUS_STYLE[data.budget.status].cls}`}>{STATUS_STYLE[data.budget.status].label}</span>
+						<Card variant="ink" className="mb-5">
+							<div className="flex items-center justify-between mb-4">
+								<h3 className="text-[15px] font-medium text-white">Your budget</h3>
+								<Chip variant={data.budget.status === 'safe' ? 'positive' : data.budget.status === 'over' ? 'negative' : 'neutral'}>
+									{data.budget.status === 'safe' ? 'On track' : data.budget.status === 'over' ? 'Over budget' : 'Watch out'}
+								</Chip>
 							</div>
-							<div className="flex items-end justify-between mb-1.5">
-								<span className="text-2xl font-black">{inr(data.budget.spent)}</span>
-								<span className="text-xs text-gray-600 font-bold">of {inr(data.budget.limit)}</span>
+							<div className="flex items-end justify-between mb-3">
+								<span className="text-[32px] font-medium text-white">{inr(data.budget.spent)}</span>
+								<span className="text-[12px] text-text-on-ink-muted">of {inr(data.budget.limit)}</span>
 							</div>
-							<div className="w-full h-4 border border-black bg-gray-50 overflow-hidden" role="progressbar" aria-valuenow={Math.min(100, data.budget.percentUsed)} aria-valuemin={0} aria-valuemax={100}>
-								<div className="h-full transition-all duration-500" style={{ width: `${Math.min(100, data.budget.percentUsed)}%`, background: STATUS_STYLE[data.budget.status].bar }} />
-							</div>
-							<p className="text-[11px] text-gray-600 mt-1">
+							<ProgressBar progress={data.budget.percentUsed} variant="ink" className="mb-3" />
+							<p className="text-[12px] text-text-on-ink-muted">
 								{data.budget.percentUsed.toFixed(0)}% used · {activeBudget.startDate} to {activeBudget.endDate}
 							</p>
 
-							<div className="grid grid-cols-3 gap-2 mt-4 text-center">
-								<div className="border border-black/20 p-2">
-									<div className="text-[10px] uppercase font-bold text-gray-500">{data.budget.remaining >= 0 ? 'Left' : 'Over by'}</div>
-									<div className={`text-sm font-black ${data.budget.remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{inr(Math.abs(data.budget.remaining))}</div>
-								</div>
-								<div className="border border-black/20 p-2">
-									<div className="text-[10px] uppercase font-bold text-gray-500">Safe / day</div>
-									<div className="text-sm font-black">{data.budget.daysLeft > 0 ? inr(data.budget.safePerDay) : '–'}</div>
-								</div>
-								<div className="border border-black/20 p-2">
-									<div className="text-[10px] uppercase font-bold text-gray-500">Days left</div>
-									<div className="text-sm font-black">{data.budget.daysLeft}</div>
-								</div>
+							<div className="grid grid-cols-3 gap-2 mt-4">
+								{[
+									{ label: data.budget.remaining >= 0 ? 'Left' : 'Over by', value: inr(Math.abs(data.budget.remaining)), colored: true, positive: data.budget.remaining >= 0 },
+									{ label: 'Safe / day', value: data.budget.daysLeft > 0 ? inr(data.budget.safePerDay) : '–', colored: false, positive: true },
+									{ label: 'Days left', value: String(data.budget.daysLeft), colored: false, positive: true },
+								].map((s) => (
+									<div key={s.label} className="bg-ink-soft rounded-[16px] p-3 text-center">
+										<div className="text-[12px] text-text-on-ink-muted mb-1">{s.label}</div>
+										<div className={`text-[15px] font-medium ${s.colored ? (s.positive ? 'text-mint' : 'text-danger') : 'text-white'}`}>
+											{s.value}
+										</div>
+									</div>
+								))}
 							</div>
+
 							{data.budget.daysElapsed > 0 && data.budget.daysLeft > 0 && (
-								<p className={`text-xs font-medium mt-3 px-3 py-2 border ${data.budget.projected > data.budget.limit ? INSIGHT_STYLE.warn : INSIGHT_STYLE.good}`}>
+								<p className={`text-[13px] font-medium mt-4 px-3 py-2 rounded-[16px] ${data.budget.projected > data.budget.limit ? 'bg-warning-soft text-text' : 'bg-mint text-ink'}`}>
 									At your current pace you will spend about <b>{inr(data.budget.projected)}</b> by {activeBudget.endDate}.
 								</p>
 							)}
-						</section>
+						</Card>
 
-						<ChartCard title="Budget burn-down" subtitle="Stay under the dotted line to be on an even pace" icon={<CalendarRange size={16} />}>
+						<ChartCard
+							title="Budget burn-down"
+							subtitle="Stay under the dotted line to be on an even pace"
+							icon={<CalendarRange size={16} strokeWidth={1.5} />}
+						>
 							<BudgetBurnChart data={data.burn} limit={data.budget.limit} />
 						</ChartCard>
 					</>
 				) : (
-					<div className="border-2 border-dashed border-black/40 bg-white p-6 text-center flex flex-col items-center gap-3">
-						<CalendarRange size={28} className="text-gray-400" />
-						<p className="text-sm font-black uppercase">No active budget</p>
-						<p className="text-xs text-gray-500">Create a budget with a date range to see how your spending compares.</p>
-						<Link to="/budget" className="flex items-center gap-1.5 text-xs font-black uppercase border-2 border-black px-4 py-2 bg-black text-white">
+					<Card variant="white" className="flex flex-col items-center justify-center gap-3 text-center py-8">
+						<CalendarRange size={28} className="text-text-muted" />
+						<p className="text-[15px] font-medium text-text">No active budget</p>
+						<p className="text-[12px] text-text-muted">
+							Create a budget with a date range to see how your spending compares.
+						</p>
+						<Link
+							to="/budget"
+							className="flex items-center gap-1.5 text-sm font-medium bg-ink text-white rounded-full px-5 py-2.5 mt-1 active:scale-[0.98] transition-transform"
+						>
 							<PlusCircle size={14} /> Create Budget
 						</Link>
-					</div>
+					</Card>
 				))}
 		</div>
 	);

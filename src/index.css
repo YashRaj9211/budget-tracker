@@ -1,17 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
 @import 'tailwindcss';
 
-/* .rubik-<uniquifier> {
-  font-family: "Rubik", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: <weight>;
-  font-style: normal;
-} */
+:root {
+  --hatch: repeating-linear-gradient(135deg, rgba(0,0,0,.4) 0 1px, transparent 1px 5px);
+  --hatch-on-ink: repeating-linear-gradient(135deg, rgba(255,255,255,.35) 0 1px, transparent 1px 5px);
+}
 
-
-
-html, body {
-	font-family: 'Rubik', sans-serif;
-	background-color: #ffffff;
+html,
+body {
+	font-family: var(--font-sans);
+	background-color: var(--color-canvas);
+	color: var(--color-text);
 	overflow-x: hidden;
 	max-width: 100vw;
 	margin: 0;
@@ -19,7 +18,9 @@ html, body {
 	box-sizing: border-box;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
 	box-sizing: border-box;
 }
 
@@ -29,144 +30,150 @@ button {
 	text-align: center;
 }
 
+.hatched { background-image: var(--hatch); }
+.hatched-ink { background-image: var(--hatch-on-ink); }
 
-.pastel-pink{
-  background-color: #fecaca;
+@theme {
+	/* New Soft Mint Tokens */
+	/* Surfaces */
+	--color-canvas: #D6DDD3;
+	--color-surface: #EEF0EC;
+	--color-card: #FFFFFF;
+	--color-ink: #1E1E1E;
+	--color-ink-soft: #2A2A2A;
+
+	/* Accents */
+	--color-mint: #A8F5A2;
+	--color-mint-deep: #2E7D32;
+	--color-lavender: #AFA0F8;
+	--color-lavender-deep: #5B47D6;
+
+	/* Text */
+	--color-text: #1C1C1C;
+	--color-text-muted: #6B706A;
+	--color-text-on-ink: #FFFFFF;
+	--color-text-on-ink-muted: #9A9F98;
+
+	/* Status */
+	--color-danger: #C62828;
+	--color-danger-soft: #FBE3E3;
+	--color-warning-soft: #FFF3C4;
+
+	/* Radius */
+	--radius-card: 28px;
+	--radius-tile: 20px;
+	--radius-chip: 999px;
+	--radius-bar: 14px;
+
+	/* Type */
+	--font-sans: "Poppins", "Plus Jakarta Sans", system-ui, sans-serif;
+
+	/* Old Brutalist Tokens (kept temporarily to avoid breaking changes) */
+	--color-pastel-pink: #fecaca;
+	--color-pastel-blue: #bde2ff;
+	--color-pastel-purple: #e4b5fe;
+	--color-pastel-yellow: #fefed4;
+	--color-pastel-green: #aff588;
+	--color-pastel-red: #ff6b6b;
+	--color-dark-red: #8c6239;
+	--color-light-gray: #9f8569;
+
+	/* Modern Theme Colors */
+	--color-modern-green: #a8f0a8;
+	--color-modern-purple: #b29cff;
+	--color-modern-dark: #222222;
+	--color-modern-bg: #e1e6e2;
+
+	/* Standard Brutalist Shadows */
+	--shadow-brutal: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+	--shadow-brutal-sm: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+	--shadow-brutal-lg: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+
+	/* Pastel colored shadows for tags/badges */
+	--shadow-pastel-pink: 4px 4px 0px 0px var(--color-pastel-pink);
+	--shadow-pastel-blue: 4px 4px 0px 0px var(--color-pastel-blue);
+	--shadow-pastel-purple: 4px 4px 0px 0px var(--color-pastel-purple);
+	--shadow-pastel-yellow: 4px 4px 0px 0px var(--color-pastel-yellow);
+	--shadow-pastel-green: 4px 4px 0px 0px var(--color-pastel-green);
+	--shadow-pastel-red: 4px 4px 0px 0px var(--color-pastel-red);
 }
 
-.pastel-blue{
-  background-color: #bde2ff;
-}
-
-.pastel-purple{
-  background-color: #e4b5fe;
-}
-
-.pastel-yellow{
-  background-color: #fefed4;
-}
-
-.pastel-green{
-  background-color: #aff588;
-}
-
-.pastel-red{
-  background-color: #ff6b6b;
-}
-
-.border-pastel-pink{
-  border: 2px solid #fecaca;
-}
-
-.border-pastel-blue{
-  border: 2px solid #bde2ff;
-}
-
-.border-pastel-purple{
-  border: 2px solid #e4b5fe;
-}
-
-.border-pastel-yellow{
-  border: 2px solid #fefed4;
-}
-
-.border-pastel-green{
-  border: 2px solid #aff588;
-}
-
-.border-pastel-red{
-  border: 2px solid #ff6b6b;
-}
-
-.shadow-pastel-pink{
-  box-shadow: 4px 4px 0px 0px #fecaca;
-}
-
-.shadow-pastel-blue{
-  box-shadow: 4px 4px 0px 0px #bde2ff;
-}
-
-.shadow-pastel-purple{
-  box-shadow: 4px 4px 0px 0px #e4b5fe;
-}
-
-.shadow-pastel-yellow{
-  box-shadow: 4px 4px 0px 0px #fefed4;
-}
-
-.shadow-pastel-green{
-  box-shadow: 4px 4px 0px 0px #aff588;
-}
-
-.shadow-pastel-red{
-  box-shadow: 4px 4px 0px 0px #ff6b6b;
-}
-
-.text-pastel-pink{
-  color: #fecaca;
-}
-
-.text-pastel-blue{
-  color: #bde2ff;
-}
-
-.text-pastel-purple{
-  color: #e4b5fe;
-}
-
-.text-pastel-yellow{
-  color: #fefed4;
-}
-
-.text-pastel-green{
-  color: #aff588;
-}
-
-.text-pastel-red{
-  color: #ff6b6b;
-}
-
-.text-dark-red{
-  color: #8c6239;
-}
-
-
-.text-light-gray{
-  color: #9f8569;
-}
-
-.border-light-gray{
-  border: 1px solid #9f8569;
-}
-
-.border-dark-red{
-  border: 2px solid #8c6239;
-}
-
-/* Custom Neobrutalist Scrollbars */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+	width: 6px;
+	height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-left: 1px solid #000;
+	background: var(--color-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000;
-  border-radius: 0px;
+	background: var(--color-text-muted);
+	border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333;
+	background: var(--color-ink);
 }
 
 /* Prevent iOS Safari auto-zoom on inputs */
 @media screen and (max-width: 767px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
+	input,
+	select,
+	textarea {
+		font-size: 16px !important;
+	}
 }
 
+/* Bottom Sheet Status Animations */
+@keyframes airplane-float {
+	0%, 100% {
+		transform: translateY(0px) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-8px) rotate(-2deg);
+	}
+}
+
+@keyframes wind-stream {
+	0%, 100% {
+		transform: translate(0, 0);
+		opacity: 0.8;
+	}
+	50% {
+		transform: translate(-4px, 4px);
+		opacity: 0.35;
+	}
+}
+
+@keyframes rosette-pop {
+	0% {
+		transform: scale(0.2) rotate(-12deg);
+		opacity: 0;
+	}
+	65% {
+		transform: scale(1.14) rotate(4deg);
+		opacity: 1;
+	}
+	85% {
+		transform: scale(0.95) rotate(-1deg);
+	}
+	100% {
+		transform: scale(1) rotate(0deg);
+	}
+}
+
+.animate-airplane-float {
+	animation: airplane-float 2.4s ease-in-out infinite;
+	transform-origin: center center;
+}
+
+.animate-wind-stream {
+	animation: wind-stream 1.2s ease-in-out infinite;
+}
+
+.animate-rosette-pop {
+	animation: rosette-pop 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+	transform-origin: center center;
+}

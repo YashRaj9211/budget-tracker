@@ -1,6 +1,5 @@
-import { lazy, Suspense, useEffect, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useCallback, useState } from 'react';
 import DailyBudgetCard from '../components/budget/DailyBudgetCard';
-import Button from '../components/common/Button';
 import TransactionList from '../components/transaction/TransactionList';
 import HomePageHeader from '../components/home/HomeHeader';
 import AddTransactionForm from '../components/transaction/AddTransactionForm';
@@ -11,8 +10,8 @@ import { syncService } from '../services/syncService';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { todayStr } from '../utils/date';
 import { initDb } from '../db';
+import SegmentedTabs from '../components/ui/SegmentedTabs';
 
-// Charts load after the first screen so Home stays fast
 const HomeSnapshot = lazy(() => import('../components/home/HomeSnapshot'));
 
 function Home() {
@@ -25,8 +24,9 @@ function Home() {
 	const loadAccounts = useBudgetStore((s) => s.loadAccounts);
 	const dayGroups = useDayGroups();
 	const { onEvent } = useWebSocket();
+	
+	const [activeTab, setActiveTab] = useState('daily');
 
-	// Init DB and load data on mount, then sync with cloud
 	useEffect(() => {
 		async function init() {
 			await initDb();
@@ -36,19 +36,16 @@ function Home() {
 			await loadAllTransactions();
 			await loadActiveBudget(todayStr());
 
-			// Sync offline records with cloud and pull latest records
 			if (useAuthStore.getState().isAuthenticated && navigator.onLine) {
 				syncService.syncAll();
 			}
 
-			// Hide the initial loading splash screen once initial load is complete
 			window.hideSplashScreen?.();
 		}
 		init();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Listen for live updates and sync home records
 	useEffect(() => {
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const unsubscribe = onEvent('REFETCH_EXPENSES', () => {
@@ -63,7 +60,6 @@ function Home() {
 		};
 	}, [onEvent]);
 
-	// At midnight: reload transactions + re-check active budget (the date changed)
 	const handleMidnight = useCallback(() => {
 		const now = new Date();
 		loadMonth(now.getFullYear(), now.getMonth());
@@ -79,14 +75,14 @@ function Home() {
 			const tomorrow = new Date(
 				now.getFullYear(),
 				now.getMonth(),
-				now.getDate() + 1, // next day
-				0, 0, 0, 0,        // exactly midnight
+				now.getDate() + 1,
+				0, 0, 0, 0
 			);
 			const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
 			timeoutId = setTimeout(() => {
 				handleMidnight();
-				scheduleNext(); // reschedule for the following midnight
+				scheduleNext();
 			}, msUntilMidnight);
 		}
 
@@ -95,34 +91,48 @@ function Home() {
 	}, [handleMidnight]);
 
 	return (
-		<div className="relative space-y-3">
+		<div className="relative pb-28">
 			<HomePageHeader />
-			<div>
-				<div className="flex items-center justify-between gap-2 mb-3">
-					<Button text="Daily" type="primary" className="flex-1" />
-					<Button text="Monthly" type="secondary" className="flex-1" />
-					<Button text="Calendar" type="secondary" className="flex-1" />
-				</div>
-				<DailyBudgetCard />
-				<div className="mt-3">
+			
+			<SegmentedTabs 
+				tabs={[
+					{ id: 'daily', label: 'Daily' },
+					{ id: 'monthly', label: 'Monthly' },
+					{ id: 'calendar', label: 'Calendar' }
+				]} 
+				activeId={activeTab} 
+				onChange={setActiveTab} 
+				className="mb-4"
+			/>
+			
+			{activeTab === 'daily' && (
+				<>
+					<DailyBudgetCard />
 					<Suspense fallback={null}>
 						<HomeSnapshot />
 					</Suspense>
-				</div>
-				<div className="mt-3">
-					{/* List of transactions */}
-					{dayGroups.length > 0 ? (
-						dayGroups.map((group) => (
-							<TransactionList key={group.date} group={group} />
-						))
-					) : (
-						<div className="border-2 border-black p-8 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-center text-sm font-bold text-gray-500">
-							No transactions this month
-						</div>
-					)}
-				</div>
-			</div>
-			{/* Expanding Add Transaction Form and FAB */}
+					
+					<div className="mt-6 mb-2">
+						<h3 className="text-[15px] font-medium text-text mb-3">Transactions</h3>
+						{dayGroups.length > 0 ? (
+							dayGroups.map((group) => <TransactionList key={group.date} group={group} />)
+						) : (
+							<div className="p-6 bg-surface rounded-[20px] text-center text-sm text-text-muted">
+								No transactions this month
+							</div>
+						)}
+					</div>
+				</>
+			)}
+			
+			{activeTab === 'monthly' && (
+				<div className="p-6 text-center text-sm text-text-muted">Monthly view coming soon</div>
+			)}
+			
+			{activeTab === 'calendar' && (
+				<div className="p-6 text-center text-sm text-text-muted">Calendar view coming soon</div>
+			)}
+			
 			<AddTransactionForm />
 		</div>
 	);

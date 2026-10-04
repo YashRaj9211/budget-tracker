@@ -5,34 +5,34 @@ import { useToastStore, type ToastItem, type ToastType } from '../../stores/toas
 const TOAST_STYLES: Record<
 	ToastType,
 	{
-		bg: string;
+		badgeBg: string;
 		icon: typeof CheckCircle2;
 		iconColor: string;
 		defaultTitle: string;
 	}
 > = {
 	success: {
-		bg: 'bg-[#bbf7d0]', // Soft mint green
+		badgeBg: 'bg-mint/40',
 		icon: CheckCircle2,
-		iconColor: 'text-black',
+		iconColor: 'text-mint-deep',
 		defaultTitle: 'Success',
 	},
 	error: {
-		bg: 'bg-[#fecaca]', // Soft light red
+		badgeBg: 'bg-danger-soft',
 		icon: AlertOctagon,
-		iconColor: 'text-black',
+		iconColor: 'text-danger',
 		defaultTitle: 'Error',
 	},
 	warning: {
-		bg: 'bg-[#fef08a]', // Soft pastel yellow
+		badgeBg: 'bg-amber-100',
 		icon: AlertTriangle,
-		iconColor: 'text-black',
+		iconColor: 'text-amber-800',
 		defaultTitle: 'Notice',
 	},
 	info: {
-		bg: 'bg-[#bde2ff]', // Soft sky blue
+		badgeBg: 'bg-lavender/40',
 		icon: Info,
-		iconColor: 'text-black',
+		iconColor: 'text-lavender-deep',
 		defaultTitle: 'Update',
 	},
 };
@@ -49,21 +49,21 @@ function ToastCard({ item }: { item: ToastItem }) {
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			exit={{ opacity: 0, y: -12, scale: 0.92, transition: { duration: 0.15 } }}
 			transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-			className={`pointer-events-auto w-full border-[2.5px] border-black ${style.bg} p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-1 relative overflow-hidden`}
+			className="pointer-events-auto w-full bg-card rounded-[22px] p-3.5 shadow-xl border border-ink/5 flex flex-col gap-1 relative overflow-hidden"
 			role="alert"
 		>
-			<div className="flex items-start gap-2.5">
+			<div className="flex items-start gap-3">
 				{/* Icon Badge */}
-				<div className="w-7 h-7 bg-white border-2 border-black shrink-0 flex items-center justify-center shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]">
-					<Icon className={`w-4 h-4 ${style.iconColor}`} />
+				<div className={`w-8 h-8 rounded-full ${style.badgeBg} shrink-0 flex items-center justify-center`}>
+					<Icon className={`w-4 h-4 ${style.iconColor}`} strokeWidth={2} />
 				</div>
 
 				{/* Content */}
 				<div className="flex-1 min-w-0 pt-0.5">
-					<p className="text-[11px] font-black uppercase tracking-wider text-black leading-tight">
+					<p className="text-[13px] font-medium text-text leading-tight">
 						{item.title || style.defaultTitle}
 					</p>
-					<p className="text-xs font-bold text-gray-900 mt-0.5 leading-snug break-words">
+					<p className="text-xs text-text-muted mt-0.5 leading-snug break-words">
 						{item.message}
 					</p>
 
@@ -75,7 +75,7 @@ function ToastCard({ item }: { item: ToastItem }) {
 								item.action?.onClick();
 								removeToast(item.id);
 							}}
-							className="mt-2 inline-flex items-center px-2 py-0.5 text-[10px] font-black uppercase bg-black text-white border border-black hover:bg-gray-800 cursor-pointer active:translate-x-0.5 active:translate-y-0.5 transition-transform"
+							className="mt-2 inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-ink text-white hover:bg-ink-soft cursor-pointer transition-colors"
 						>
 							{item.action.label}
 						</button>
@@ -87,9 +87,9 @@ function ToastCard({ item }: { item: ToastItem }) {
 					type="button"
 					aria-label="Close notification"
 					onClick={() => removeToast(item.id)}
-					className="w-5 h-5 bg-white border border-black flex items-center justify-center text-black hover:bg-black hover:text-white cursor-pointer transition-colors shrink-0 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+					className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-text-muted hover:text-text cursor-pointer transition-colors shrink-0"
 				>
-					<X className="w-3.5 h-3.5" />
+					<X className="w-3.5 h-3.5" strokeWidth={1.5} />
 				</button>
 			</div>
 
@@ -99,7 +99,7 @@ function ToastCard({ item }: { item: ToastItem }) {
 					initial={{ scaleX: 1 }}
 					animate={{ scaleX: 0 }}
 					transition={{ duration: item.duration / 1000, ease: 'linear' }}
-					className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/30 origin-left"
+					className="absolute bottom-0 left-0 right-0 h-[2px] bg-ink/10 origin-left"
 				/>
 			)}
 		</motion.div>

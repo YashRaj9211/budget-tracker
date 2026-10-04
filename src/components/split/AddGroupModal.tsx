@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { X, Users, Palette, Check } from 'lucide-react';
+import { Users, Palette, Check } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
 import { useAuthStore } from '../../stores/authStore';
 import { friendshipApi, type FriendItem } from '../../api/financeHubApi';
+import { Button } from '../common/Button';
+import { BottomSheet } from '../ui/BottomSheet';
+import { statusSheet } from '../../stores/statusSheetStore';
 
 const COLOR_OPTIONS = [
-	{ name: 'Pink', class: 'pastel-pink' },
-	{ name: 'Blue', class: 'pastel-blue' },
-	{ name: 'Purple', class: 'pastel-purple' },
-	{ name: 'Yellow', class: 'pastel-yellow' },
-	{ name: 'Green', class: 'pastel-green' },
+	{ name: 'Mint', class: 'bg-mint text-ink' },
+	{ name: 'Lavender', class: 'bg-lavender text-ink' },
+	{ name: 'Pink', class: 'bg-rose-200 text-rose-900' },
+	{ name: 'Blue', class: 'bg-sky-200 text-sky-900' },
+	{ name: 'Yellow', class: 'bg-amber-200 text-amber-900' },
 ];
 
 export default function AddGroupModal() {
@@ -20,10 +23,9 @@ export default function AddGroupModal() {
 
 	const [name, setName] = useState('');
 	const [description, setDescription] = useState('');
-	const [selectedColor, setSelectedColor] = useState('pastel-pink');
+	const [selectedColor, setSelectedColor] = useState('bg-lavender text-ink');
 	const [friends, setFriends] = useState<FriendItem[]>([]);
 	const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	// Load friends when modal opens if authenticated
@@ -49,174 +51,212 @@ export default function AddGroupModal() {
 		}
 	};
 
+	const handleClose = () => {
+		setAddGroupOpen(false);
+		setErrorMessage(null);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!name.trim() || isSubmitting) return;
+		if (!name.trim()) return;
 
-		setIsSubmitting(true);
-		setErrorMessage(null);
-		try {
-			await addGroup({
-				name: name.trim(),
-				description: description.trim(),
-				memberIds: selectedFriendIds,
-				avatarColor: selectedColor,
-			});
-			setAddGroupOpen(false);
+		const groupName = name.trim();
+		const groupDesc = description.trim();
+		const memberIds = [...selectedFriendIds];
+		const color = selectedColor;
 
-			// Reset form
-			setName('');
-			setDescription('');
-			setSelectedFriendIds([]);
-		} catch (error: any) {
-			console.error('Error creating group:', error);
-			const msg =
-				error?.response?.data?.error ||
-				error?.message ||
-				'Failed to create group. Please check your connection and try again.';
-			setErrorMessage(msg);
-		} finally {
-			setIsSubmitting(false);
-		}
+		setAddGroupOpen(false);
+		setName('');
+		setDescription('');
+		setSelectedFriendIds([]);
+
+		await statusSheet.execute({
+			action: async () => {
+				await addGroup({
+					name: groupName,
+					description: groupDesc,
+					memberIds,
+					avatarColor: color,
+				});
+			},
+			processingTitle: 'Processing...',
+			processingMessage: `Setting up split group "${groupName}"`,
+			successTitle: 'Success!',
+			successMessage: `Group "${groupName}" created successfully`,
+			buttonText: 'Nice one!',
+			onError: (err) => {
+				const msg =
+					err?.response?.data?.error ||
+					err?.message ||
+					'Failed to create group. Please check your connection and try again.';
+				setErrorMessage(msg);
+			},
+		});
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-			<div className="bg-white border-2 border-black w-full max-w-md p-5 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative max-h-[90vh] flex flex-col">
-				{/* Close Button */}
-				<button
-					onClick={() => setAddGroupOpen(false)}
-					className="absolute top-4 right-4 p-1 border border-black hover:bg-gray-100"
-				>
-					<X className="w-5 h-5" />
-				</button>
+		<BottomSheet
+			isOpen={isAddGroupOpen}
+			onClose={handleClose}
+			title={
+				<span className="flex items-center gap-2">
+					<Users className="w-5 h-5 text-text-muted" strokeWidth={1.5} /> Create new group
+				</span>
+			}
+		>
+			{errorMessage && (
+				<div className="mb-3 p-3 rounded-[16px] bg-danger-soft text-danger text-xs font-medium">
+					{errorMessage}
+				</div>
+			)}
 
-				<h2 className="font-bold text-lg text-black mb-4 flex items-center gap-2">
-					<Users className="w-5 h-5" /> Create New Group
-				</h2>
+			<form onSubmit={handleSubmit} className="space-y-4">
+				{/* Group Name */}
+				<div>
+					<label className="block text-[12px] font-medium text-text-muted mb-1.5">Group name</label>
+					<input
+						type="text"
+						placeholder="e.g. Goa Trip 🏖️, Roommates 🏠"
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+						required
+						className="w-full bg-surface rounded-full h-11 px-4 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
+					/>
+				</div>
 
-				{errorMessage && (
-					<div className="mb-3 p-2.5 border-2 border-red-500 bg-red-50 text-red-700 text-xs font-bold shadow-[2px_2px_0px_0px_rgba(239,68,68,1)]">
-						{errorMessage}
+				{/* Description */}
+				<div>
+					<label className="block text-[12px] font-medium text-text-muted mb-1.5">
+						Description (optional)
+					</label>
+					<input
+						type="text"
+						placeholder="e.g. Shared expenses for our trip"
+						value={description}
+						onChange={(e) => setDescription(e.target.value)}
+						className="w-full bg-surface rounded-full h-11 px-4 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
+					/>
+				</div>
+
+				{/* Color theme selection */}
+				<div>
+					<label className="block text-[12px] font-medium text-text-muted mb-1.5 flex items-center gap-1.5">
+						<Palette className="w-3.5 h-3.5" strokeWidth={1.5} /> Color theme
+					</label>
+					<div className="flex items-center gap-2.5">
+						{COLOR_OPTIONS.map((c) => (
+							<button
+								key={c.name}
+								type="button"
+								onClick={() => setSelectedColor(c.class)}
+								className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform cursor-pointer ${
+									c.class
+								} ${selectedColor === c.class ? 'ring-2 ring-ink ring-offset-2 scale-105' : 'opacity-70 hover:opacity-100'}`}
+								title={c.name}
+							>
+								{selectedColor === c.class && <Check className="w-4 h-4" strokeWidth={2} />}
+							</button>
+						))}
 					</div>
-				)}
+				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1">
-					{/* Group Name */}
-					<div>
-						<label className="block text-xs font-bold uppercase mb-1">Group Name</label>
-						<input
-							type="text"
-							placeholder="e.g. Goa Trip 🏖️, Roommates 🏠"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							required
-							className="w-full border-2 border-black p-2.5 text-sm font-medium focus:outline-none focus:bg-yellow-50"
-						/>
-					</div>
+				{/* Friends selection */}
+				<div>
+					<label className="block text-[12px] font-medium text-text-muted mb-1.5">
+						Add members ({selectedFriendIds.length + 1})
+					</label>
 
-					{/* Description */}
-					<div>
-						<label className="block text-xs font-bold uppercase mb-1">Description (Optional)</label>
-						<input
-							type="text"
-							placeholder="Trip expenses, shared apartment bills, etc."
-							value={description}
-							onChange={(e) => setDescription(e.target.value)}
-							className="w-full border-2 border-black p-2 text-sm font-medium focus:outline-none focus:bg-yellow-50"
-						/>
-					</div>
-
-					{/* Theme Color */}
-					<div>
-						<label className="block text-xs font-bold uppercase mb-1 items-center gap-1">
-							<Palette className="w-3.5 h-3.5" /> Group Badge Color
-						</label>
-						<div className="flex gap-2">
-							{COLOR_OPTIONS.map((c) => (
-								<button
-									key={c.class}
-									type="button"
-									onClick={() => setSelectedColor(c.class)}
-									className={`w-8 h-8 border-2 border-black ${c.class} ${
-										selectedColor === c.class
-											? 'ring-2 ring-black scale-110 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-											: 'opacity-80'
-									}`}
-								/>
-							))}
+					<div className="mb-2 flex items-center gap-2 bg-surface p-2.5 rounded-[16px]">
+						<div className="w-7 h-7 rounded-full bg-mint text-ink font-medium text-xs flex items-center justify-center">
+							Y
 						</div>
+						<div className="flex-1">
+							<p className="text-xs font-medium text-text">You (Creator)</p>
+						</div>
+						<span className="text-[11px] text-text-muted font-normal bg-card px-2 py-0.5 rounded-full">
+							Always included
+						</span>
 					</div>
 
-					{/* Add Friends Section */}
-					<div>
-						<div className="flex items-center justify-between mb-1.5">
-							<label className="block text-xs font-bold uppercase">Add Friends to Group</label>
-							<span className="text-[11px] font-bold text-gray-500">
-								{selectedFriendIds.length} friend{selectedFriendIds.length === 1 ? '' : 's'} added
-							</span>
-						</div>
-
-						{isAuthenticated ? (
-							friends.length > 0 ? (
-								<div className="border-2 border-black p-2 space-y-1.5 max-h-40 overflow-y-auto bg-neutral-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-									{friends.map((f) => {
-										const isSelected = selectedFriendIds.includes(f.user_id);
-										return (
-											<div
-												key={f.user_id}
-												onClick={() => toggleFriend(f.user_id)}
-												className={`flex items-center justify-between p-2 border-2 transition-all cursor-pointer select-none ${
-													isSelected
-														? 'border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-														: 'border-transparent bg-transparent opacity-70 hover:opacity-100 hover:bg-neutral-100'
-												}`}
-											>
-												<div className="flex items-center gap-2">
-													<div
-														className={`w-4 h-4 border-2 border-black flex items-center justify-center ${
-															isSelected ? 'bg-black text-white' : 'bg-white'
+					{isAuthenticated ? (
+						friends.length > 0 ? (
+							<div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+								{friends.map((friend) => {
+									const isSelected = selectedFriendIds.includes(friend.id);
+									return (
+										<div
+											key={friend.id}
+											onClick={() => toggleFriend(friend.id)}
+											className={`flex items-center justify-between p-2.5 rounded-[16px] cursor-pointer transition-colors ${
+												isSelected
+													? 'bg-ink text-white'
+													: 'bg-surface hover:bg-surface/80 text-text'
+											}`}
+										>
+											<div className="flex items-center gap-2.5">
+												<div
+													className={`w-7 h-7 rounded-full flex items-center justify-center font-medium text-xs ${
+														isSelected ? 'bg-white/20 text-white' : 'bg-card text-text'
+													}`}
+												>
+													{friend.name.slice(0, 1).toUpperCase()}
+												</div>
+												<div>
+													<p className="text-xs font-medium leading-none">{friend.name}</p>
+													<p
+														className={`text-[10px] mt-0.5 leading-none ${
+															isSelected ? 'text-white/70' : 'text-text-muted'
 														}`}
 													>
-														{isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-													</div>
-													<span className="text-xs font-bold text-black">{f.name}</span>
+														@{friend.username}
+													</p>
 												</div>
 											</div>
-										);
-									})}
-								</div>
-							) : (
-								<div className="border-2 border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 bg-gray-50">
-									No accepted friends found. You can add friends from the Finance Hub tab or create a group with just yourself for now.
-								</div>
-							)
-						) : (
-							<div className="border-2 border-dashed border-gray-300 p-3 text-center text-xs text-gray-500 bg-gray-50">
-								Log in to invite and sync group expenses with real friends.
+											<div
+												className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors ${
+													isSelected
+														? 'bg-mint border-transparent text-ink'
+														: 'border-black/20 bg-card'
+												}`}
+											>
+												{isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+											</div>
+										</div>
+									);
+								})}
 							</div>
-						)}
-					</div>
+						) : (
+							<div className="rounded-[16px] bg-surface p-3 text-center text-[12px] text-text-muted">
+								No friends found. You can add friends from the Finance Hub tab or create a group with just yourself for now.
+							</div>
+						)
+					) : (
+						<div className="rounded-[16px] bg-surface p-3 text-center text-[12px] text-text-muted">
+							Log in to invite and sync group expenses with real friends.
+						</div>
+					)}
+				</div>
 
-					{/* Buttons */}
-					<div className="flex gap-3 pt-3 border-t-2 border-black">
-						<button
-							type="button"
-							onClick={() => setAddGroupOpen(false)}
-							className="flex-1 border-2 border-black p-2.5 font-bold text-sm bg-gray-100 hover:bg-gray-200"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={isSubmitting}
-							className="flex-1 border-2 border-black p-2.5 font-bold text-sm bg-black text-white shadow-[3px_3px_0px_0px_rgba(150,150,150,1)] hover:bg-gray-800 disabled:opacity-50"
-						>
-							{isSubmitting ? 'Creating...' : 'Create Group'}
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
+				{/* Buttons */}
+				<div className="flex gap-2.5 pt-3">
+					<Button
+						type="button"
+						variant="secondary"
+						onClick={handleClose}
+						className="flex-1 py-3"
+					>
+						Cancel
+					</Button>
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={!name.trim()}
+						className="flex-1 py-3 font-medium"
+					>
+						Create group
+					</Button>
+				</div>
+			</form>
+		</BottomSheet>
 	);
 }

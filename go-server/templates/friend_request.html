@@ -1,130 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="light only">
-<meta name="supported-color-schemes" content="light only">
-<title>New Friend Request - Dekhkar</title>
-<style>
-  body { margin:0; padding:0; background:#fefed4; }
-  @media only screen and (max-width:620px) {
-    .wrap { width:100% !important; }
-    .pad { padding-left:18px !important; padding-right:18px !important; }
-    .btn { display:block !important; width:100% !important; text-align:center !important; box-sizing:border-box !important; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
+    <title>New Friend Request</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #F4F6F3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @media only screen and (max-width:620px) {
+            .wrap {
+                width: 100% !important;
+                border-radius: 20px !important;
+            }
+
+            .pad {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .btn {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                text-align: center !important;
+            }
+        }
+    </style>
 </head>
-<body style="margin:0;padding:0;background:#fefed4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-<!-- Hidden preheader (inbox preview only) -->
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#fefed4;font-size:1px;line-height:1px;">
-  {{.SenderName}} sent you a friend request on Dekhkar. Accept to start sharing expenses and splitting bills together.
-  &#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;
-</div>
+<body style="margin:0;padding:0;background:#F4F6F3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fefed4;">
-<tr><td align="center" style="padding:32px 14px;">
+    <!-- Hidden preheader (inbox preview only) -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F4F6F3;font-size:1px;line-height:1px;">
+        {{.SenderName}} sent you a friend request on Divvit Budget.
+        &#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;&#8199;&zwnj;
+    </div>
 
-  <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0"
-         style="width:600px;max-width:600px;background:#ffffff;border:2px solid #000000;box-shadow:6px 6px 0px 0px rgba(0,0,0,1);">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F6F3;">
+        <tr>
+            <td align="center" style="padding:40px 16px;">
 
-    <!-- Header -->
-    <tr>
-      <td class="pad" style="background:#bde2ff;border-bottom:2px solid #000000;padding:20px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="vertical-align:middle;">
-              <img src="{{.LogoURL}}" alt="Dekhkar" width="40" height="40" style="vertical-align:middle;border:2px solid #000000;background:#ffffff;">
-              <span style="font-size:22px;font-weight:800;color:#000000;vertical-align:middle;margin-left:10px;letter-spacing:-0.5px;">Dekhkar</span>
+                <table role="presentation" class="wrap" width="560" cellpadding="0" cellspacing="0" border="0"
+                    style="width:560px;max-width:560px;background:#ffffff;border-radius:24px;border:1px solid #E2E6E0;box-shadow:0 8px 24px rgba(30,30,30,0.04);overflow:hidden;">
+
+                    <!-- Brand Header -->
+                    <tr>
+                        <td class="pad" style="background:#FFFFFF;border-bottom:1px solid #EEF0EC;padding:24px 32px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="vertical-align:middle;">
+                                        <div style="display:inline-block;vertical-align:middle;width:36px;height:36px;border-radius:50%;background:#AFA0F8;text-align:center;line-height:36px;">
+                                            <span style="font-size:18px;line-height:36px;">👥</span>
+                                        </div>
+                                        <span style="font-size:18px;font-weight:600;color:#1E1E1E;vertical-align:middle;margin-left:12px;letter-spacing:-0.3px;">Divvit Budget</span>
+                                    </td>
+                                    <td align="right" style="vertical-align:middle;">
+                                        <span style="display:inline-block;background:#F0EEFF;color:#5B47D6;font-size:11px;font-weight:600;letter-spacing:0.5px;padding:6px 12px;border-radius:9999px;">
+                                            Friend Request
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Title & Greeting -->
+                    <tr>
+                        <td class="pad" style="padding:32px 32px 12px 32px;">
+                            <h1 style="margin:0 0 10px 0;font-size:22px;line-height:28px;font-weight:600;color:#1E1E1E;">
+                                {{if .RecipientName}}Hi {{.RecipientName}},{{else}}Hello!{{end}}
+                            </h1>
+                            <p style="margin:0;font-size:15px;line-height:24px;color:#555A54;">
+                                <strong style="color:#1E1E1E;">{{.SenderName}}</strong> wants to connect with you on Divvit Budget to split bills and track shared expenses.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Sender Card -->
+                    <tr>
+                        <td class="pad" style="padding:16px 32px 24px 32px;">
+                            <div style="background:#F6F4FF;border:1px solid #DFDAFC;border-radius:20px;padding:20px 24px;">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td style="vertical-align:middle;">
+                                            <div style="font-size:17px;font-weight:600;color:#1E1E1E;margin-bottom:2px;">{{.SenderName}}</div>
+                                            <div style="font-size:13px;color:#555A54;">{{.SenderEmail}}</div>
+                                        </td>
+                                        <td align="right" style="vertical-align:middle;">
+                                            <div style="width:40px;height:40px;border-radius:50%;background:#AFA0F8;text-align:center;line-height:40px;font-size:18px;">
+                                                🤝
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div style="height:1px;background:#DFDAFC;margin:14px 0 12px 0;"></div>
+                                <p style="margin:0;font-size:13px;line-height:20px;color:#6A6780;">
+                                    Once connected, you can add shared expenses, split group costs, and settle balances in a tap.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Action Button -->
+                    <tr>
+                        <td class="pad" align="center" style="padding:0 32px 28px 32px;">
+                            <a href="{{.ActionURL}}" class="btn" target="_blank"
+                                style="display:inline-block;background:#1E1E1E;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;padding:14px 36px;border-radius:9999px;box-shadow:0 4px 12px rgba(30,30,30,0.15);">
+                                View &amp; Accept Request &rarr;
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Decline note -->
+                    <tr>
+                        <td class="pad" style="padding:0 32px 28px 32px;">
+                            <p style="margin:0;font-size:13px;line-height:20px;color:#888E86;text-align:center;">
+                                Don't know this person? You can safely decline the request in your dashboard under the Friends tab.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td class="pad" align="center" style="background:#F9FAF8;border-top:1px solid #EEF0EC;padding:20px 32px;">
+                            <p style="margin:0;font-size:12px;line-height:18px;color:#888E86;">
+                                &copy; {{.Year}} Divvit Budget. All rights reserved.<br>
+                                Automated notification · Please do not reply directly to this email.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
             </td>
-            <td align="right" style="vertical-align:middle;">
-              <span style="display:inline-block;background:#000000;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 10px;">Friend Request</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- Intro -->
-    <tr>
-      <td class="pad" style="padding:32px 28px 12px 28px;">
-        <h1 style="margin:0 0 12px 0;font-size:24px;line-height:30px;font-weight:800;color:#000000;">
-          {{if .RecipientName}}Hi {{.RecipientName}},{{else}}Hello!{{end}}
-        </h1>
-        <p style="margin:0;font-size:16px;line-height:24px;color:#374151;">
-          <strong style="color:#000000;">{{.SenderName}}</strong> sent you a friend request on Dekhkar!
-        </p>
-      </td>
-    </tr>
-
-    <!-- Sender card -->
-    <tr>
-      <td class="pad" style="padding:16px 28px 8px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-               style="background:#fef3c7;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);">
-          <tr>
-            <td style="padding:20px 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <div style="font-size:18px;font-weight:800;color:#000000;margin-bottom:4px;">{{.SenderName}}</div>
-                    <div style="font-size:13px;font-weight:600;color:#4b5563;">{{.SenderEmail}}</div>
-                  </td>
-                  <td align="right" style="vertical-align:middle;">
-                    <span style="font-size:28px;">👋</span>
-                  </td>
-                </tr>
-              </table>
-              <div style="border-top:1px dashed #000000;margin:16px 0 12px 0;"></div>
-              <p style="margin:0;font-size:13px;line-height:20px;color:#6b7280;">
-                Once connected, you can split group expenses, share dining and trip bills, and settle balances effortlessly.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- Action button -->
-    <tr>
-      <td class="pad" align="center" style="padding:24px 28px 12px 28px;">
-        <a href="{{.ActionURL}}" class="btn" target="_blank"
-           style="display:inline-block;background:#000000;color:#ffffff;text-decoration:none;font-size:15px;font-weight:800;letter-spacing:0.5px;padding:14px 32px;border:2px solid #000000;box-shadow:4px 4px 0px 0px rgba(0,0,0,1);text-transform:uppercase;">
-          View &amp; Accept Request &rarr;
-        </a>
-      </td>
-    </tr>
-
-    <!-- Heads up info note -->
-    <tr>
-      <td class="pad" style="padding:16px 28px 24px 28px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-               style="background:#f3f4f6;border:2px solid #000000;">
-          <tr>
-            <td style="padding:12px 16px;">
-              <p style="margin:0;font-size:13px;line-height:19px;color:#4b5563;">
-                Don't know this person? You can safely decline the request in your Dekhkar dashboard under the <strong>Friends</strong> tab.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td class="pad" align="center" style="background:#f9fafb;border-top:2px solid #000000;padding:18px 28px;">
-        <p style="margin:0;font-size:13px;line-height:20px;color:#9f8569;">
-          &copy; {{.Year}} Dekhkar. All rights reserved.<br>
-          Split bills, track spending, settle with zero awkwardness.
-        </p>
-      </td>
-    </tr>
-
-  </table>
-
-</td></tr>
-</table>
+        </tr>
+    </table>
 </body>
+
 </html>

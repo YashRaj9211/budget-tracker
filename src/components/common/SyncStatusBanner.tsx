@@ -1,101 +1,107 @@
-import { useState, useEffect } from 'react';
-import { WifiOff, RefreshCw, CheckCircle2, CloudUpload } from 'lucide-react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { WifiOff, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useSyncStore, syncService } from '../../services/syncService';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function SyncStatusBanner() {
-	const { isOnline, isSyncing, pendingCount, lastSyncTime } = useSyncStore();
+	const { isOnline, isSyncing, pendingCount, lastError } = useSyncStore();
 	const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 	const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+	const prevSyncingRef = useRef(isSyncing);
 
-	// Show temporary "All records synced" banner after a sync completes
+	// Show brief success pill when sync finishes successfully, then automatically disappear
 	useEffect(() => {
-		if (lastSyncTime && pendingCount === 0 && isOnline) {
+		if (prevSyncingRef.current && !isSyncing && pendingCount === 0 && !lastError && isOnline) {
 			setShowSuccessBanner(true);
-			const timer = setTimeout(() => setShowSuccessBanner(false), 3500);
+			const timer = setTimeout(() => {
+				setShowSuccessBanner(false);
+			}, 2000);
 			return () => clearTimeout(timer);
 		}
-	}, [lastSyncTime, pendingCount, isOnline]);
-
-	const handleManualSync = async () => {
-		if (isSyncing || !isOnline) return;
-		await syncService.syncAll();
-	};
+		prevSyncingRef.current = isSyncing;
+	}, [isSyncing, pendingCount, lastError, isOnline]);
 
 	if (!isAuthenticated) return null;
 
-	// 1. OFFLINE Banner
+	const baseClasses =
+		'pointer-events-auto rounded-full px-4 py-1.5 flex items-center justify-center gap-2 text-xs font-medium shadow-md backdrop-blur-md border border-ink/5 select-none';
+
+	let bannerContent: ReactNode = null;
+	let bannerKey: string | null = null;
+
+	// 1. When offline: show compact offline indicator
 	if (!isOnline) {
-		return (
-			<div
-				role="status"
-				className="w-full bg-amber-300 border-2 border-black px-3 py-1.5 mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-2 text-xs font-bold text-black animate-in fade-in duration-200"
-			>
-				<div className="flex items-center gap-1.5">
-					<WifiOff className="w-4 h-4 text-black shrink-0 animate-pulse" />
-					<span>Offline Mode — Changes saved on device</span>
-				</div>
+		bannerKey = 'offline';
+		bannerContent = (
+			<div role="status" className={`${baseClasses} bg-surface/95 text-text-muted border-ink/10`}>
+				<WifiOff className="w-3.5 h-3.5 text-text-muted shrink-0" strokeWidth={1.5} />
+				<span>Offline mode</span>
 				{pendingCount > 0 && (
-					<span className="bg-black text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-none">
-						{pendingCount} pending
+					<span className="bg-ink text-white text-[10px] px-2 py-0.2 rounded-full font-mono">
+						{pendingCount} saved
 					</span>
 				)}
 			</div>
 		);
 	}
-
-	// 2. SYNCING Banner
-	if (isSyncing) {
-		return (
-			<div
-				role="status"
-				className="w-full bg-blue-100 border-2 border-black px-3 py-1.5 mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-2 text-xs font-bold text-black"
-			>
-				<div className="flex items-center gap-1.5">
-					<RefreshCw className="w-4 h-4 text-blue-800 shrink-0 animate-spin" />
-					<span>Syncing records to cloud...</span>
-				</div>
-				<span className="text-[10px] text-blue-900 font-semibold uppercase">In Progress</span>
+	// 2. While syncing: show active spinning sync indicator
+	else if (isSyncing) {
+		bannerKey = 'syncing';
+		bannerContent = (
+			<div role="status" className={`${baseClasses} bg-lavender/95 text-ink`}>
+				<RefreshCw className="w-3.5 h-3.5 text-ink shrink-0 animate-spin" strokeWidth={1.5} />
+				<span>Syncing changes…</span>
 			</div>
 		);
 	}
-
-	// 3. PENDING RECORDS (Online, but items waiting to sync)
-	if (pendingCount > 0) {
-		return (
-			<div
-				role="status"
-				className="w-full bg-purple-100 border-2 border-black px-3 py-1.5 mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-2 text-xs font-bold text-black"
-			>
-				<div className="flex items-center gap-1.5">
-					<CloudUpload className="w-4 h-4 text-purple-800 shrink-0" />
-					<span>{pendingCount} offline record{pendingCount > 1 ? 's' : ''} ready to sync</span>
-				</div>
+	// 3. Briefly show success notification, then disappear
+	else if (showSuccessBanner) {
+		bannerKey = 'success';
+		bannerContent = (
+			<div role="status" className={`${baseClasses} bg-mint/95 text-ink`}>
+				<CheckCircle2 className="w-3.5 h-3.5 text-ink shrink-0" strokeWidth={1.5} />
+				<span>All records synced!</span>
+			</div>
+		);
+	}
+	// 4. When sync previously failed and items remain pending: show calm indicator with retry button
+	else if (lastError && pendingCount > 0) {
+		bannerKey = 'error';
+		bannerContent = (
+			<div role="status" className={`${baseClasses} bg-surface/95 text-text-muted border-ink/10`}>
+				<AlertCircle className="w-3.5 h-3.5 text-danger shrink-0" strokeWidth={1.5} />
+				<span>{pendingCount} unsynced change{pendingCount > 1 ? 's' : ''}</span>
 				<button
 					type="button"
-					onClick={handleManualSync}
-					className="bg-black text-white hover:bg-neutral-800 text-[10px] font-bold px-2 py-0.5 cursor-pointer border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-x-px active:translate-y-px"
+					onClick={() => syncService.syncAll({ force: true })}
+					className="text-ink font-semibold underline underline-offset-2 ml-1 cursor-pointer hover:opacity-80 active:scale-95 transition"
 				>
-					Sync Now
+					Retry
 				</button>
 			</div>
 		);
 	}
 
-	// 4. JUST SYNCED SUCCESS BANNER
-	if (showSuccessBanner) {
-		return (
-			<div
-				role="status"
-				className="w-full bg-emerald-100 border-2 border-black px-3 py-1.5 mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-2 text-xs font-bold text-emerald-900 animate-in fade-in slide-in-from-top-1 duration-200"
-			>
-				<div className="flex items-center gap-1.5">
-					<CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-					<span>All offline records synced to cloud!</span>
-				</div>
-			</div>
-		);
-	}
-
-	return null;
+	return (
+		<div
+			aria-live="polite"
+			className="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none flex justify-center w-fit max-w-[90vw]"
+		>
+			<AnimatePresence mode="wait">
+				{bannerContent && (
+					<motion.div
+						key={bannerKey}
+						initial={{ opacity: 0, y: -16, scale: 0.95 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: -16, scale: 0.95 }}
+						transition={{ duration: 0.2, ease: 'easeOut' }}
+					>
+						{bannerContent}
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</div>
+	);
 }
+
