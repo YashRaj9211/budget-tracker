@@ -1,5 +1,7 @@
 
 
+import AnimatedLogo from './AnimatedLogo';
+
 interface PageLoaderProps {
 	message?: string;
 	subtext?: string;
@@ -19,15 +21,9 @@ export default function PageLoader({
 		>
 			<div className="w-[320px] max-w-[90%] bg-card rounded-[32px] p-8 flex flex-col items-center text-center shadow-lg border border-ink/5">
 				{/* Squircle Animated Icon */}
-				<div className="relative mb-4">
-					<div className="w-18 h-18 rounded-[24px] overflow-hidden shadow-sm animate-pulse p-1 bg-white/50 border border-mint">
-						<img
-							src="/budget-tracker-icon.svg"
-							alt="Divvit Logo"
-							className="w-full h-full object-contain rounded-[20px]"
-						/>
-					</div>
-					<div className="absolute inset-0 rounded-[24px] bg-mint/40 blur-md -z-10 animate-ping opacity-30" />
+				<div className="relative mb-4 flex items-center justify-center">
+					<AnimatedLogo state="loading" size={72} title="Loading workspace" />
+					<div className="absolute inset-0 rounded-[24px] bg-mint/40 blur-md -z-10 animate-ping opacity-30 pointer-events-none" />
 				</div>
 
 				{/* Title & Subtext */}

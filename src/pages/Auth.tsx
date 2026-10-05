@@ -17,6 +17,7 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import AnimatedLogo from '../components/common/AnimatedLogo';
 
 // Optional custom image asset paths (drop generated images into public/assets/auth/)
 const CUSTOM_HERO_IMAGE = '/assets/auth/hero-logo.png';
@@ -279,11 +280,7 @@ export default function Auth() {
 									id="auth-hero-illustration"
 									className="w-24 h-24 sm:w-28 sm:h-28 rounded-[28px] overflow-hidden shadow-xl shadow-mint-deep/20 transition-transform hover:scale-105 border-2 border-white/70 bg-white/40 backdrop-blur-sm p-1 flex items-center justify-center"
 								>
-									<img
-										src="/budget-tracker-icon.svg"
-										alt="Divvit Budget Icon"
-										className="w-full h-full object-contain rounded-[22px]"
-									/>
+									<AnimatedLogo state="idle" size={96} title="Divvit Mascot" />
 								</div>
 
 								{/* Brand Script Title */}
@@ -363,10 +360,10 @@ export default function Auth() {
 								</button>
 
 								<div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md pl-1.5 pr-3 py-1 rounded-full border border-white/60 shadow-2xs">
-									<img
-										src="/budget-tracker-icon.svg"
-										alt="Divvit"
-										className="w-4 h-4 rounded-sm object-contain"
+									<AnimatedLogo
+										state={isLoading ? 'loading' : error ? 'error' : 'idle'}
+										size={20}
+										title="Divvit"
 									/>
 									<span className="text-[11px] font-bold text-ink tracking-wide">divvit</span>
 								</div>
@@ -570,12 +567,12 @@ export default function Auth() {
 											<div className="flex flex-col items-center justify-center my-2">
 												<div
 													id="auth-otp-badge"
-													className="w-16 h-16 rounded-[22px] bg-white border border-mint flex items-center justify-center p-2.5 shadow-sm mb-2 relative"
+													className="w-16 h-16 rounded-[22px] bg-white border border-mint flex items-center justify-center p-1.5 shadow-sm mb-2 relative"
 												>
-													<img
-														src="/budget-tracker-icon.svg"
-														alt="Divvit Security"
-														className="w-full h-full object-contain rounded-xl"
+													<AnimatedLogo
+														state={isLoading ? 'loading' : error ? 'error' : 'idle'}
+														size={52}
+														title="Divvit Security Mascot"
 													/>
 													<div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-ink text-mint flex items-center justify-center shadow-xs">
 														<ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.5} />

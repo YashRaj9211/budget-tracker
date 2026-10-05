@@ -19,12 +19,20 @@ import ExcelTools from '../components/common/ExcelTools';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/common/Button';
 import Chip from '../components/ui/Chip';
+import AnimatedLogo, { type AnimatedLogoState } from '../components/common/AnimatedLogo';
 
 export default function Profile() {
 	const navigate = useNavigate();
 	const user = useAuthStore((s) => s.user);
 	const logout = useAuthStore((s) => s.logout);
 	const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+	const [mascotState, setMascotState] = useState<AnimatedLogoState>('idle');
+
+	const cycleMascotState = () => {
+		const states: AnimatedLogoState[] = ['idle', 'loading', 'success', 'error'];
+		const nextIdx = (states.indexOf(mascotState) + 1) % states.length;
+		setMascotState(states[nextIdx]);
+	};
 
 	const handleLogout = () => {
 		logout();
@@ -126,13 +134,44 @@ export default function Profile() {
 				<ExcelTools />
 			</Card>
 
-			{/* App edition */}
-			<Card variant="light" nested className="flex items-center justify-between">
-				<div className="flex items-center gap-2 text-text-muted">
-					<Smartphone size={16} strokeWidth={1.5} />
-					<span className="text-[12px]">App edition</span>
+			{/* App edition & Mascot */}
+			<Card variant="light" nested className="space-y-3">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2 text-text-muted">
+						<Smartphone size={16} strokeWidth={1.5} />
+						<span className="text-[12px]">App edition</span>
+					</div>
+					<Chip variant="neutral">Mobile-First v1.0</Chip>
 				</div>
-				<Chip variant="neutral">Mobile-First v1.0</Chip>
+
+				<div className="pt-2 border-t border-ink/5 flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<button
+							type="button"
+							onClick={cycleMascotState}
+							title="Click to change expression!"
+							className="cursor-pointer active:scale-95 transition-transform"
+						>
+							<AnimatedLogo state={mascotState} size={42} title="Interactive Mascot" />
+						</button>
+						<div>
+							<div className="text-[12px] font-medium text-text flex items-center gap-1.5">
+								<span>Divvit Mascot</span>
+								<span className="text-[10px] font-mono uppercase bg-mint text-mint-deep px-1.5 py-0.2 rounded-full">
+									{mascotState}
+								</span>
+							</div>
+							<p className="text-[11px] text-text-muted">Tap to cycle animations</p>
+						</div>
+					</div>
+
+					<Link
+						to="/logo-demo"
+						className="text-[11px] font-medium text-mint-deep hover:underline cursor-pointer"
+					>
+						Demo Lab &rarr;
+					</Link>
+				</div>
 			</Card>
 
 			{/* Logout */}
