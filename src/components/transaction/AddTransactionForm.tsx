@@ -6,7 +6,6 @@ import CustomCalendar from '../common/Calendar';
 import SplitExpenseFields from '../split/SplitExpenseFields';
 import { AmountCalculatorInput } from './AmountCalculatorInput';
 import { CategoryAccountSelector } from './CategoryAccountSelector';
-import { Select } from '../ui/Select';
 import VoiceInput from '../common/VoiceInput';
 import { Button } from '../common/Button';
 import { BottomSheet } from '../ui/BottomSheet';
@@ -214,7 +213,13 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 						description: desc,
 					});
 				} else if (isSplit) {
-					await draft.submit({ description: desc, date: currentDate, amount: finalAmount });
+					await draft.submit({
+						description: desc,
+						date: currentDate,
+						amount: finalAmount,
+						category: currentCategory,
+						account: currentAccount,
+					});
 					draft.reset();
 				} else {
 					await addTransaction({
@@ -444,43 +449,22 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 								</div>
 							</div>
 
-							{/* Category selection for Split tab */}
-							{isSplit && draft.categories.length > 0 && (
-								<div>
-									<label className="block text-[12px] font-medium text-text-muted mb-1.5">
-										Category
-									</label>
-									<Select
-										ariaLabel="Category"
-										value={draft.categoryId}
-										onChange={draft.setCategoryId}
-										options={[
-											{ id: '', label: 'No category' },
-											...draft.categories.map((c) => ({ id: c.id, label: c.name })),
-										]}
-										placeholder="No category"
-									/>
-								</div>
-							)}
-
-							{/* Category & Account for normal expense/income */}
-							{!isSplit && (
-								<CategoryAccountSelector
-									accounts={accounts}
-									selectedAccount={selectedAccount}
-									onSelectAccount={setSelectedAccount}
-									onAddAccount={handleAddAccount}
-									onDeleteAccount={handleDeleteAccount}
-									categories={categories}
-									selectedCategory={selectedCategory}
-									onSelectCategory={(cat) => {
-										setUserOverrodeCategory(true);
-										setSelectedCategory(cat);
-									}}
-									onAddCategory={handleAddCategory}
-									onDeleteCategory={handleDeleteCategory}
-								/>
-							)}
+							{/* Category & Payment Method selector (same across Expense, Income, and Split) */}
+							<CategoryAccountSelector
+								accounts={accounts}
+								selectedAccount={selectedAccount}
+								onSelectAccount={setSelectedAccount}
+								onAddAccount={handleAddAccount}
+								onDeleteAccount={handleDeleteAccount}
+								categories={categories}
+								selectedCategory={selectedCategory}
+								onSelectCategory={(cat) => {
+									setUserOverrodeCategory(true);
+									setSelectedCategory(cat);
+								}}
+								onAddCategory={handleAddCategory}
+								onDeleteCategory={handleDeleteCategory}
+							/>
 						</>
 					)}
 

@@ -8,6 +8,7 @@ import { computeSplits, type SplitResult } from '../utils/splitMath';
 import * as db from '../db';
 import { syncService } from '../services/syncService';
 import type { SplitExpense } from '../types/split';
+import type { Transaction } from '../types';
 
 export interface Person {
 	id: string;
@@ -156,11 +157,19 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 	const error = missingTarget ?? (nobodyElse ? 'Choose who to split with' : result.ok ? null : result.error);
 
 	/** Send the expense to the server and refresh data, or save locally if offline. */
-	const submit = async (info: { description: string; date: string; amount: number }) => {
+	const submit = async (info: {
+		description: string;
+		date: string;
+		amount: number;
+		category?: string;
+		account?: string;
+	}) => {
 		if (!result.ok || error) throw new Error(error ?? (result.ok ? '' : result.error));
 
+		const matchedFromInfo = info.category ? matchCategoryToApi(info.category, categories) : null;
 		const inferredCat = suggestCategoryFromText(info.description);
-		const effectiveCatId = categoryId || (inferredCat ? matchCategoryToApi(inferredCat, categories) : null);
+		const matchedFromInferred = inferredCat ? matchCategoryToApi(inferredCat, categories) : null;
+		const effectiveCatId = matchedFromInfo || categoryId || matchedFromInferred || null;
 
 		const payload = {
 			type: 'SPLIT' as const,
@@ -176,8 +185,45 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 
 		if (navigator.onLine) {
 			try {
-				await expenseApi.create(payload);
+				const createdExpense = await expenseApi.create(payload);
 				await loadGroups();
+
+				// Mirror personal share to local Transactions so the home screen feed and stats
+				// reflect this expense immediately with the selected category and payment method (account).
+				const totalAmount = parseFloat(String(createdExpense.amount)) || info.amount;
+				let myShare = 0;
+				const paidByMe = createdExpense.userId === (me?.id ?? payerId);
+				let lentAmount = 0;
+				if (createdExpense.splits) {
+					const mySplit = createdExpense.splits.find((s: any) => s.userId === me?.id);
+					if (mySplit) myShare = parseFloat(String(mySplit.amount)) || 0;
+				} else {
+					myShare = totalAmount;
+				}
+				if (paidByMe) {
+					lentAmount = totalAmount - myShare;
+				}
+
+				const newLocal: Transaction = {
+					id: createdExpense.id,
+					type: 'expense',
+					amount: myShare,
+					description: createdExpense.description || info.description,
+					category: info.category || 'Split',
+					account: info.account || 'Cash',
+					date: info.date,
+					createdAt: new Date(createdExpense.createdAt || Date.now()).getTime(),
+					syncStatus: 'synced',
+					serverId: createdExpense.id,
+					isSplit: true,
+					groupId: mode === 'group' ? groupId : undefined,
+					paidByMe,
+					totalAmount,
+					lentAmount,
+				};
+				await db.addTransaction(newLocal);
+				const { useTransactionStore } = await import('../stores/transactionStore');
+				await useTransactionStore.getState().reloadAll();
 				return;
 			} catch (err: unknown) {
 				console.warn('[useSplitDraft] Server create failed. Checking if offline fallback applies:', err);
@@ -216,6 +262,38 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 		useSplitStore.setState((s) => ({
 			splits: [splitExpense, ...s.splits],
 		}));
+
+		// Mirror personal share to local transactions for offline support
+		let myShare = 0;
+		const paidByMe = payerId === me?.id;
+		if (result.ok && result.splits) {
+			const mySplit = result.splits.find((s) => s.userId === me?.id);
+			if (mySplit) myShare = parseFloat(String(mySplit.amount)) || 0;
+		} else {
+			myShare = info.amount;
+		}
+		const lentAmount = paidByMe ? info.amount - myShare : 0;
+
+		const newLocalTx: Transaction = {
+			id: localId,
+			type: 'expense',
+			amount: myShare,
+			description: info.description,
+			category: info.category || 'Split',
+			account: info.account || 'Cash',
+			date: info.date,
+			createdAt: Date.now(),
+			syncStatus: 'pending',
+			serverId: undefined,
+			isSplit: true,
+			groupId: mode === 'group' ? groupId : undefined,
+			paidByMe,
+			totalAmount: info.amount,
+			lentAmount,
+		};
+		await db.addTransaction(newLocalTx);
+		const { useTransactionStore } = await import('../stores/transactionStore');
+		await useTransactionStore.getState().reloadAll();
 	};
 
 	const reset = () => {

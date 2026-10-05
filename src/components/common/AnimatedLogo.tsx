@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import { useId } from 'react';
 import './AnimatedLogo.css';
 
 export type AnimatedLogoState = 'idle' | 'loading' | 'success' | 'error';

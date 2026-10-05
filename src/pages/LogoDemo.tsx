@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Sparkles, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 import AnimatedLogo, { type AnimatedLogoState } from '../components/common/AnimatedLogo';
 import { Card } from '../components/ui/Card';
