@@ -1,7 +1,7 @@
-import { Layers, User, Users, ChevronDown } from 'lucide-react';
+import { Layers, User, Users } from 'lucide-react';
 import type { SplitDraft } from '../../hooks/useSplitDraft';
 import type { SplitType } from '../../api/financeHubApi';
-import { SearchableMultiSelect, SearchableSelect } from '../common/SearchableSelect';
+import { Select, MultiSelect } from '../ui/Select';
 
 const TYPES: { id: SplitType; label: string; hint: string; unit: string }[] = [
 	{ id: 'EQUAL', label: 'Equally', hint: 'Everyone pays the same', unit: '' },
@@ -11,7 +11,6 @@ const TYPES: { id: SplitType; label: string; hint: string; unit: string }[] = [
 ];
 
 const labelStyle = 'block text-[12px] font-medium text-text-muted mb-1.5';
-const selectStyle = "w-full bg-surface rounded-full h-11 px-4 pr-10 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 appearance-none";
 
 /**
  * The "who shares this expense" part of the form: group or friends, who paid,
@@ -62,20 +61,13 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 							You are not in any group yet. Create one on the Split screen.
 						</p>
 					) : (
-						<div className="relative">
-							<select
-								value={draft.groupId}
-								onChange={(e) => draft.switchGroup(e.target.value)}
-								className={selectStyle}
-								aria-label="Group"
-							>
-								<option value="" disabled>Select a group...</option>
-								{groups.map(g => (
-									<option key={g.id} value={g.id}>{g.name}</option>
-								))}
-							</select>
-							<ChevronDown className="w-4 h-4 text-text-muted absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-						</div>
+						<Select
+							ariaLabel="Group"
+							value={draft.groupId}
+							onChange={draft.switchGroup}
+							options={groups.map(g => ({ id: g.id, label: g.name }))}
+							placeholder="Select a group..."
+						/>
 					)}
 				</div>
 			)}
@@ -85,7 +77,7 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 				<label className={`${labelStyle} flex items-center gap-1`}>
 					<User size={12} strokeWidth={1.5} /> Paid by
 				</label>
-				<SearchableSelect 
+				<Select 
 					ariaLabel="Paid by" 
 					value={draft.payerId} 
 					onChange={draft.setPayerChoice}
@@ -124,7 +116,7 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 					<p className="text-xs text-text-muted rounded-[16px] bg-surface p-3">No one to show yet.</p>
 				) : (
 					<div className="space-y-2.5">
-						<SearchableMultiSelect 
+						<MultiSelect 
 							options={people.map(p => ({ id: p.id, label: p.name }))}
 							selectedIds={selectedIds}
 							onChange={draft.setSelectedIds}
@@ -176,20 +168,13 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 			{draft.categories.length > 0 && (
 				<div>
 					<label className={labelStyle}>Category</label>
-					<div className="relative">
-						<select
-							value={draft.categoryId}
-							onChange={(e) => draft.setCategoryId(e.target.value)}
-							className={selectStyle}
-							aria-label="Category"
-						>
-							<option value="">No category</option>
-							{draft.categories.map(c => (
-								<option key={c.id} value={c.id}>{c.name}</option>
-							))}
-						</select>
-						<ChevronDown className="w-4 h-4 text-text-muted absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-					</div>
+					<Select
+						ariaLabel="Category"
+						value={draft.categoryId}
+						onChange={draft.setCategoryId}
+						options={[{ id: '', label: 'No category' }, ...draft.categories.map(c => ({ id: c.id, label: c.name }))]}
+						placeholder="No category"
+					/>
 				</div>
 			)}
 		</div>

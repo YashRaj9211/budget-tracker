@@ -12,6 +12,8 @@ import {
 import { useSplitStore } from '../../stores/splitStore';
 import { Card } from '../ui/Card';
 import { Button } from '../common/Button';
+import AddMemberToGroupModal from './AddMemberToGroupModal';
+import { getCategoryVisual } from '../../utils/indianCategoryIcons';
 
 interface GroupDetailViewProps {
 	groupId: string;
@@ -29,6 +31,7 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [deletingSplitId, setDeletingSplitId] = useState<string | null>(null);
+	const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
 	const group = groups.find((g) => g.id === groupId);
 	if (!group) return null;
@@ -55,11 +58,20 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 					</button>
 					<div>
 						<h2 className="font-medium text-[17px] text-text leading-tight">{group.name}</h2>
-						<p className="text-[12px] text-text-muted mt-0.5">{group.members.length} Members: {group.members.join(', ')}</p>
+						<p className="text-[12px] text-text-muted mt-0.5">{group.members.length} Members</p>
 					</div>
 				</div>
 
 				<div className="flex items-center gap-2">
+					{!confirmDelete && (
+						<button
+							onClick={() => setIsAddMemberOpen(true)}
+							className="px-3 py-1.5 bg-surface text-text font-medium text-xs rounded-full hover:bg-surface/80 transition-colors"
+							title="Add Members"
+						>
+							Add Member
+						</button>
+					)}
 					{confirmDelete ? (
 						<div className="flex items-center gap-1.5">
 							<button
@@ -77,7 +89,10 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 						</div>
 					) : (
 						<button
-							onClick={() => setConfirmDelete(true)}
+							onClick={() => {
+								setIsAddMemberOpen(false);
+								setConfirmDelete(true);
+							}}
 							className="w-9 h-9 rounded-full bg-surface hover:bg-danger-soft text-text-muted hover:text-danger flex items-center justify-center transition-colors"
 							title="Delete Group"
 						>
@@ -193,32 +208,44 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 							const baseSharePaise = Math.floor(totalPaise / count);
 							const isUserPayer = split.paidBy === 'You';
 							const isUserInvolved = split.splitAmong.includes('You');
-							const userShareAmount = baseSharePaise / 100;
+							const visual = getCategoryVisual({
+								description: split.title,
+								isSplit: true,
+							});
 
 							return (
 								<div
 									key={split.id}
-									className={`p-3.5 rounded-[16px] flex items-center justify-between ${
+									className={`p-3.5 rounded-[16px] flex items-center justify-between gap-3 ${
 										split.isSettlement ? 'bg-mint/20' : 'bg-surface'
 									}`}
 								>
-									<div>
-										<div className="flex items-center gap-2">
-											<span className="font-medium text-[14px] text-text">{split.title}</span>
-											{split.isSettlement && (
-												<span className="text-[10px] bg-mint text-ink font-medium px-2 py-0.5 rounded-full">
-													Settlement
-												</span>
-											)}
+									<div className="flex items-center gap-3 min-w-0">
+										<div
+											className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${visual.bg}`}
+										>
+											{visual.icon}
 										</div>
-										<p className="text-[12px] text-text-muted mt-0.5">
-											<span className="text-text font-medium">{split.paidBy}</span> paid ₹
-											{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-											{split.splitAmong && split.splitAmong.length > 0
-												? ` • split among ${split.splitAmong.join(', ')}`
-												: ' • not split'}
-										</p>
-										<p className="text-[11px] text-text-muted mt-0.5">{split.date}</p>
+										<div className="min-w-0">
+											<div className="flex items-center gap-2">
+												<span className="font-medium text-[14px] text-text truncate">
+													{split.title}
+												</span>
+												{split.isSettlement && (
+													<span className="text-[10px] bg-mint text-ink font-medium px-2 py-0.5 rounded-full shrink-0">
+														Settlement
+													</span>
+												)}
+											</div>
+											<p className="text-[12px] text-text-muted mt-0.5 truncate">
+												<span className="text-text font-medium">{split.paidBy}</span> paid ₹
+												{split.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+												{split.splitAmong && split.splitAmong.length > 0
+													? ` • split among ${split.splitAmong.join(', ')}`
+													: ' • not split'}
+											</p>
+											<p className="text-[11px] text-text-muted mt-0.5">{split.date}</p>
+										</div>
 									</div>
 
 									<div className="flex items-center gap-3">
@@ -270,6 +297,12 @@ export default function GroupDetailView({ groupId, onBack }: GroupDetailViewProp
 					</div>
 				)}
 			</Card>
+
+			<AddMemberToGroupModal
+				isOpen={isAddMemberOpen}
+				onClose={() => setIsAddMemberOpen(false)}
+				group={group}
+			/>
 		</div>
 	);
 }

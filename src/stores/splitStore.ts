@@ -33,6 +33,7 @@ interface SplitState {
 	setSettleUpOpen: (open: boolean) => void;
 
 	addGroup: (groupData: { name: string; description?: string; memberIds?: string[]; avatarColor?: string }) => Promise<void>;
+	addGroupMember: (groupId: string, memberId: string) => Promise<void>;
 	removeGroup: (id: string) => Promise<void>;
 	addSplit: (splitData: {
 		groupId: string;
@@ -254,7 +255,10 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 
 				set((state) => ({ groups: [transformed, ...state.groups] }));
 				return;
-			} catch (err) {
+			} catch (err: any) {
+				if (err?.response?.status >= 400 && err?.response?.status < 500) {
+					throw err;
+				}
 				console.warn('Failed to create group on server. Saving offline:', err);
 			}
 		}
@@ -277,6 +281,14 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 			payload: { name, description, simplifyDebts: false, memberIds },
 		});
 		set((state) => ({ groups: [newGroup, ...state.groups] }));
+	},
+
+	addGroupMember: async (groupId: string, memberId: string) => {
+		const auth = useAuthStore.getState();
+		if (auth.isAuthenticated && auth.user && navigator.onLine) {
+			await groupApi.addMember(groupId, memberId);
+			await get().loadData();
+		}
 	},
 
 	removeGroup: async (id) => {

@@ -10,6 +10,7 @@ import VoiceInput from '../common/VoiceInput';
 import { Button } from '../common/Button';
 import { BottomSheet } from '../ui/BottomSheet';
 import { statusSheet } from '../../stores/statusSheetStore';
+import { getCategoryVisual, suggestCategoryFromText } from '../../utils/indianCategoryIcons';
 
 interface AddTransactionFormProps {
 	dateContext?: string;
@@ -29,6 +30,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 
 	const [selectedAccount, setSelectedAccount] = useState('Personal');
 	const [selectedCategory, setSelectedCategory] = useState('Food');
+	const [userOverrodeCategory, setUserOverrodeCategory] = useState(false);
 	const [categories, setCategories] = useState<string[]>([
 		'Food',
 		'Transport',
@@ -47,6 +49,35 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 	const isSplit = type === 'split';
 	const numAmount = evaluatedAmount ?? (parseFloat(amountInput) || 0);
 	const draft = useSplitDraft({ active: isOpen && isSplit, allowFriends: true, amount: numAmount });
+
+	const detectedVisual = getCategoryVisual({
+		description,
+		category: selectedCategory,
+		isIncome: type === 'income',
+		isSplit: type === 'split',
+		iconSize: 16,
+	});
+
+	const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const val = e.target.value;
+		setDescription(val);
+
+		if (!userOverrodeCategory && val.trim()) {
+			const suggested = suggestCategoryFromText(val);
+			if (suggested) {
+				let targetCat = suggested;
+				if (suggested === 'Travel' && categories.includes('Transport')) {
+					targetCat = 'Transport';
+				} else if (suggested === 'Groceries' && !categories.includes('Groceries')) {
+					targetCat = 'Food';
+				}
+
+				if (categories.includes(targetCat)) {
+					setSelectedCategory(targetCat);
+				}
+			}
+		}
+	};
 
 	const evaluateExpression = (expr: string): number | null => {
 		try {
@@ -113,6 +144,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 		setAmountInput('');
 		setEvaluatedAmount(null);
 		setType('expense');
+		setUserOverrodeCategory(false);
 
 		await statusSheet.execute({
 			action: async () => {
@@ -156,8 +188,20 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 				setCategories((prev) => [...prev, parsed.category!]);
 			}
 			setSelectedCategory(parsed.category);
+			setUserOverrodeCategory(true);
 		}
-		if (parsed.description) setDescription(parsed.description);
+		if (parsed.description) {
+			setDescription(parsed.description);
+			if (!parsed.category && !userOverrodeCategory) {
+				const suggested = suggestCategoryFromText(parsed.description);
+				if (suggested) {
+					let targetCat = suggested;
+					if (suggested === 'Travel' && categories.includes('Transport')) targetCat = 'Transport';
+					else if (suggested === 'Groceries' && !categories.includes('Groceries')) targetCat = 'Food';
+					if (categories.includes(targetCat)) setSelectedCategory(targetCat);
+				}
+			}
+		}
 		if (parsed.account) setSelectedAccount(parsed.account);
 		if (parsed.date) setDate(parsed.date);
 
@@ -253,17 +297,42 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 
 					{/* Description Field */}
 					<div>
-						<label className="block text-[12px] font-medium text-text-muted mb-1.5">
-							Description
-						</label>
-						<input
-							type="text"
-							value={description}
-							onChange={(e) => setDescription(e.target.value)}
-							placeholder="e.g. Afternoon Lunch"
-							className="w-full bg-surface rounded-full h-11 px-4 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
-							required
-						/>
+						<div className="flex items-center justify-between mb-1.5">
+							<label className="text-[12px] font-medium text-text-muted">
+								Description
+							</label>
+							{description.trim() && (
+								<span className="text-[11px] text-text-muted flex items-center gap-1.5">
+									<span>Auto icon:</span>
+									<span
+										className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${detectedVisual.bg}`}
+									>
+										{detectedVisual.icon}
+										<span>{detectedVisual.iconName}</span>
+									</span>
+								</span>
+							)}
+						</div>
+						<div className="relative flex items-center">
+							<input
+								type="text"
+								value={description}
+								onChange={handleDescriptionChange}
+								placeholder="e.g. Chai tapri, Auto fare, Biryani, Blinkit"
+								className="w-full bg-surface rounded-full h-11 pl-4 pr-11 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20"
+								required
+							/>
+							<div
+								className={`absolute right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+									description.trim()
+										? detectedVisual.bg
+										: 'bg-surface text-text-muted opacity-40'
+								}`}
+								title={`Auto icon: ${detectedVisual.iconName}`}
+							>
+								{detectedVisual.icon}
+							</div>
+						</div>
 					</div>
 
 					{/* Account and Category (own tracker) or Split details (shared with others) */}
@@ -276,7 +345,10 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 							onSelectAccount={setSelectedAccount}
 							categories={categories}
 							selectedCategory={selectedCategory}
-							onSelectCategory={setSelectedCategory}
+							onSelectCategory={(cat) => {
+								setUserOverrodeCategory(true);
+								setSelectedCategory(cat);
+							}}
 							onAddCategory={handleAddCategory}
 						/>
 					)}

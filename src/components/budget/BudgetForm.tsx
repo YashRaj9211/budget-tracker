@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, Check, Save } from 'lucide-react';
 import { getTotalDays, todayStr } from '../../utils/date';
 import { Card } from '../ui/Card';
+import { Select } from '../ui/Select';
 import { Button } from '../common/Button';
 import type { Budget } from '../../types';
 
@@ -133,25 +134,19 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ onSave }) => {
 					</div>
 
 					{/* Alert Threshold */}
-					<div>
-						<label
-							htmlFor="threshold"
-							className="block text-[12px] font-medium text-text-muted mb-1.5"
-						>
-							Alert threshold (%)
-						</label>
-						<select
-							id="threshold"
-							value={alertThreshold}
-							onChange={(e) => setAlertThreshold(e.target.value)}
-							className="w-full bg-surface rounded-full h-11 px-4 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
-						>
-							<option value="50">50% used</option>
-							<option value="80">80% used</option>
-							<option value="90">90% used</option>
-							<option value="100">100% used</option>
-						</select>
-					</div>
+					<Select
+						id="threshold"
+						label="Alert threshold (%)"
+						value={alertThreshold}
+						onChange={(val) => setAlertThreshold(val)}
+						options={[
+							{ value: '50', label: '50% used' },
+							{ value: '80', label: '80% used' },
+							{ value: '90', label: '90% used' },
+							{ value: '100', label: '100% used' },
+						]}
+						searchable={false}
+					/>
 
 					{/* Summary */}
 					{totalDays > 0 && (

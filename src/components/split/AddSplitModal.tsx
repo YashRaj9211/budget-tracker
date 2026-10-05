@@ -6,6 +6,7 @@ import SplitExpenseFields from './SplitExpenseFields';
 import { Button } from '../common/Button';
 import { BottomSheet } from '../ui/BottomSheet';
 import { statusSheet } from '../../stores/statusSheetStore';
+import { getCategoryVisual } from '../../utils/indianCategoryIcons';
 
 const inputStyle =
 	'w-full bg-surface rounded-full h-11 px-4 text-sm font-normal text-text focus:outline-none focus:ring-2 focus:ring-ink/20';
@@ -22,6 +23,12 @@ export default function AddSplitModal() {
 
 	const numAmount = parseFloat(amount) || 0;
 	const draft = useSplitDraft({ active: isOpen, allowFriends: true, amount: numAmount });
+
+	const detectedVisual = getCategoryVisual({
+		description: title,
+		isSplit: true,
+		iconSize: 16,
+	});
 
 	if (!isOpen) return null;
 
@@ -72,15 +79,40 @@ export default function AddSplitModal() {
 		>
 			<form onSubmit={handleSubmit} className="space-y-4 text-left pb-12">
 				<div>
-					<label className="block text-[12px] font-medium text-text-muted mb-1.5">Description</label>
-					<input
-						type="text"
-						placeholder="e.g. Weekend Villa, Team Lunch, Uber"
-						value={title}
-						onChange={(e) => setTitle(e.target.value)}
-						required
-						className={inputStyle}
-					/>
+					<div className="flex items-center justify-between mb-1.5">
+						<label className="text-[12px] font-medium text-text-muted">Description</label>
+						{title.trim() && (
+							<span className="text-[11px] text-text-muted flex items-center gap-1.5">
+								<span>Auto icon:</span>
+								<span
+									className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${detectedVisual.bg}`}
+								>
+									{detectedVisual.icon}
+									<span>{detectedVisual.iconName}</span>
+								</span>
+							</span>
+						)}
+					</div>
+					<div className="relative flex items-center">
+						<input
+							type="text"
+							placeholder="e.g. Chai tapri, Dinner at Dhaba, Auto ride, Blinkit"
+							value={title}
+							onChange={(e) => setTitle(e.target.value)}
+							required
+							className={`${inputStyle} pr-11`}
+						/>
+						<div
+							className={`absolute right-2.5 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+								title.trim()
+									? detectedVisual.bg
+									: 'bg-surface text-text-muted opacity-40'
+							}`}
+							title={`Auto icon: ${detectedVisual.iconName}`}
+						>
+							{detectedVisual.icon}
+						</div>
+					</div>
 				</div>
 
 				<div className="grid grid-cols-2 gap-3">
