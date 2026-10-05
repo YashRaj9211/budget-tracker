@@ -10,18 +10,15 @@ import {
 	BarChart3,
 	LogOut,
 	ShieldAlert,
-	Smartphone,
 	CheckCircle,
 	FileSpreadsheet,
 	Download,
-	Apple,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import ExcelTools from '../components/common/ExcelTools';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/common/Button';
 import Chip from '../components/ui/Chip';
-import AnimatedLogo, { type AnimatedLogoState } from '../components/common/AnimatedLogo';
 import AndroidInstallGuide from '../components/common/AndroidInstallGuide';
 import IOSInstallGuide from '../components/common/IOSInstallGuide';
 
@@ -30,15 +27,8 @@ export default function Profile() {
 	const user = useAuthStore((s) => s.user);
 	const logout = useAuthStore((s) => s.logout);
 	const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-	const [mascotState, setMascotState] = useState<AnimatedLogoState>('idle');
 	const [showAndroidGuide, setShowAndroidGuide] = useState(false);
 	const [showIOSGuide, setShowIOSGuide] = useState(false);
-
-	const cycleMascotState = () => {
-		const states: AnimatedLogoState[] = ['idle', 'loading', 'success', 'error'];
-		const nextIdx = (states.indexOf(mascotState) + 1) % states.length;
-		setMascotState(states[nextIdx]);
-	};
 
 	const handleLogout = () => {
 		logout();

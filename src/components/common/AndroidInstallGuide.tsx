@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, MoreVertical, CheckCircle2, X, Smartphone, ArrowDown } from 'lucide-react';
+import { Download, MoreVertical, CheckCircle2, X, ArrowDown } from 'lucide-react';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import BottomSheet from '../ui/BottomSheet';
 
