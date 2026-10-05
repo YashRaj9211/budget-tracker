@@ -10,6 +10,8 @@ import { useAuthStore } from './stores/authStore';
 import { useWebSocket } from './hooks/useWebSocket';
 import { syncService } from './services/syncService';
 import { toast } from './stores/toastStore';
+import AndroidInstallGuide from './components/common/AndroidInstallGuide';
+import IOSInstallGuide from './components/common/IOSInstallGuide';
 
 function App() {
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -47,6 +49,8 @@ function App() {
 		>
 			<ToastContainer />
 			<StatusActionSheet />
+			<AndroidInstallGuide />
+			<IOSInstallGuide />
 			{isAuthenticated && <SyncStatusBanner />}
 			<main className={`flex-1 w-full ${isAuthenticated ? 'px-4 pt-4 pb-28' : 'p-0 flex flex-col'}`}>
 				<Outlet />

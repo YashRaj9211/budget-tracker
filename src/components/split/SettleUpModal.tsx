@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Handshake, ArrowRight, ChevronDown } from 'lucide-react';
+import { Handshake, ArrowRight } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
 import { Button } from '../common/Button';
 import { BottomSheet } from '../ui/BottomSheet';
+import { Select } from '../ui/Select';
 import { statusSheet } from '../../stores/statusSheetStore';
 
 const PRESET_AMOUNTS = [100, 250, 500, 1000, 2000, 5000];
@@ -84,51 +85,31 @@ export default function SettleUpModal() {
 				{/* Payer and Recipient selectors */}
 				<div className="flex items-center gap-3 bg-surface p-4 rounded-[20px]">
 					{/* Payer */}
-					<div className="flex-1">
-						<label className="block text-[11px] font-medium text-text-muted mb-1">Payer</label>
-						<div className="relative">
-							<select
-								value={payer}
-								onChange={(e) => setPayer(e.target.value)}
-								className="w-full appearance-none rounded-full bg-card px-3.5 py-2 pr-7 text-xs font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
-							>
-								{activeGroup.members.map((m) => (
-									<option key={m} value={m}>
-										{m}
-									</option>
-								))}
-							</select>
-							<ChevronDown
-								className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-text-muted"
-								strokeWidth={1.5}
-							/>
-						</div>
+					<div className="flex-1 min-w-0">
+						<Select
+							label="Payer"
+							variant="card"
+							size="sm"
+							value={payer}
+							onChange={(val) => setPayer(val)}
+							options={activeGroup.members.map((m) => ({ value: m, label: m }))}
+						/>
 					</div>
 
-					<ArrowRight className="w-4 h-4 text-text-muted mt-4 shrink-0" strokeWidth={1.5} />
+					<ArrowRight className="w-4 h-4 text-text-muted mt-5 shrink-0" strokeWidth={1.5} />
 
 					{/* Receiver */}
-					<div className="flex-1">
-						<label className="block text-[11px] font-medium text-text-muted mb-1">Recipient</label>
-						<div className="relative">
-							<select
-								value={receiver}
-								onChange={(e) => setReceiver(e.target.value)}
-								className="w-full appearance-none rounded-full bg-card px-3.5 py-2 pr-7 text-xs font-medium text-text focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
-							>
-								{activeGroup.members
-									.filter((m) => m !== payer)
-									.map((m) => (
-										<option key={m} value={m}>
-											{m}
-										</option>
-									))}
-							</select>
-							<ChevronDown
-								className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-text-muted"
-								strokeWidth={1.5}
-							/>
-						</div>
+					<div className="flex-1 min-w-0">
+						<Select
+							label="Recipient"
+							variant="card"
+							size="sm"
+							value={receiver}
+							onChange={(val) => setReceiver(val)}
+							options={activeGroup.members
+								.filter((m) => m !== payer)
+								.map((m) => ({ value: m, label: m }))}
+						/>
 					</div>
 				</div>
 

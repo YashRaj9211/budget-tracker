@@ -25,6 +25,10 @@ const router = createBrowserRouter([
 				Component: Auth,
 			},
 			{
+				path: "/logo-demo",
+				lazy: async () => ({ Component: (await import("./pages/LogoDemo")).default }),
+			},
+			{
 				Component: ProtectedRoute,
 				children: [
 					{

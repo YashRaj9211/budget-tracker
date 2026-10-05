@@ -1,0 +1,378 @@
+.animated-logo {
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 0;
+  contain: layout paint;
+}
+
+.animated-logo svg {
+  display: block;
+  overflow: visible;
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.animated-logo__container,
+.animated-logo__face,
+.animated-logo__eye,
+.animated-logo__background {
+  transform-box: fill-box;
+}
+
+.animated-logo__container {
+  transform-origin: center;
+}
+
+.animated-logo__face {
+  transform-origin: center;
+}
+
+.animated-logo__eye {
+  transform-origin: center;
+}
+
+
+/* =========================================================
+   IDLE
+   Gentle floating + occasional blink
+   ========================================================= */
+
+.animated-logo--idle .animated-logo__container {
+  animation: logo-idle 4s ease-in-out infinite;
+}
+
+.animated-logo--idle .animated-logo__face {
+  animation: face-idle 4s ease-in-out infinite;
+}
+
+.animated-logo--idle .animated-logo__eye {
+  animation: eye-blink 4s ease-in-out infinite;
+}
+
+.animated-logo--idle .animated-logo__eye--right {
+  animation-delay: 40ms;
+}
+
+
+/* =========================================================
+   LOADING
+   Continuous thinking / processing animation
+   ========================================================= */
+
+.animated-logo--loading .animated-logo__container {
+  animation: logo-loading 1.6s ease-in-out infinite;
+}
+
+.animated-logo--loading .animated-logo__face {
+  animation: face-loading 1.6s ease-in-out infinite;
+}
+
+.animated-logo--loading .animated-logo__eye {
+  animation: eye-loading 1.6s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   SUCCESS
+   Happy nod + wide eyes
+   ========================================================= */
+
+.animated-logo--success .animated-logo__face {
+  animation: success-nod 900ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.animated-logo--success .animated-logo__eye {
+  animation: success-wide-eyes 900ms ease-in-out infinite;
+}
+
+
+/*
+ * Head nod:
+ *
+ *       normal
+ *          ↓
+ *        down
+ *          ↓
+ *         up
+ *          ↓
+ *        down
+ *
+ * The slight rotation makes it feel like
+ * an actual head movement rather than
+ * simply moving the SVG vertically.
+ */
+
+@keyframes success-nod {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  20% {
+    transform: translateY(-2px) rotate(-1deg);
+  }
+
+  42% {
+    transform: translateY(5px) rotate(1deg);
+  }
+
+  62% {
+    transform: translateY(-2px) rotate(-0.5deg);
+  }
+
+  80% {
+    transform: translateY(3px) rotate(0.5deg);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+
+/*
+ * Slightly wider eyes during success.
+ */
+
+@keyframes success-wide-eyes {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.06);
+  }
+
+  60% {
+    transform: scale(1.03);
+  }
+}
+
+
+/* =========================================================
+   FAILURE
+   Sad / disappointed face
+   ========================================================= */
+
+.animated-logo--error .animated-logo__face {
+  animation: failure-slump 1.8s ease-in-out infinite;
+}
+
+.animated-logo--error .animated-logo__eye {
+  animation: failure-eyes 1.8s ease-in-out infinite;
+}
+
+
+/*
+ * The whole face slowly drops down,
+ * then slightly recovers.
+ *
+ * This gives the feeling of:
+ *
+ *       😐
+ *       ↓
+ *       😞
+ */
+
+@keyframes failure-slump {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  20% {
+    transform: translateY(3px) rotate(0.5deg);
+  }
+
+  45% {
+    transform: translateY(7px) rotate(1.2deg);
+  }
+
+  65% {
+    transform: translateY(6px) rotate(1deg);
+  }
+
+  82% {
+    transform: translateY(4px) rotate(0.5deg);
+  }
+
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+
+/*
+ * Eyes become smaller and slightly compressed,
+ * giving the character a sad/tired expression.
+ */
+
+@keyframes failure-eyes {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(0.88, 0.78);
+  }
+
+  60% {
+    transform: scale(0.91, 0.82);
+  }
+}
+
+
+/* =========================================================
+   KEYFRAMES
+   ========================================================= */
+
+/* IDLE */
+
+@keyframes logo-idle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.008);
+  }
+}
+
+@keyframes face-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes eye-blink {
+  0%,
+  42%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  45% {
+    transform: scaleY(0.08);
+  }
+}
+
+
+/* LOADING */
+
+@keyframes logo-loading {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes face-loading {
+  0%,
+  100% {
+    transform: translateY(2px);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes eye-loading {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  50% {
+    transform: scaleY(0.35);
+  }
+}
+
+
+/* SUCCESS */
+
+@keyframes logo-success {
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.12);
+  }
+
+  65% {
+    transform: scale(0.96);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* ERROR */
+
+@keyframes logo-error {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  15% {
+    transform: translateX(-6px);
+  }
+
+  30% {
+    transform: translateX(6px);
+  }
+
+  45% {
+    transform: translateX(-5px);
+  }
+
+  60% {
+    transform: translateX(5px);
+  }
+
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes face-error {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  30%,
+  60% {
+    transform: translateX(2px);
+  }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-logo__container,
+  .animated-logo__face,
+  .animated-logo__eye {
+    animation: none !important;
+  }
+}

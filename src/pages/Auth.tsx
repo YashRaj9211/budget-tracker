@@ -17,6 +17,7 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import AnimatedLogo from '../components/common/AnimatedLogo';
 
 // Optional custom image asset paths (drop generated images into public/assets/auth/)
 const CUSTOM_HERO_IMAGE = '/assets/auth/hero-logo.png';
@@ -32,6 +33,7 @@ export default function Auth() {
 		error,
 		login,
 		signup,
+		requestSignupOtp,
 		requestOtp,
 		verifyOtp,
 		clearError,
@@ -147,7 +149,18 @@ export default function Auth() {
 
 	const triggerOtpVerify = async (code: string) => {
 		try {
-			await verifyOtp(email.trim(), code);
+			if (mode === 'signup') {
+				await signup({
+					name: name.trim(),
+					username: username.trim(),
+					email: email.trim(),
+					password,
+					phone: phone.trim() || undefined,
+					code,
+				});
+			} else {
+				await verifyOtp(email.trim(), code);
+			}
 			navigate('/');
 		} catch {
 			// handled in authStore
@@ -160,14 +173,39 @@ export default function Auth() {
 
 		try {
 			if (mode === 'signup') {
-				await signup({
-					name: name.trim(),
-					username: username.trim(),
-					email: email.trim(),
-					password,
-					phone: phone.trim() || undefined,
-				});
-				navigate('/');
+				if (otpState === 'idle') {
+					if (!name.trim()) {
+						useAuthStore.setState({ error: 'Please enter your full name' });
+						return;
+					}
+					if (!username.trim()) {
+						useAuthStore.setState({ error: 'Please enter a username' });
+						return;
+					}
+					if (!email.trim()) {
+						useAuthStore.setState({ error: 'Please enter your email address' });
+						return;
+					}
+					if (password.length < 6) {
+						useAuthStore.setState({ error: 'Password must be at least 6 characters' });
+						return;
+					}
+					await requestSignupOtp(email.trim(), username.trim());
+					setOtpState('requested');
+					setResendCooldown(30);
+				} else {
+					const fullCode = otpDigits.join('');
+					if (fullCode.length < 6) return;
+					await signup({
+						name: name.trim(),
+						username: username.trim(),
+						email: email.trim(),
+						password,
+						phone: phone.trim() || undefined,
+						code: fullCode,
+					});
+					navigate('/');
+				}
 			} else if (mode === 'login') {
 				if (loginMethod === 'password') {
 					try {
@@ -242,11 +280,7 @@ export default function Auth() {
 									id="auth-hero-illustration"
 									className="w-24 h-24 sm:w-28 sm:h-28 rounded-[28px] overflow-hidden shadow-xl shadow-mint-deep/20 transition-transform hover:scale-105 border-2 border-white/70 bg-white/40 backdrop-blur-sm p-1 flex items-center justify-center"
 								>
-									<img
-										src="/budget-tracker-icon.svg"
-										alt="Divvit Budget Icon"
-										className="w-full h-full object-contain rounded-[22px]"
-									/>
+									<AnimatedLogo state="idle" size={96} title="Divvit Mascot" />
 								</div>
 
 								{/* Brand Script Title */}
@@ -312,7 +346,7 @@ export default function Auth() {
 								<button
 									type="button"
 									onClick={() => {
-										if (mode === 'login' && otpState === 'requested') {
+										if (otpState === 'requested') {
 											setOtpState('idle');
 											clearError();
 										} else {
@@ -326,10 +360,10 @@ export default function Auth() {
 								</button>
 
 								<div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md pl-1.5 pr-3 py-1 rounded-full border border-white/60 shadow-2xs">
-									<img
-										src="/budget-tracker-icon.svg"
-										alt="Divvit"
-										className="w-4 h-4 rounded-sm object-contain"
+									<AnimatedLogo
+										state={isLoading ? 'loading' : error ? 'error' : 'idle'}
+										size={20}
+										title="Divvit"
 									/>
 									<span className="text-[11px] font-bold text-ink tracking-wide">divvit</span>
 								</div>
@@ -343,14 +377,18 @@ export default function Auth() {
 								<div className="mb-5">
 									<h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text">
 										{mode === 'signup'
-											? 'Welcome!'
+											? otpState === 'requested'
+												? 'Verify Your Email'
+												: 'Welcome!'
 											: loginMethod === 'otp' && otpState === 'requested'
 											? 'Enter Code'
 											: 'Welcome Back!'}
 									</h1>
 									<p className="text-xs text-text-muted mt-1 leading-relaxed">
 										{mode === 'signup'
-											? 'Create an account to join Divvit and manage expenses'
+											? otpState === 'requested'
+												? `Enter the 6-digit verification code sent to ${email || 'your email'}`
+												: 'Create an account to join Divvit and manage expenses'
 											: loginMethod === 'otp'
 											? otpState === 'requested'
 												? `Enter the 6-digit code sent to ${email || 'your email'}`
@@ -372,7 +410,7 @@ export default function Auth() {
 								{/* Main Form Fields */}
 								<form onSubmit={handleSubmit} className="space-y-3.5">
 									{/* SIGNUP FIELDS */}
-									{mode === 'signup' && (
+									{mode === 'signup' && otpState === 'idle' && (
 										<>
 											{/* Full Name */}
 											<div>
@@ -417,7 +455,7 @@ export default function Auth() {
 									)}
 
 									{/* EMAIL FIELD (Hidden when OTP digits are active) */}
-									{!(mode === 'login' && loginMethod === 'otp' && otpState === 'requested') && (
+									{otpState === 'idle' && (
 										<div>
 											<label className="block text-[11px] font-medium text-text-muted mb-1 ml-1">
 												Email Address
@@ -456,7 +494,7 @@ export default function Auth() {
 									)}
 
 									{/* PASSWORD FIELD (For Signup or Password Login) */}
-									{(mode === 'signup' || (mode === 'login' && loginMethod === 'password')) && (
+									{(mode === 'signup' || (mode === 'login' && loginMethod === 'password')) && otpState === 'idle' && (
 										<div>
 											<label className="block text-[11px] font-medium text-text-muted mb-1 ml-1">
 												Password
@@ -503,7 +541,7 @@ export default function Auth() {
 									)}
 
 									{/* PHONE FIELD (Optional on Signup) */}
-									{mode === 'signup' && (
+									{mode === 'signup' && otpState === 'idle' && (
 										<div>
 											<label className="block text-[11px] font-medium text-text-muted mb-1 ml-1 flex justify-between">
 												<span>Phone Number</span>
@@ -523,18 +561,18 @@ export default function Auth() {
 									)}
 
 									{/* OTP VERIFICATION VIEW (Interactive 6 Boxes & OTP Badge) */}
-									{mode === 'login' && loginMethod === 'otp' && otpState === 'requested' && (
+									{otpState === 'requested' && (
 										<div className="pt-1">
 											{/* OTP Security Badge / Illustration Slot (Slot: auth-otp-badge) */}
 											<div className="flex flex-col items-center justify-center my-2">
 												<div
 													id="auth-otp-badge"
-													className="w-16 h-16 rounded-[22px] bg-white border border-mint flex items-center justify-center p-2.5 shadow-sm mb-2 relative"
+													className="w-16 h-16 rounded-[22px] bg-white border border-mint flex items-center justify-center p-1.5 shadow-sm mb-2 relative"
 												>
-													<img
-														src="/budget-tracker-icon.svg"
-														alt="Divvit Security"
-														className="w-full h-full object-contain rounded-xl"
+													<AnimatedLogo
+														state={isLoading ? 'loading' : error ? 'error' : 'idle'}
+														size={52}
+														title="Divvit Security Mascot"
 													/>
 													<div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-ink text-mint flex items-center justify-center shadow-xs">
 														<ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.5} />
@@ -582,7 +620,7 @@ export default function Auth() {
 													className="text-text-muted hover:text-text flex items-center gap-1 cursor-pointer transition-colors"
 												>
 													<ArrowLeft className="w-3.5 h-3.5" />
-													<span>Change email</span>
+													<span>{mode === 'signup' ? 'Change details' : 'Change email'}</span>
 												</button>
 
 												<button
@@ -590,7 +628,11 @@ export default function Auth() {
 													disabled={resendCooldown > 0}
 													onClick={async () => {
 														clearError();
-														await requestOtp(email.trim());
+														if (mode === 'signup') {
+															await requestSignupOtp(email.trim(), username.trim());
+														} else {
+															await requestOtp(email.trim());
+														}
 														setResendCooldown(30);
 													}}
 													className="text-mint-deep hover:text-ink font-medium flex items-center gap-1 disabled:text-text-muted/50 disabled:cursor-not-allowed cursor-pointer transition-colors"
@@ -608,9 +650,7 @@ export default function Auth() {
 											type="submit"
 											disabled={
 												isLoading ||
-												(mode === 'login' &&
-													loginMethod === 'otp' &&
-													otpState === 'requested' &&
+												(otpState === 'requested' &&
 													otpDigits.some((d) => d === ''))
 											}
 											className="w-full h-11 sm:h-12 rounded-full bg-ink hover:bg-ink-soft active:scale-[0.98] text-white font-medium text-xs sm:text-sm tracking-wide shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
@@ -624,7 +664,9 @@ export default function Auth() {
 												<>
 													<span>
 														{mode === 'signup'
-															? 'Create Account'
+															? otpState === 'idle'
+																? 'Continue to Verification'
+																: 'Verify & Create Account'
 															: loginMethod === 'password'
 															? 'Sign In'
 															: otpState === 'idle'

@@ -81,3 +81,28 @@ export function getDaysRemaining(endDate: string): number {
 	if (today > endDate) return 0;
 	return differenceInDays(parseISO(endDate), parseISO(today)) + 1;
 }
+
+/** Friendly format for quick entry: 'Today, Oct 5', 'Yesterday, Oct 4', or 'Mon, Oct 5, 2026'. */
+export function formatFriendlyDate(dateStr: string): string {
+	if (!dateStr) return '';
+	const today = todayStr();
+	if (dateStr === today) {
+		return `Today, ${format(parseISO(dateStr), 'MMM d')}`;
+	}
+	const now = new Date();
+	const yesterdayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+	const yesterday = format(yesterdayObj, 'yyyy-MM-dd');
+	if (dateStr === yesterday) {
+		return `Yesterday, ${format(parseISO(dateStr), 'MMM d')}`;
+	}
+	const tomorrowObj = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+	const tomorrow = format(tomorrowObj, 'yyyy-MM-dd');
+	if (dateStr === tomorrow) {
+		return `Tomorrow, ${format(parseISO(dateStr), 'MMM d')}`;
+	}
+	const parsed = parseISO(dateStr);
+	if (parsed.getFullYear() === now.getFullYear()) {
+		return format(parsed, 'EEE, MMM d');
+	}
+	return format(parsed, 'EEE, MMM d, yyyy');
+}

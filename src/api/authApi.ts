@@ -23,6 +23,11 @@ export async function requestOtpApi(email: string): Promise<{message: string}> {
 	return response.data;
 }
 
+export async function requestSignupOtpApi(data: { email: string; username: string }): Promise<{message: string}> {
+	const response = await apiClient.post<{message: string}>('/api/_public/v1/users/signup/request-otp', data);
+	return response.data;
+}
+
 export async function verifyOtpApi(email: string, code: string): Promise<AuthResponse> {
 	const response = await apiClient.post<AuthResponse>('/api/_public/v1/users/verify-otp', { email, code });
 	return response.data;

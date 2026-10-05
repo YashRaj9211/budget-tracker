@@ -11,6 +11,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { todayStr } from '../utils/date';
 import { initDb, getAllTransactions } from '../db';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
+import AnimatedLogo from '../components/common/AnimatedLogo';
 
 const HomeSnapshot = lazy(() => import('../components/home/HomeSnapshot'));
 
@@ -176,7 +177,8 @@ function Home() {
 								))}
 							</div>
 						) : loadError ? (
-							<div className="p-6 bg-surface rounded-[20px] text-center">
+							<div className="p-6 bg-surface rounded-[24px] text-center flex flex-col items-center">
+								<AnimatedLogo state="error" size={56} className="mb-2" title="Could not load transactions" />
 								<p className="text-sm text-danger font-medium mb-1">Could not load transactions</p>
 								<p className="text-xs text-text-muted mb-3">{loadError}</p>
 								<button
@@ -197,8 +199,10 @@ function Home() {
 						) : dayGroups.length > 0 ? (
 							dayGroups.map((group) => <TransactionList key={group.date} group={group} />)
 						) : (
-							<div className="p-6 bg-surface rounded-[20px] text-center text-sm text-text-muted">
-								No transactions this month
+							<div className="p-8 bg-surface rounded-[24px] text-center flex flex-col items-center justify-center">
+								<AnimatedLogo state="idle" size={52} className="mb-2 opacity-85" title="No transactions yet" />
+								<p className="text-sm font-medium text-text">No transactions this month</p>
+								<p className="text-xs text-text-muted mt-0.5">Tap + below to add your first expense</p>
 							</div>
 						)}
 					</div>

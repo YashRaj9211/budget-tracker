@@ -55,6 +55,7 @@ vi.mock('../api/financeHubApi', () => ({
 	},
 	expenseApi: {
 		create: vi.fn(),
+		update: vi.fn().mockResolvedValue({ id: 'updated' }),
 		delete: vi.fn(),
 		getUserExpenses: vi.fn().mockResolvedValue([]),
 	},

@@ -19,6 +19,12 @@ export interface SignUpRequest {
 	password: string;
 	phone?: string;
 	avatarUrl?: string;
+	code: string;
+}
+
+export interface RequestSignupOtpRequest {
+	email: string;
+	username: string;
 }
 
 export interface AuthResponse {

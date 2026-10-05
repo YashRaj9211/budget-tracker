@@ -101,8 +101,10 @@ func GetFriendships(c *gin.Context) {
 
 // FriendResult is the normalized shape returned by GetFriends.
 type FriendResult struct {
-	UserID string `json:"user_id"`
-	Name   string `json:"name"`
+	ID       string `json:"id"`
+	UserID   string `json:"user_id"` // Keep for backwards compatibility
+	Name     string `json:"name"`
+	Username string `json:"username"`
 }
 
 // GetFriends returns only ACCEPTED friends of the current user,
@@ -121,14 +123,14 @@ func GetFriends(c *gin.Context) {
 	var result []FriendResult
 
 	if err := database.DB.Raw(`
-		SELECT u.id as user_id, u.name
+		SELECT u.id as id, u.id as user_id, u.name, u.username
 		FROM friendships f
 		JOIN users u ON u.id = f.friend_id
 		WHERE f.user_id = ? AND f.status = 'ACCEPTED'
 
 		UNION
 
-		SELECT u.id as user_id, u.name
+		SELECT u.id as id, u.id as user_id, u.name, u.username
 		FROM friendships f
 		JOIN users u ON u.id = f.user_id
 		WHERE f.friend_id = ? AND f.status = 'ACCEPTED'

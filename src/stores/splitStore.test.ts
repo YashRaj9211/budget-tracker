@@ -22,6 +22,9 @@ vi.mock('../db', () => ({
 	getAllSplits: vi.fn().mockResolvedValue([]),
 	saveSplit: vi.fn().mockResolvedValue(undefined),
 	deleteSplit: vi.fn().mockResolvedValue(undefined),
+	getAllTransactions: vi.fn().mockResolvedValue([]),
+	getTransactionsByMonth: vi.fn().mockResolvedValue([]),
+	deleteTransaction: vi.fn().mockResolvedValue(undefined),
 	addToSyncQueue: vi.fn().mockResolvedValue(undefined),
 	getSyncQueue: vi.fn().mockResolvedValue([]),
 	removeSyncQueueItem: vi.fn().mockResolvedValue(undefined),
@@ -52,6 +55,7 @@ vi.mock('../api/financeHubApi', () => ({
 
 describe('splitStore group creation', () => {
 	beforeEach(() => {
+		Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 		useSplitStore.setState({ groups: [], splits: [], selectedGroupId: null, isAddGroupOpen: false });
 	});
 
@@ -81,5 +85,72 @@ describe('splitStore group creation', () => {
 		await useSplitStore.getState().removeGroup(gid);
 		expect(useSplitStore.getState().groups.length).toBe(0);
 		expect(useSplitStore.getState().selectedGroupId).toBeNull();
+	});
+
+	it('calls expenseApi.delete when removing a split with serverId or synced status', async () => {
+		const { useAuthStore } = await import('./authStore');
+		const { expenseApi } = await import('../api/financeHubApi');
+
+		useAuthStore.setState({
+			isAuthenticated: true,
+			user: { id: 'u1', name: 'Alice', email: 'alice@demo.com', username: 'alice' },
+		});
+
+		useSplitStore.setState({
+			splits: [
+				{
+					id: 'exp-remote-1',
+					groupId: 'g-1',
+					title: 'Lunch',
+					amount: 200,
+					paidBy: 'You',
+					paidById: 'u1',
+					splitAmong: ['You', 'Bob'],
+					splitAmongIds: ['u1', 'u2'],
+					date: '2026-10-05',
+					createdAt: Date.now(),
+					serverId: 'exp-remote-1',
+					syncStatus: 'synced',
+				},
+			],
+		});
+
+		await useSplitStore.getState().removeSplit('exp-remote-1');
+
+		expect(expenseApi.delete).toHaveBeenCalledWith('exp-remote-1');
+		expect(useSplitStore.getState().splits.length).toBe(0);
+	});
+
+	it('calls expenseApi.delete even if split serverId was missing but id was server format', async () => {
+		const { useAuthStore } = await import('./authStore');
+		const { expenseApi } = await import('../api/financeHubApi');
+		vi.mocked(expenseApi.delete).mockClear();
+
+		useAuthStore.setState({
+			isAuthenticated: true,
+			user: { id: 'u1', name: 'Alice', email: 'alice@demo.com', username: 'alice' },
+		});
+
+		useSplitStore.setState({
+			splits: [
+				{
+					id: 'expense-xyz789',
+					groupId: 'g-1',
+					title: 'Taxi',
+					amount: 150,
+					paidBy: 'You',
+					paidById: 'u1',
+					splitAmong: ['You'],
+					splitAmongIds: ['u1'],
+					date: '2026-10-05',
+					createdAt: Date.now(),
+				},
+			],
+		});
+
+		await useSplitStore.getState().removeSplit('expense-xyz789');
+
+		expect(expenseApi.delete).toHaveBeenCalledWith('expense-xyz789');
+		expect(useSplitStore.getState().splits.length).toBe(0);
 	});
 });

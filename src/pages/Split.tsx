@@ -9,6 +9,7 @@ import SettleUpModal from '../components/split/SettleUpModal';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/common/Button';
+import AnimatedLogo from '../components/common/AnimatedLogo';
 
 export default function Split() {
 	const groups = useSplitStore((s) => s.groups);
@@ -124,12 +125,13 @@ export default function Split() {
 					</h2>
 
 					{isLoading ? (
-						<div className="p-6 bg-surface rounded-[20px] text-center text-[13px] text-text-muted">
-							Loading split groups…
+						<div className="p-8 bg-surface rounded-[24px] text-center flex flex-col items-center justify-center">
+							<AnimatedLogo state="loading" size={56} className="mb-2" title="Loading groups" />
+							<p className="text-[13px] text-text-muted">Loading split groups…</p>
 						</div>
 					) : groups.length === 0 ? (
-						<Card variant="white" className="flex flex-col items-center justify-center gap-3 text-center py-8">
-							<Users className="w-10 h-10 text-text-muted" strokeWidth={1.5} />
+						<Card variant="white" className="flex flex-col items-center justify-center gap-2.5 text-center py-8">
+							<AnimatedLogo state="idle" size={60} className="mb-1" title="No groups" />
 							<h3 className="text-[15px] font-medium text-text">No groups yet</h3>
 							<p className="text-[12px] text-text-muted max-w-xs">
 								Create a group with friends, roommates, or trip mates to split bills effortlessly.
