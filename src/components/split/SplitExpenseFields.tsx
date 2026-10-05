@@ -16,7 +16,7 @@ const labelStyle = 'block text-[12px] font-medium text-text-muted mb-1.5';
  * The "who shares this expense" part of the form: group or friends, who paid,
  * who is included, and how to divide. All state lives in useSplitDraft.
  */
-export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
+export default function SplitExpenseFields({ draft, hideCategory }: { draft: SplitDraft; hideCategory?: boolean }) {
 	const { mode, allowFriends, groups, people, selectedIds, splitType } = draft;
 	const perPerson = draft.result.ok ? new Map(draft.result.splits.map((s) => [s.userId, s.amount])) : new Map<string, string>();
 	const current = TYPES.find((t) => t.id === splitType) ?? TYPES[0];
@@ -165,7 +165,7 @@ export default function SplitExpenseFields({ draft }: { draft: SplitDraft }) {
 			</div>
 
 			{/* Category (shared list from the server, so charts can group by it) */}
-			{draft.categories.length > 0 && (
+			{!hideCategory && draft.categories.length > 0 && (
 				<div>
 					<label className={labelStyle}>Category</label>
 					<Select

@@ -7,6 +7,7 @@ export interface ListRowProps {
 	caption?: string | React.ReactNode;
 	amount?: string | React.ReactNode;
 	amountColor?: 'mint-deep' | 'danger' | 'ink';
+	rightContent?: React.ReactNode;
 	className?: string;
 }
 
@@ -17,6 +18,7 @@ export function ListRow({
 	caption,
 	amount,
 	amountColor = 'ink',
+	rightContent,
 	className = '',
 }: ListRowProps) {
 	const colorClasses = {
@@ -46,11 +48,13 @@ export function ListRow({
 					)}
 				</div>
 			</div>
-			{amount && (
+			{rightContent ? (
+				<div className="shrink-0 ml-3">{rightContent}</div>
+			) : amount ? (
 				<span className={`text-[15px] font-medium shrink-0 ml-3 ${colorClasses[amountColor]}`}>
 					{amount}
 				</span>
-			)}
+			) : null}
 		</div>
 	);
 }

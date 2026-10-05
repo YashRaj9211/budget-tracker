@@ -103,6 +103,8 @@ function transformApiGroup(apiGroup: ApiGroup, currentUserId?: string): Group {
 		avatarColor,
 		simplifyDebts: apiGroup.simplifyDebts,
 		createdAt: new Date(apiGroup.createdAt).getTime(),
+		serverId: apiGroup.id,
+		syncStatus: 'synced',
 	};
 }
 
@@ -147,6 +149,8 @@ const isSettlement = !!exp.isSettlement;
 		date: exp.expenseDate ? exp.expenseDate.split('T')[0] : new Date(exp.createdAt).toISOString().split('T')[0],
 		createdAt: new Date(exp.createdAt).getTime(),
 		isSettlement,
+		serverId: exp.id,
+		syncStatus: 'synced',
 	};
 }
 
@@ -502,9 +506,25 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 	removeSplit: async (id) => {
 		const auth = useAuthStore.getState();
 		const split = get().splits.find((s) => s.id === id);
-		// BUG FIX #5: only use serverId if it actually came from the server;
-		// never pass a local UUID to the remote API.
-		const serverId = split?.serverId;
+
+		// Resolve serverId:
+		// 1. Explicit serverId on the split object
+		// 2. If already marked synced or not a pending local record, split.id is the server expense ID
+		// 3. Check locally saved split in IndexedDB
+		let serverId = split?.serverId;
+		if (!serverId) {
+			if (split?.syncStatus === 'synced' || (split?.id && !split.id.startsWith('demo-') && split.syncStatus !== 'pending')) {
+				serverId = split.id;
+			} else {
+				const localSplits = await getAllSplits();
+				const stored = localSplits.find((s) => s.id === id);
+				if (stored?.serverId) {
+					serverId = stored.serverId;
+				} else if (stored?.syncStatus === 'synced' || (stored?.id && !stored.id.startsWith('demo-') && stored.syncStatus !== 'pending')) {
+					serverId = stored.id;
+				}
+			}
+		}
 
 		if (auth.isAuthenticated && auth.user && navigator.onLine) {
 			if (serverId) {
@@ -539,6 +559,9 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 		try {
 			const { deleteTransaction } = await import('../db');
 			await deleteTransaction(id); // split id === transaction id (set in addSplit)
+			if (serverId && serverId !== id) {
+				await deleteTransaction(serverId);
+			}
 		} catch {
 			// best-effort — transaction mirror may not exist for demo/old splits
 		}

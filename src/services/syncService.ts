@@ -1,8 +1,10 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import * as db from '../db';
 import { expenseApi, groupApi, categoryApi, budgetApi, type ApiCategory } from '../api/financeHubApi';
 import { useAuthStore } from '../stores/authStore';
 import type { SyncQueueItem, SyncStatusState, Transaction, Budget } from '../types';
+import { matchCategoryToApi } from '../utils/categoryMatcher';
+import { suggestCategoryFromText } from '../utils/indianCategoryIcons';
 
 // ── Zustand Store for Sync State ──
 
@@ -203,9 +205,8 @@ class SyncService {
 					else if (item.entityType === 'transaction') {
 						if (item.action === 'create') {
 							const t: Transaction = item.payload;
-							const catId = t.category
-								? categoryByName.get(t.category.toLowerCase())
-								: null;
+							const catId = matchCategoryToApi(t.category, categories) ||
+								(t.category ? categoryByName.get(t.category.toLowerCase()) : null);
 
 							const res = await expenseApi.create({
 								type: t.type === 'income' ? 'INCOME' : 'PERSONAL',
@@ -218,6 +219,24 @@ class SyncService {
 								categoryId: catId || null,
 							});
 							await db.markTransactionSynced(item.recordId, res.id);
+							await db.removeSyncQueueItem(item.id);
+							syncedCount++;
+						} else if (item.action === 'update') {
+							const targetId = item.payload?.serverId || item.recordId;
+							if (targetId) {
+								const catId = matchCategoryToApi(item.payload?.category, categories) ||
+									(item.payload?.category ? categoryByName.get(item.payload.category.toLowerCase()) : null);
+								await expenseApi.update(targetId, {
+									amount: item.payload?.amount,
+									description: item.payload?.description,
+									type: item.payload?.type === 'income' ? 'INCOME' : 'PERSONAL',
+									expenseDate: item.payload?.date
+										? new Date(item.payload.date).toISOString()
+										: new Date().toISOString(),
+									categoryId: catId || null,
+								});
+								await db.markTransactionSynced(item.recordId, targetId);
+							}
 							await db.removeSyncQueueItem(item.id);
 							syncedCount++;
 						} else if (item.action === 'delete') {
@@ -394,12 +413,30 @@ class SyncService {
 					const existingLocal = allLocal.find((lt) => lt.serverId === exp.id || lt.id === exp.id);
 
 					if (exp.type === 'PERSONAL' || exp.type === 'INCOME') {
+						const serverCat = exp.categoryId ? categoryById.get(exp.categoryId) : undefined;
+						const localCat = existingLocal?.category && existingLocal.category.toLowerCase() !== 'other'
+							? existingLocal.category
+							: undefined;
+						const inferredCat = suggestCategoryFromText(exp.description || '');
+
+						const resolvedCat = serverCat || localCat || (inferredCat && inferredCat.toLowerCase() !== 'other' ? inferredCat : undefined) || 'Other';
+
+						// If server was missing categoryId, but we resolved a valid non-Other category, backfill it to server
+						if (!exp.categoryId && resolvedCat && resolvedCat.toLowerCase() !== 'other') {
+							const catIdToBackfill = matchCategoryToApi(resolvedCat, categories);
+							if (catIdToBackfill && typeof expenseApi.update === 'function') {
+								expenseApi.update(exp.id, { categoryId: catIdToBackfill }).catch((err) => {
+									console.warn('[SyncService] Failed to backfill categoryId on server:', err);
+								});
+							}
+						}
+
 						const newLocal: Transaction = {
 							id: existingLocal ? existingLocal.id : exp.id,
 							type: exp.type === 'INCOME' ? 'income' : 'expense',
 							amount: parseFloat(exp.amount) || 0,
 							description: exp.description || '',
-							category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Other',
+							category: resolvedCat,
 							account: existingLocal?.account || 'Default',
 							date: exp.expenseDate
 								? exp.expenseDate.split('T')[0]
@@ -427,13 +464,29 @@ class SyncService {
 						if (paidByMe) {
 							lentAmount = totalAmount - myShare;
 						}
+
+						const serverCat = exp.categoryId ? categoryById.get(exp.categoryId) : undefined;
+						const localCat = existingLocal?.category && existingLocal.category.toLowerCase() !== 'other' && existingLocal.category.toLowerCase() !== 'split'
+							? existingLocal.category
+							: undefined;
+						const inferredCat = suggestCategoryFromText(exp.description || '');
+						const resolvedCat = serverCat || localCat || (inferredCat && inferredCat.toLowerCase() !== 'other' ? inferredCat : undefined) || 'Split';
+
+						if (!exp.categoryId && resolvedCat && resolvedCat.toLowerCase() !== 'other' && resolvedCat.toLowerCase() !== 'split') {
+							const catIdToBackfill = matchCategoryToApi(resolvedCat, categories);
+							if (catIdToBackfill && typeof expenseApi.update === 'function') {
+								expenseApi.update(exp.id, { categoryId: catIdToBackfill }).catch((err) => {
+									console.warn('[SyncService] Failed to backfill categoryId on server:', err);
+								});
+							}
+						}
 						
 						const newLocal: Transaction = {
 							id: existingLocal ? existingLocal.id : exp.id,
 							type: 'expense',
 							amount: myShare,
 							description: exp.description || '',
-							category: (exp.categoryId && categoryById.get(exp.categoryId)) || 'Split',
+							category: resolvedCat,
 							account: existingLocal?.account || 'Default',
 							date: exp.expenseDate
 								? exp.expenseDate.split('T')[0]

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User, LoginRequest, SignUpRequest } from '../types/auth';
-import { loginApi, signUpApi, requestOtpApi, verifyOtpApi } from '../api/authApi';
+import { loginApi, signUpApi, requestSignupOtpApi, requestOtpApi, verifyOtpApi } from '../api/authApi';
 import { socketService } from '../api/socketService';
 import { isBeyondGracePeriod } from '../utils/jwt';
 import { toast } from './toastStore';
@@ -38,6 +38,7 @@ interface AuthState {
 
 	login: (credentials: LoginRequest) => Promise<void>;
 	signup: (userData: SignUpRequest) => Promise<void>;
+	requestSignupOtp: (email: string, username: string) => Promise<void>;
 	requestOtp: (email: string) => Promise<void>;
 	verifyOtp: (email: string, code: string) => Promise<void>;
 	logout: (reason?: string) => void;
@@ -150,6 +151,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
 			set({ error: errorMessage, isLoading: false });
 			toast.error(errorMessage, { title: 'Sign Up Failed' });
+			throw err;
+		}
+	},
+
+	requestSignupOtp: async (email: string, username: string) => {
+		set({ isLoading: true, error: null });
+		try {
+			await requestSignupOtpApi({ email, username });
+			set({ isLoading: false });
+			toast.info('A 6-digit verification code has been sent to your email.', { title: 'Code Sent' });
+		} catch (err: unknown) {
+			const errorMessage = err instanceof Error ? err.message : 'Failed to send verification code';
+			set({ error: errorMessage, isLoading: false });
+			toast.error(errorMessage, { title: 'Verification Failed' });
 			throw err;
 		}
 	},

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { categoryApi, expenseApi, friendshipApi, type ApiCategory, type FriendItem, type SplitType } from '../api/financeHubApi';
+import { matchCategoryToApi } from '../utils/categoryMatcher';
+import { suggestCategoryFromText } from '../utils/indianCategoryIcons';
 import { useAuthStore } from '../stores/authStore';
 import { useSplitStore } from '../stores/splitStore';
 import { computeSplits, type SplitResult } from '../utils/splitMath';
@@ -67,8 +69,8 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 	const groupId = groups.some((g) => g.id === groupChoice)
 		? groupChoice
 		: groups.some((g) => g.id === selectedGroupId)
-		? (selectedGroupId as string)
-		: groups[0]?.id ?? '';
+			? (selectedGroupId as string)
+			: groups[0]?.id ?? '';
 	const group = groups.find((g) => g.id === groupId);
 
 	// Everyone who can be part of this expense (always includes me)
@@ -157,6 +159,9 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 	const submit = async (info: { description: string; date: string; amount: number }) => {
 		if (!result.ok || error) throw new Error(error ?? (result.ok ? '' : result.error));
 
+		const inferredCat = suggestCategoryFromText(info.description);
+		const effectiveCatId = categoryId || (inferredCat ? matchCategoryToApi(inferredCat, categories) : null);
+
 		const payload = {
 			type: 'SPLIT' as const,
 			amount: info.amount,
@@ -164,7 +169,7 @@ export function useSplitDraft({ active, allowFriends = true, amount }: { active:
 			currency: 'INR',
 			expenseDate: info.date ? new Date(info.date).toISOString() : new Date().toISOString(),
 			groupId: mode === 'group' ? groupId : null,
-			categoryId: categoryId || null,
+			categoryId: effectiveCatId || null,
 			userId: payerId,
 			splits: result.splits,
 		};

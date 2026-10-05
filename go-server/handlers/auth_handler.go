@@ -24,11 +24,72 @@ type SignUpBody struct {
 	Password  string  `json:"password" binding:"required"`
 	Phone     *string `json:"phone,omitempty" binding:"omitempty"`
 	AvatarURL *string `json:"avatarUrl,omitempty" binding:"omitempty"`
+	Code      string  `json:"code" binding:"required"`
 }
 
-type LoginBody struct {
+type RequestSignupOTPBody struct {
 	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required"`
+}
+
+func RequestSignupOTP(c *gin.Context) {
+	var body RequestSignupOTPBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(400, gin.H{"error": "Email and username are required"})
+		return
+	}
+
+	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
+	trimmedUsername := strings.TrimSpace(strings.ToLower(body.Username))
+
+	if trimmedEmail == "" || !strings.Contains(trimmedEmail, "@") {
+		c.JSON(400, gin.H{"error": "Please provide a valid email address"})
+		return
+	}
+
+	if trimmedUsername == "" {
+		c.JSON(400, gin.H{"error": "Please provide a valid username"})
+		return
+	}
+
+	// 1. Check if email already registered
+	var existingUser models.User
+	if err := database.DB.Where("LOWER(email) = ?", trimmedEmail).First(&existingUser).Error; err == nil {
+		c.JSON(400, gin.H{"error": "An account with this email already exists. Please sign in."})
+		return
+	}
+
+	// 2. Check if username is already taken
+	if err := database.DB.Where("LOWER(username) = ?", trimmedUsername).First(&existingUser).Error; err == nil {
+		c.JSON(400, gin.H{"error": "This username is already taken. Please choose another."})
+		return
+	}
+
+	// 3. Generate a 6-digit OTP
+	code := fmt.Sprintf("%06d", rand.Intn(1000000))
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	// Invalidate previous OTPs for this email by deleting them
+	database.DB.Where("LOWER(email) = ?", trimmedEmail).Delete(&models.OTP{})
+
+	otp := models.OTP{
+		Email:     trimmedEmail,
+		Code:      code,
+		ExpiresAt: expiresAt,
+	}
+
+	if err := database.DB.Create(&otp).Error; err != nil {
+		c.JSON(500, gin.H{"error": "Failed to create verification OTP"})
+		return
+	}
+
+	// 4. Send email with signup_verification.html template
+	if err := services.SendOTP(trimmedEmail, code, "signup_verification.html", "Verify your email - Divvit Budget"); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to send verification email. Please check your email address."})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Verification OTP sent successfully"})
 }
 
 func CreateUser(c *gin.Context) {
@@ -38,9 +99,41 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	isExist := models.User{}
-	if err := database.DB.Where("email = ?", body.Email).First(&isExist).Error; err == nil {
-		c.JSON(400, gin.H{"error": "User already exists"})
+	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
+	trimmedUsername := strings.TrimSpace(strings.ToLower(body.Username))
+	trimmedCode := strings.TrimSpace(body.Code)
+
+	if trimmedCode == "" {
+		c.JSON(400, gin.H{"error": "Verification code is required"})
+		return
+	}
+
+	// Verify OTP
+	var otp models.OTP
+	if err := database.DB.Where("LOWER(email) = ? AND code = ?", trimmedEmail, trimmedCode).First(&otp).Error; err != nil {
+		c.JSON(400, gin.H{"error": "Invalid verification code. Please check your email and try again."})
+		return
+	}
+
+	if time.Now().After(otp.ExpiresAt) {
+		c.JSON(400, gin.H{"error": "Verification code has expired. Please request a new code."})
+		return
+	}
+
+	// Check if user already exists
+	var isExist models.User
+	if err := database.DB.Where("LOWER(email) = ?", trimmedEmail).First(&isExist).Error; err == nil {
+		c.JSON(400, gin.H{"error": "An account with this email already exists"})
+		return
+	}
+
+	if err := database.DB.Where("LOWER(username) = ?", trimmedUsername).First(&isExist).Error; err == nil {
+		c.JSON(400, gin.H{"error": "Username is already taken"})
+		return
+	}
+
+	if len(body.Password) < 6 {
+		c.JSON(400, gin.H{"error": "Password must be at least 6 characters"})
 		return
 	}
 
@@ -51,9 +144,9 @@ func CreateUser(c *gin.Context) {
 	}
 
 	user := models.User{
-		Email:     body.Email,
-		Name:      body.Name,
-		Username:  body.Username,
+		Email:     trimmedEmail,
+		Name:      strings.TrimSpace(body.Name),
+		Username:  trimmedUsername,
 		Password:  hashedPassword,
 		Phone:     body.Phone,
 		AvatarURL: body.AvatarURL,
@@ -63,6 +156,9 @@ func CreateUser(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Delete used OTP
+	database.DB.Delete(&otp)
 
 	token := utils.GenerateToken(user.ID)
 	c.JSON(200, gin.H{
@@ -78,6 +174,11 @@ func CreateUser(c *gin.Context) {
 	})
 }
 
+type LoginBody struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 func LoginUser(c *gin.Context) {
 	var body LoginBody
 
@@ -86,8 +187,10 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
+	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
+
 	user := models.User{}
-	if err := database.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
+	if err := database.DB.Where("LOWER(email) = ?", trimmedEmail).First(&user).Error; err != nil {
 		c.JSON(400, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -129,30 +232,27 @@ func RequestOTP(c *gin.Context) {
 		return
 	}
 
-	// Check if user exists to determine the email template
+	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
+
+	// Check if user exists
 	var user models.User
-	userExists := true
-	if err := database.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
-		userExists = false
+	if err := database.DB.Where("LOWER(email) = ?", trimmedEmail).First(&user).Error; err != nil {
+		c.JSON(404, gin.H{"error": "No account found with this email. Please sign up first."})
+		return
 	}
 
 	templateName := "otp_email.html"
 	subject := "Your Login OTP - Divvit Budget"
-
-	if !userExists {
-		templateName = "signup_verification.html"
-		subject = "Verify your email - Divvit Budget"
-	}
 
 	// Generate a 6-digit OTP
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
 	expiresAt := time.Now().Add(10 * time.Minute)
 
 	// Invalidate previous OTPs for this email by deleting them
-	database.DB.Where("email = ?", body.Email).Delete(&models.OTP{})
+	database.DB.Where("LOWER(email) = ?", trimmedEmail).Delete(&models.OTP{})
 
 	otp := models.OTP{
-		Email:     body.Email,
+		Email:     trimmedEmail,
 		Code:      code,
 		ExpiresAt: expiresAt,
 	}
@@ -162,7 +262,7 @@ func RequestOTP(c *gin.Context) {
 		return
 	}
 
-	if err := services.SendOTP(body.Email, code, templateName, subject); err != nil {
+	if err := services.SendOTP(trimmedEmail, code, templateName, subject); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to send OTP email"})
 		return
 	}
@@ -177,8 +277,11 @@ func VerifyOTP(c *gin.Context) {
 		return
 	}
 
+	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
+	trimmedCode := strings.TrimSpace(body.Code)
+
 	var otp models.OTP
-	if err := database.DB.Where("email = ? AND code = ?", body.Email, body.Code).First(&otp).Error; err != nil {
+	if err := database.DB.Where("LOWER(email) = ? AND code = ?", trimmedEmail, trimmedCode).First(&otp).Error; err != nil {
 		c.JSON(400, gin.H{"error": "Invalid OTP"})
 		return
 	}
@@ -188,52 +291,11 @@ func VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	// OTP is valid. Find user or auto-create account for new users
+	// OTP is valid. Find user
 	var user models.User
-	if err := database.DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
-		emailPrefix := strings.Split(body.Email, "@")[0]
-		cleanPrefix := strings.ToLower(emailPrefix)
-		cleanPrefix = strings.Map(func(r rune) rune {
-			if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' {
-				return r
-			}
-			return -1
-		}, cleanPrefix)
-		if cleanPrefix == "" {
-			cleanPrefix = "user"
-		}
-
-		parts := strings.FieldsFunc(emailPrefix, func(r rune) bool {
-			return r == '.' || r == '_' || r == '-' || r == '+'
-		})
-		for i, p := range parts {
-			if len(p) > 0 {
-				parts[i] = strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
-			}
-		}
-		displayName := strings.Join(parts, " ")
-		if displayName == "" {
-			displayName = emailPrefix
-		}
-
-		uniqueUsername := cleanPrefix
-		var count int64
-		database.DB.Model(&models.User{}).Where("username = ?", uniqueUsername).Count(&count)
-		if count > 0 {
-			uniqueUsername = fmt.Sprintf("%s%d", cleanPrefix, rand.Intn(9000)+1000)
-		}
-
-		dummyPassword, _ := utils.GeneratePasswordHash(fmt.Sprintf("otp_pwd_%d", time.Now().UnixNano()))
-		user = models.User{
-			Email:    body.Email,
-			Name:     displayName,
-			Username: uniqueUsername,
-			Password: dummyPassword,
-		}
-		if err := database.DB.Create(&user).Error; err != nil {
-			c.JSON(500, gin.H{"error": "Failed to create user account"})
-			return
-		}
+	if err := database.DB.Where("LOWER(email) = ?", trimmedEmail).First(&user).Error; err != nil {
+		c.JSON(404, gin.H{"error": "User account not found. Please sign up."})
+		return
 	}
 
 	// Delete the OTP after successful verification
