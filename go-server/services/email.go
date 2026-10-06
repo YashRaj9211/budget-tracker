@@ -29,11 +29,9 @@ func SendOTP(email, otp, templateName, subject string) error {
 	// Prepare the data for the template
 	data := struct {
 		OTP     string
-		LogoURL string
 		Year    int
 	}{
 		OTP:     otp,
-		LogoURL: "https://budget-tracker-phi-ivory.vercel.app/budget-tracker-icon.png", // Using a placeholder URL, user needs to host it
 		Year:    time.Now().Year(),
 	}
 
@@ -44,7 +42,7 @@ func SendOTP(email, otp, templateName, subject string) error {
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    "Divvit <noreply@dekhkar.prjly.org>", // Updated to include friendly name
+		From:    "Divvit <hello@dekhkar.prjly.org>", // Updated to include friendly name
 		To:      []string{email},
 		Subject: subject,
 		Html:    body.String(),
@@ -65,7 +63,6 @@ type FriendRequestEmailData struct {
 	SenderName    string
 	SenderEmail   string
 	ActionURL     string
-	LogoURL       string
 	Year          int
 }
 
@@ -87,7 +84,7 @@ func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail stri
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		frontendURL = "https://budget-tracker-phi-ivory.vercel.app"
+		frontendURL = "https://app.prjly.org"
 	}
 	actionURL := fmt.Sprintf("%s/friends", frontendURL)
 
@@ -101,7 +98,6 @@ func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail stri
 		SenderName:    displayName,
 		SenderEmail:   senderEmail,
 		ActionURL:     actionURL,
-		LogoURL:       "https://budget-tracker-phi-ivory.vercel.app/budget-tracker-icon.png",
 		Year:          time.Now().Year(),
 	}
 
@@ -113,7 +109,7 @@ func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail stri
 
 	subject := fmt.Sprintf("%s sent you a friend request on Divvit", displayName)
 	params := &resend.SendEmailRequest{
-		From:    "Divvit <noreply@dekhkar.prjly.org>",
+		From:    "Divvit <hello@dekhkar.prjly.org>",
 		To:      []string{toEmail},
 		Subject: subject,
 		Html:    body.String(),
