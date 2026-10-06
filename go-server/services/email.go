@@ -44,7 +44,7 @@ func SendOTP(email, otp, templateName, subject string) error {
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    "noreply@dekhkar.prjly.org", // Updated to your newly verified domain!
+		From:    "Divvit <noreply@dekhkar.prjly.org>", // Updated to include friendly name
 		To:      []string{email},
 		Subject: subject,
 		Html:    body.String(),
@@ -113,7 +113,7 @@ func SendFriendRequestEmail(toEmail, recipientName, senderName, senderEmail stri
 
 	subject := fmt.Sprintf("%s sent you a friend request on Divvit", displayName)
 	params := &resend.SendEmailRequest{
-		From:    "noreply@dekhkar.prjly.org",
+		From:    "Divvit <noreply@dekhkar.prjly.org>",
 		To:      []string{toEmail},
 		Subject: subject,
 		Html:    body.String(),

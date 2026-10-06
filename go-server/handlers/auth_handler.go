@@ -84,7 +84,7 @@ func RequestSignupOTP(c *gin.Context) {
 	}
 
 	// 4. Send email with signup_verification.html template
-	if err := services.SendOTP(trimmedEmail, code, "signup_verification.html", "Verify your email - Divvit Budget"); err != nil {
+	if err := services.SendOTP(trimmedEmail, code, "signup_verification.html", "Your access code for Divvit Budget"); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to send verification email. Please check your email address."})
 		return
 	}
@@ -242,7 +242,7 @@ func RequestOTP(c *gin.Context) {
 	}
 
 	templateName := "otp_email.html"
-	subject := "Your Login OTP - Divvit Budget"
+	subject := "Your access code for Divvit Budget"
 
 	// Generate a 6-digit OTP
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
