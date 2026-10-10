@@ -59,9 +59,11 @@ func RequestSignupOTP(c *gin.Context) {
 		return
 	}
 
-	// 2. Check if username is already taken
-	if err := database.DB.Where("LOWER(username) = ?", trimmedUsername).First(&existingUser).Error; err == nil {
-		c.JSON(400, gin.H{"error": "This username is already taken. Please choose another."})
+	// 2. Check if username has reached max limit
+	var count int64
+	database.DB.Model(&models.User{}).Where("LOWER(username) = ?", trimmedUsername).Count(&count)
+	if count >= 9999 {
+		c.JSON(400, gin.H{"error": "This username is currently full. Please choose another."})
 		return
 	}
 
@@ -127,8 +129,10 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	if err := database.DB.Where("LOWER(username) = ?", trimmedUsername).First(&isExist).Error; err == nil {
-		c.JSON(400, gin.H{"error": "Username is already taken"})
+	var count int64
+	database.DB.Model(&models.User{}).Where("LOWER(username) = ?", trimmedUsername).Count(&count)
+	if count >= 9999 {
+		c.JSON(400, gin.H{"error": "This username is currently full. Please choose another."})
 		return
 	}
 
@@ -143,10 +147,34 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	// Generate a unique tag
+	var tag string
+	var attempts int
+	for attempts = 0; attempts < 50; attempts++ {
+		tag = fmt.Sprintf("%04d", rand.Intn(10000))
+		identifier := fmt.Sprintf("%s#%s", trimmedUsername, tag)
+
+		// Check bloom filter first (fast path)
+		if services.UserBloomFilter != nil && !services.UserBloomFilter.TestString(identifier) {
+			break // Definitely available!
+		}
+
+		// DB fallback for false positives
+		var existing models.User
+		if err := database.DB.Where("LOWER(username) = ? AND tag = ?", trimmedUsername, tag).First(&existing).Error; err != nil {
+			break // Tag is actually available
+		}
+	}
+	if attempts == 50 {
+		c.JSON(500, gin.H{"error": "Failed to generate a unique user tag. Please try again or use a different username."})
+		return
+	}
+
 	user := models.User{
 		Email:     trimmedEmail,
 		Name:      strings.TrimSpace(body.Name),
 		Username:  trimmedUsername,
+		Tag:       tag,
 		Password:  hashedPassword,
 		Phone:     body.Phone,
 		AvatarURL: body.AvatarURL,
@@ -155,6 +183,10 @@ func CreateUser(c *gin.Context) {
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	if services.UserBloomFilter != nil {
+		services.UserBloomFilter.AddString(fmt.Sprintf("%s#%s", trimmedUsername, tag))
 	}
 
 	// Delete used OTP
@@ -167,6 +199,7 @@ func CreateUser(c *gin.Context) {
 			"email":     user.Email,
 			"name":      user.Name,
 			"username":  user.Username,
+			"tag":       user.Tag,
 			"phone":     user.Phone,
 			"avatarUrl": user.AvatarURL,
 		},
@@ -207,6 +240,7 @@ func LoginUser(c *gin.Context) {
 			"email":     user.Email,
 			"name":      user.Name,
 			"username":  user.Username,
+			"tag":       user.Tag,
 			"phone":     user.Phone,
 			"avatarUrl": user.AvatarURL,
 		},
@@ -308,6 +342,7 @@ func VerifyOTP(c *gin.Context) {
 			"email":     user.Email,
 			"name":      user.Name,
 			"username":  user.Username,
+			"tag":       user.Tag,
 			"phone":     user.Phone,
 			"avatarUrl": user.AvatarURL,
 		},
@@ -391,6 +426,7 @@ func RefreshToken(c *gin.Context) {
 			"email":     user.Email,
 			"name":      user.Name,
 			"username":  user.Username,
+			"tag":       user.Tag,
 			"phone":     user.Phone,
 			"avatarUrl": user.AvatarURL,
 		},

@@ -68,7 +68,8 @@ type User struct {
 	ID        string     `gorm:"primaryKey;type:varchar(50)" json:"id"`
 	Email     string     `gorm:"uniqueIndex;not null" json:"email"`
 	Name      string     `gorm:"not null" json:"name"`
-	Username  string     `gorm:"uniqueIndex;not null" json:"username"`
+	Username  string     `gorm:"uniqueIndex:idx_user_tag;not null" json:"username"`
+	Tag       string     `gorm:"uniqueIndex:idx_user_tag;not null;type:varchar(4)" json:"tag"`
 	Password  string     `gorm:"not null" json:"-"`
 	Phone     *string    `gorm:"type:varchar(20)" json:"phone,omitempty"`
 	AvatarURL *string    `gorm:"column:avatar_url" json:"avatarUrl,omitempty"`

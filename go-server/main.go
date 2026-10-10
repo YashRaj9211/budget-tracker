@@ -13,6 +13,7 @@ import (
 	"splitwise-go/database"
 	"splitwise-go/middleware"
 	"splitwise-go/router"
+	"splitwise-go/services"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -41,6 +42,7 @@ func init() {
 	// Connect Database
 	database.Connect()
 	database.MigrateOnStartIfEnabled()
+	services.InitBloomFilter()
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -74,6 +76,7 @@ func main() {
 		// Re-register routes for local (cleaner way is to extract setupRouter function)
 		database.Connect()
 		database.MigrateOnStartIfEnabled()
+		services.InitBloomFilter()
 		go func() {
 			for {
 				time.Sleep(time.Duration(50+rand.Intn(11)) * time.Second)

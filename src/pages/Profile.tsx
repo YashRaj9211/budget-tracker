@@ -98,7 +98,7 @@ export default function Profile() {
 							{user?.name || user?.username || 'Budget User'}
 						</h2>
 						<p className="text-[12px] text-text-on-ink-muted truncate">
-							@{user?.username || 'user'}
+							@{user?.username || 'user'}{user?.tag ? `#${user.tag}` : ''}
 						</p>
 						<div className="mt-2">
 							<Chip variant="positive">

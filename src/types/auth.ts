@@ -3,6 +3,7 @@ export interface User {
 	email: string;
 	name: string;
 	username: string;
+	tag?: string;
 	phone?: string;
 	avatarUrl?: string;
 }

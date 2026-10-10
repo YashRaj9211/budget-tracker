@@ -12,7 +12,7 @@ export default function Friends() {
 	const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
 	const [friends, setFriends] = useState<FriendItem[]>([]);
 	const [friendships, setFriendships] = useState<Friendship[]>([]);
-	const [emailInput, setEmailInput] = useState('');
+	const [identifierInput, setIdentifierInput] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -51,21 +51,21 @@ export default function Friends() {
 
 	const handleSendRequest = async (e: React.FormEvent) => {
 		e.preventDefault();
-		const email = emailInput.trim();
-		if (!email) return;
+		const identifier = identifierInput.trim();
+		if (!identifier) return;
 		setError(null);
 		setSuccessMsg(null);
-		setEmailInput('');
+		setIdentifierInput('');
 
 		await statusSheet.execute({
 			action: async () => {
-				await friendshipApi.sendRequest(email);
+				await friendshipApi.sendRequest(identifier);
 				await loadData();
 			},
 			processingTitle: 'Sending invite...',
-			processingMessage: `Sending friend request to ${email}`,
+			processingMessage: `Sending friend request to ${identifier}`,
 			successTitle: 'Invite sent!',
-			successMessage: `Friend request sent to ${email}`,
+			successMessage: `Friend request sent to ${identifier}`,
 			buttonText: 'Nice one!',
 			onError: (err) => {
 				setError(err?.message || 'Failed to send friend request');
@@ -114,16 +114,16 @@ export default function Friends() {
 			{/* Add friend card */}
 			<Card variant="white">
 				<h2 className="text-[15px] font-medium text-text flex items-center gap-2 mb-3">
-					<UserPlus className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Add friend by email
+					<UserPlus className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Add friend
 				</h2>
 				<form onSubmit={handleSendRequest} className="flex gap-2 items-center">
 					<div className="relative flex-1">
 						<Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" strokeWidth={1.5} />
 						<input
-							type="email"
-							placeholder="friend@example.com"
-							value={emailInput}
-							onChange={(e) => setEmailInput(e.target.value)}
+							type="text"
+							placeholder="friend@example.com or Username#Tag"
+							value={identifierInput}
+							onChange={(e) => setIdentifierInput(e.target.value)}
 							required
 							className="w-full pl-10 pr-4 h-12 bg-surface text-text placeholder:text-text-muted rounded-full focus:outline-none focus:ring-2 focus:ring-ink/40 transition-shadow text-[14px]"
 						/>
@@ -170,7 +170,7 @@ export default function Friends() {
 				friends.length === 0 ? (
 					<div className="p-6 bg-surface rounded-[20px] text-center">
 						<p className="text-[14px] font-medium text-text-muted">No friends added yet.</p>
-						<p className="text-[12px] text-text-muted mt-1">Send a friend invite using their email above!</p>
+						<p className="text-[12px] text-text-muted mt-1">Send a friend invite using their email or username above!</p>
 					</div>
 				) : (
 					<Card variant="white" className="!p-0 divide-y divide-black/5">
@@ -182,7 +182,7 @@ export default function Friends() {
 									</div>
 									<div>
 										<h3 className="text-[14px] font-medium text-text">{f.name}</h3>
-										<span className="text-[12px] text-text-muted">ID: {f.user_id}</span>
+										<span className="text-[12px] text-text-muted">@{f.username || 'user'}{f.tag ? `#${f.tag}` : ''}</span>
 									</div>
 								</div>
 								<Chip variant="positive">Active</Chip>

@@ -116,6 +116,7 @@ export interface FriendItem {
 	name: string;
 	id: string;
 	username?: string;
+	tag?: string;
 }
 
 export interface Friendship {
@@ -292,8 +293,8 @@ export const categoryApi = {
 // -------------------------------------------------------------
 
 export const friendshipApi = {
-	sendRequest: async (email: string): Promise<{ message: string }> => {
-		const res = await apiClient.post('/api/_private/v1/friendships/send', { email });
+	sendRequest: async (identifier: string): Promise<{ message: string }> => {
+		const res = await apiClient.post('/api/_private/v1/friendships/send', { identifier });
 		return res.data;
 	},
 

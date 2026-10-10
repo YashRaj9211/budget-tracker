@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strings"
 	"splitwise-go/database"
 	"splitwise-go/models"
 	"splitwise-go/services"
@@ -12,7 +13,7 @@ import (
 )
 
 type SendFriendshipRequestBody struct {
-	Email string `json:"email" binding:"required"`
+	Identifier string `json:"identifier" binding:"required"`
 }
 
 func SendFriendshipRequest(c *gin.Context) {
@@ -22,9 +23,25 @@ func SendFriendshipRequest(c *gin.Context) {
 		return
 	}
 
-	targetUser := models.User{}
-	if err := database.DB.Where("email = ?", body.Email).First(&targetUser).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User with this email not found"})
+	identifier := strings.TrimSpace(body.Identifier)
+	var targetUser models.User
+
+	if strings.Contains(identifier, "@") {
+		if err := database.DB.Where("LOWER(email) = ?", strings.ToLower(identifier)).First(&targetUser).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User with this email not found"})
+			return
+		}
+	} else if strings.Contains(identifier, "#") {
+		parts := strings.SplitN(identifier, "#", 2)
+		username := strings.ToLower(strings.TrimSpace(parts[0]))
+		tag := strings.TrimSpace(parts[1])
+		
+		if err := database.DB.Where("LOWER(username) = ? AND tag = ?", username, tag).First(&targetUser).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User with this username and tag not found"})
+			return
+		}
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter a valid email or Username#Tag (e.g. John#1234)"})
 		return
 	}
 
@@ -105,6 +122,7 @@ type FriendResult struct {
 	UserID   string `json:"user_id"` // Keep for backwards compatibility
 	Name     string `json:"name"`
 	Username string `json:"username"`
+	Tag      string `json:"tag"`
 }
 
 // GetFriends returns only ACCEPTED friends of the current user,
@@ -123,14 +141,14 @@ func GetFriends(c *gin.Context) {
 	var result []FriendResult
 
 	if err := database.DB.Raw(`
-		SELECT u.id as id, u.id as user_id, u.name, u.username
+		SELECT u.id as id, u.id as user_id, u.name, u.username, u.tag
 		FROM friendships f
 		JOIN users u ON u.id = f.friend_id
 		WHERE f.user_id = ? AND f.status = 'ACCEPTED'
 
 		UNION
 
-		SELECT u.id as id, u.id as user_id, u.name, u.username
+		SELECT u.id as id, u.id as user_id, u.name, u.username, u.tag
 		FROM friendships f
 		JOIN users u ON u.id = f.user_id
 		WHERE f.friend_id = ? AND f.status = 'ACCEPTED'
