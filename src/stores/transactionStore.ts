@@ -142,7 +142,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 			try {
 				const catId = await resolveCategoryId(data.category);
 				const created = await expenseApi.create({
-					type: data.type === 'income' ? 'INCOME' : 'PERSONAL',
+					type: data.type === 'income' ? 'INCOME' : 'PERSONAL',
+					includeInBudget: data.includeInBudget !== false,
 					amount: data.amount,
 					description: data.description || 'Personal Transaction',
 					currency: 'INR',
@@ -235,7 +236,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 					await expenseApi.update(existing.serverId, {
 						amount: updated.amount,
 						description: updated.description,
-						type: updated.type === 'income' ? 'INCOME' : 'PERSONAL',
+						type: updated.type === 'income' ? 'INCOME' : 'PERSONAL',
+						includeInBudget: updated.includeInBudget !== false,
 						expenseDate: updated.date ? new Date(updated.date).toISOString() : new Date().toISOString(),
 						categoryId: catId,
 					});
@@ -322,15 +324,16 @@ export function useMonthlyTotals(): { income: number; expense: number } {
 	return { income, expense };
 }
 
-/** Today's expense total — used to show over/under daily allowance. */
+/** Today's expense total — used to show over/under daily allowance (skips excluded-from-budget). */
 export function useTodayExpense(todayDateStr: string): number {
 	const allTransactions = useTransactionStore((s) => s.allTransactions);
 	return allTransactions
-		.filter((t) => t.type === 'expense' && t.date === todayDateStr)
+		.filter((t) => t.type === 'expense' && t.date === todayDateStr && t.includeInBudget !== false)
 		.reduce((sum, t) => sum + t.amount, 0);
 }
 
-/** Totals for transactions within a date range, drawn from the full allTransactions list. */
+/** Totals for transactions within a date range, drawn from the full allTransactions list.
+ * Note: expense total skips transactions with includeInBudget === false for budget evaluation. */
 export function useDateRangeTotals(
 	startDate: string | null | undefined,
 	endDate: string | null | undefined,
@@ -342,7 +345,7 @@ export function useDateRangeTotals(
 	for (const t of allTransactions) {
 		if (t.date >= startDate && t.date <= endDate) {
 			if (t.type === 'income') income += t.amount;
-			else expense += t.amount;
+			else if (t.includeInBudget !== false) expense += t.amount;
 		}
 	}
 	return { income, expense };

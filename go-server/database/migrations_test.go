@@ -1,10 +1,12 @@
 package database_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"splitwise-go/database"
+	"splitwise-go/migrations"
 	"splitwise-go/models"
 	"splitwise-go/testutil"
 
@@ -35,7 +37,7 @@ func TestMigrationsMatchModels(t *testing.T) {
 	if err := db.Create(&models.Friendship{UserID: u1.ID, FriendID: u2.ID, Status: "ACCEPTED"}).Error; err != nil {
 		t.Fatalf("friendships: %v", err)
 	}
-	cat := models.Category{Name: "Food"}
+	cat := models.Category{Name: "CustomCat"}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("categories: %v", err)
 	}
@@ -53,7 +55,7 @@ func TestMigrationsMatchModels(t *testing.T) {
 	if err := db.Preload("Splits").First(&got, "id = ?", exp.ID).Error; err != nil {
 		t.Fatalf("read expense: %v", err)
 	}
-	if !got.IsSettlement || len(got.Splits) != 1 {
+	if !got.IsSettlement || len(got.Splits) != 1 || got.IncludeInBudget == nil || !*got.IncludeInBudget {
 		t.Fatalf("round trip lost data: %+v", got)
 	}
 
@@ -64,6 +66,38 @@ func TestMigrationsMatchModels(t *testing.T) {
 	now := time.Now()
 	if err := db.Create(&models.Budget{UserID: u1.ID, Amount: decimal.NewFromInt(1000), Period: "MONTHLY", StartDate: now, EndDate: now.AddDate(0, 1, 0)}).Error; err != nil {
 		t.Fatalf("budgets: %v", err)
+	}
+
+	sal := models.SalaryEntry{
+		UserID:        u1.ID,
+		Amount:        decimal.NewFromInt(50000),
+		EffectiveFrom: now,
+		Currency:      "INR",
+	}
+	if err := db.Create(&sal).Error; err != nil {
+		t.Fatalf("salary_entries: %v", err)
+	}
+
+	acc := models.SavingsAccount{
+		UserID:         u1.ID,
+		Name:           "HDFC Savings",
+		Kind:           models.SavingsAccountKindBank,
+		OpeningBalance: decimal.NewFromInt(10000),
+		Currency:       "INR",
+	}
+	if err := db.Create(&acc).Error; err != nil {
+		t.Fatalf("savings_accounts: %v", err)
+	}
+
+	savTxn := models.SavingsTransaction{
+		AccountID: acc.ID,
+		UserID:    u1.ID,
+		Amount:    decimal.NewFromInt(2500),
+		Direction: models.SavingsTxnDirectionDeposit,
+		TxnDate:   now,
+	}
+	if err := db.Create(&savTxn).Error; err != nil {
+		t.Fatalf("savings_transactions: %v", err)
 	}
 }
 
@@ -109,9 +143,16 @@ func TestResetAllWipesUntrackedDatabase(t *testing.T) {
 	if users != 0 {
 		t.Fatalf("old data survived the reset: %d users", users)
 	}
+	entries, _ := migrations.SQLFS.ReadDir(".")
+	var expectedMigrations int64
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".up.sql") {
+			expectedMigrations++
+		}
+	}
 	var recorded int64
 	db.Raw("SELECT count(*) FROM " + database.SchemaMigrationsTable).Scan(&recorded)
-	if recorded != 2 {
-		t.Fatalf("want 2 recorded migrations after reset, got %d", recorded)
+	if recorded != expectedMigrations {
+		t.Fatalf("want %d recorded migrations after reset, got %d", expectedMigrations, recorded)
 	}
 }

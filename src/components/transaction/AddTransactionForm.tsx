@@ -14,6 +14,7 @@ import { getCategoryVisual, suggestCategoryFromText } from '../../utils/indianCa
 import { formatFriendlyDate } from '../../utils/date';
 
 import { useBudgetStore } from '../../stores/budgetStore';
+import { Checkbox } from '../ui';
 
 interface AddTransactionFormProps {
 	dateContext?: string;
@@ -42,6 +43,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 	const [selectedAccount, setSelectedAccount] = useState('Cash');
 	const [selectedCategory, setSelectedCategory] = useState('Food');
 	const [userOverrodeCategory, setUserOverrodeCategory] = useState(false);
+	const [includeInBudget, setIncludeInBudget] = useState(true);
 
 	// Sync defaults when accounts or categories change if currently selected is missing
 	React.useEffect(() => {
@@ -79,6 +81,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 			setUserOverrodeCategory(true);
 			setSplitStep(1);
 			setSubmitError(null);
+			setIncludeInBudget(editingTransaction.includeInBudget !== false);
 			setIsOpen(true);
 		}
 	}, [editingTransaction]);
@@ -180,6 +183,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 		setEvaluatedAmount(null);
 		setType('expense');
 		setUserOverrodeCategory(false);
+		setIncludeInBudget(true);
 		setEditingTransaction(null);
 		setSubmitError(null);
 		if (onClose) onClose();
@@ -198,6 +202,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 		const currentAccount = selectedAccount;
 		const currentDate = date;
 		const activeEdit = editingTransaction;
+		const currentInclude = currentType === 'expense' ? includeInBudget : true;
 
 		handleClose();
 
@@ -207,6 +212,8 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 					await editTransaction(activeEdit.id, {
 						amount: finalAmount,
 						type: currentType as 'income' | 'expense',
+
+						includeInBudget: currentInclude,
 						category: currentCategory,
 						account: currentAccount,
 						date: currentDate,
@@ -225,6 +232,8 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 					await addTransaction({
 						amount: finalAmount,
 						type: currentType as 'income' | 'expense',
+
+						includeInBudget: currentInclude,
 						category: currentCategory,
 						account: currentAccount,
 						date: currentDate,
@@ -279,6 +288,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 		}
 		if (parsed.account) setSelectedAccount(parsed.account);
 		if (parsed.date) setDate(parsed.date);
+		setIncludeInBudget(true);
 
 		setIsOpen(true);
 	};
@@ -306,6 +316,7 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 						setType('expense');
 						setUserOverrodeCategory(false);
 						setDate(initialDate);
+						setIncludeInBudget(true);
 						setIsOpen(true);
 					}}
 					className="w-12 h-12 rounded-full bg-ink text-white flex items-center justify-center cursor-pointer shadow-lg hover:bg-ink-soft active:scale-[0.95] transition-all"
@@ -468,7 +479,18 @@ export const AddTransactionForm: React.FC<AddTransactionFormProps> = ({ dateCont
 						</>
 					)}
 
-					{/* STEP 2: Paid by and splits management */}
+					{type === 'expense' && (
+						<div className="px-1 py-1">
+							<Checkbox
+								checked={includeInBudget}
+								onChange={setIncludeInBudget}
+								label="Count in budget"
+								// description="Include this expense when calculating your budget progress"
+							/>
+						</div>
+					)}
+
+{/* STEP 2: Paid by and splits management */}
 					{isSplit && splitStep === 2 && <SplitExpenseFields draft={draft} hideCategory={true} />}
 
 					{submitError && (

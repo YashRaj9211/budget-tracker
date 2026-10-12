@@ -1,9 +1,9 @@
 import { NavLink, useLocation } from 'react-router';
-import { Home, LayoutDashboard, Sliders, UserCheck, BarChart3, User } from 'lucide-react';
+import { Home, Wallet, Sliders, UserCheck, BarChart3, User } from 'lucide-react';
 
 const NAV_ITEMS = [
 	{ to: '/', icon: Home, label: 'Home' },
-	{ to: '/hub', icon: LayoutDashboard, label: 'Finance Hub' },
+	{ to: '/hub', icon: Wallet, label: 'Finance' },
 	{ to: '/split', icon: Sliders, label: 'Split Expenses' },
 	{ to: '/friends', icon: UserCheck, label: 'Friends' },
 	{ to: '/stats', icon: BarChart3, label: 'Analytics' },

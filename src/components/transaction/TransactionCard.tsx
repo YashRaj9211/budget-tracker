@@ -168,7 +168,7 @@ function TransactionCard({ transaction }: TransactionCardProps) {
 				icon={visual.icon}
 				iconBg={visual.bg}
 				title={transaction.description}
-				caption={getMeaningfulCaption(transaction)}
+				caption={<>{getMeaningfulCaption(transaction)}{transaction.includeInBudget === false && <span className="ml-1 text-text-muted"> · Not in budget</span>}</>}
 				rightContent={rightContent}
 			/>
 		</div>

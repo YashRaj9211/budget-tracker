@@ -56,5 +56,6 @@ docs {
   - Without `groupId`, you must be the payer and can only split with accepted friends.
   - With `groupId`, you, the payer (`userId`, optional) and everyone in `splits` must be group members.
   - `isSettlement: true` marks a settle-up payment.
+  - `includeInBudget: boolean` (optional, defaults to true) controls whether a PERSONAL or INCOME expense counts toward the budget.
   - 400 = bad input, 403 = not allowed.
 }

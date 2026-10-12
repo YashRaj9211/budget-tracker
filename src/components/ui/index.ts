@@ -11,3 +11,4 @@ export * from './StatTile';
 export * from './ListRow';
 export * from './BottomSheet';
 export * from './StatusActionSheet';
+export * from './Checkbox';

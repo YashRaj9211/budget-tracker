@@ -1,0 +1,36 @@
+meta {
+  name: Get Finance Summary
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/finance-summary?month=2026-07
+  body: none
+  auth: bearer
+}
+
+params:query {
+  month: 2026-07
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Finance Summary (`GetFinanceSummary`)
+
+  **Route**: `GET /api/_private/v1/finance-summary?month=YYYY-MM` (Bearer token required)
+
+  Returns high-level finance metrics for a given month:
+  - `month`: formatted as `YYYY-MM` (defaults to current month)
+  - `salary`: active salary in effect for that month
+  - `otherIncome`: sum of `INCOME` expenses in the month
+  - `totalIncome`: `salary + otherIncome`
+  - `totalSpent`: all `PERSONAL` expenses in the month (included and excluded)
+  - `budgetSpent`: `PERSONAL` expenses where `include_in_budget = true`
+  - `excludedSpent`: `totalSpent - budgetSpent`
+  - `left`: `totalIncome - totalSpent`
+  - `savingsTotal`: sum of balances across all active savings accounts (all time)
+}

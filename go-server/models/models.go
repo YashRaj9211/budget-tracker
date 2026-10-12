@@ -63,6 +63,24 @@ const (
 	RolesAPI     Roles = "API"
 )
 
+type SavingsAccountKind string
+
+const (
+	SavingsAccountKindBank       SavingsAccountKind = "BANK"
+	SavingsAccountKindFD         SavingsAccountKind = "FD"
+	SavingsAccountKindRD         SavingsAccountKind = "RD"
+	SavingsAccountKindMutualFund SavingsAccountKind = "MUTUAL_FUND"
+	SavingsAccountKindCash       SavingsAccountKind = "CASH"
+	SavingsAccountKindOther      SavingsAccountKind = "OTHER"
+)
+
+type SavingsTxnDirection string
+
+const (
+	SavingsTxnDirectionDeposit    SavingsTxnDirection = "DEPOSIT"
+	SavingsTxnDirectionWithdrawal SavingsTxnDirection = "WITHDRAWAL"
+)
+
 // User model
 type User struct {
 	ID        string     `gorm:"primaryKey;type:varchar(50)" json:"id"`
@@ -171,8 +189,9 @@ type Expense struct {
 	Description  string          `gorm:"not null" json:"description"`
 	Note         *string         `json:"note,omitempty"`
 	Type         ExpenseType     `gorm:"type:varchar(20);not null;index" json:"type"`
-	IsSettlement bool            `gorm:"not null;default:false" json:"isSettlement"` // true for "settle up" payments
-	ExpenseDate  time.Time       `gorm:"not null;index" json:"expenseDate"`
+	IsSettlement    bool            `gorm:"not null;default:false" json:"isSettlement"` // true for "settle up" payments
+	IncludeInBudget *bool           `gorm:"column:include_in_budget;default:true" json:"includeInBudget"`
+	ExpenseDate     time.Time       `gorm:"not null;index" json:"expenseDate"`
 	CreatedAt    time.Time       `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt    time.Time       `gorm:"autoUpdateTime" json:"updatedAt"`
 	DeletedAt    *time.Time      `gorm:"index" json:"-"`
@@ -256,6 +275,69 @@ func (Budget) TableName() string {
 	return "budgets"
 }
 
+// SalaryEntry model
+type SalaryEntry struct {
+	ID            string          `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	UserID        string          `gorm:"not null;index:idx_salary_user_from" json:"userId"`
+	Amount        decimal.Decimal `gorm:"type:decimal(12,2);not null" json:"amount"`
+	Currency      string          `gorm:"type:varchar(10);not null;default:'INR'" json:"currency"`
+	EffectiveFrom time.Time       `gorm:"type:date;not null;index:idx_salary_user_from" json:"effectiveFrom"`
+	Note          *string         `json:"note,omitempty"`
+	CreatedAt     time.Time       `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt     time.Time       `gorm:"autoUpdateTime" json:"updatedAt"`
+	DeletedAt     *time.Time      `gorm:"index" json:"-"`
+
+	User *User `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
+}
+
+func (SalaryEntry) TableName() string {
+	return "salary_entries"
+}
+
+// SavingsAccount model
+type SavingsAccount struct {
+	ID             string             `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	UserID         string             `gorm:"not null;index:idx_savings_accounts_user" json:"userId"`
+	Name           string             `gorm:"type:varchar(100);not null" json:"name"`
+	Kind           SavingsAccountKind `gorm:"type:varchar(20);not null;default:'OTHER'" json:"kind"`
+	OpeningBalance decimal.Decimal    `gorm:"type:decimal(12,2);not null;default:0" json:"openingBalance"`
+	OpeningDate    time.Time          `gorm:"type:date;not null;default:CURRENT_DATE" json:"openingDate"`
+	Currency       string             `gorm:"type:varchar(10);not null;default:'INR'" json:"currency"`
+	CreatedAt      time.Time          `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt      time.Time          `gorm:"autoUpdateTime" json:"updatedAt"`
+	DeletedAt      *time.Time         `gorm:"index" json:"-"`
+
+	// Balance is calculated on the fly: opening_balance + sum(DEPOSIT) - sum(WITHDRAWAL)
+	Balance *decimal.Decimal `gorm:"-" json:"balance,omitempty"`
+
+	User         *User                `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
+	Transactions []SavingsTransaction `gorm:"foreignKey:AccountID;constraint:OnDelete:CASCADE" json:"transactions,omitempty"`
+}
+
+func (SavingsAccount) TableName() string {
+	return "savings_accounts"
+}
+
+// SavingsTransaction model
+type SavingsTransaction struct {
+	ID        string              `gorm:"primaryKey;type:varchar(50)" json:"id"`
+	AccountID string              `gorm:"not null;index:idx_savings_txn_account" json:"accountId"`
+	UserID    string              `gorm:"not null;index" json:"userId"`
+	Amount    decimal.Decimal     `gorm:"type:decimal(12,2);not null" json:"amount"`
+	Direction SavingsTxnDirection `gorm:"type:varchar(10);not null" json:"direction"`
+	TxnDate   time.Time           `gorm:"type:date;not null;index:idx_savings_txn_account" json:"txnDate"`
+	Note      *string             `json:"note,omitempty"`
+	CreatedAt time.Time           `gorm:"autoCreateTime" json:"createdAt"`
+	DeletedAt *time.Time          `gorm:"index" json:"-"`
+
+	Account *SavingsAccount `gorm:"foreignKey:AccountID;constraint:OnDelete:CASCADE" json:"account,omitempty"`
+	User    *User           `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
+}
+
+func (SavingsTransaction) TableName() string {
+	return "savings_transactions"
+}
+
 // OTP model for login/verification
 type OTP struct {
 	ID        string    `gorm:"primaryKey;type:varchar(50)" json:"id"`
@@ -309,6 +391,10 @@ func (e *Expense) BeforeCreate(tx *gorm.DB) error {
 	if e.ID == "" {
 		e.ID = utils.GenerateUUID("expense")
 	}
+	if e.IncludeInBudget == nil {
+		t := true
+		e.IncludeInBudget = &t
+	}
 	return nil
 }
 
@@ -336,6 +422,36 @@ func (b *Budget) BeforeCreate(tx *gorm.DB) error {
 func (o *OTP) BeforeCreate(tx *gorm.DB) error {
 	if o.ID == "" {
 		o.ID = utils.GenerateUUID("otp")
+	}
+	return nil
+}
+
+func (s *SalaryEntry) BeforeCreate(tx *gorm.DB) error {
+	if s.ID == "" {
+		s.ID = utils.GenerateUUID("salary")
+	}
+	if s.Currency == "" {
+		s.Currency = "INR"
+	}
+	return nil
+}
+
+func (sa *SavingsAccount) BeforeCreate(tx *gorm.DB) error {
+	if sa.ID == "" {
+		sa.ID = utils.GenerateUUID("account")
+	}
+	if sa.Currency == "" {
+		sa.Currency = "INR"
+	}
+	if sa.Kind == "" {
+		sa.Kind = SavingsAccountKindOther
+	}
+	return nil
+}
+
+func (st *SavingsTransaction) BeforeCreate(tx *gorm.DB) error {
+	if st.ID == "" {
+		st.ID = utils.GenerateUUID("savtxn")
 	}
 	return nil
 }

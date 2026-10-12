@@ -214,7 +214,7 @@ export function budgetProgress(budget: Budget, all: Transaction[], today: string
 	const daysLeft = totalDays - daysElapsed;
 
 	const spent = sum(
-		expensesOf(all).filter((t) => t.date >= budget.startDate && t.date <= budget.endDate)
+		expensesOf(all).filter((t) => t.date >= budget.startDate && t.date <= budget.endDate && t.includeInBudget !== false)
 	);
 	const remaining = round2(budget.totalLimit - spent);
 	const percentUsed = budget.totalLimit > 0 ? round2((spent / budget.totalLimit) * 100) : 0;
@@ -257,7 +257,7 @@ export function budgetBurn(budget: Budget, all: Transaction[], today: string): B
 	const perDay = budget.totalLimit / totalDays;
 	const spendByDate = new Map<string, number>();
 	for (const t of expensesOf(all)) {
-		if (t.date >= budget.startDate && t.date <= budget.endDate) {
+		if (t.date >= budget.startDate && t.date <= budget.endDate && t.includeInBudget !== false) {
 			spendByDate.set(t.date, (spendByDate.get(t.date) ?? 0) + t.amount);
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"splitwise-go/database"
 	"splitwise-go/models"
 	"splitwise-go/websocket"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -188,9 +189,7 @@ func GetUserExpenses(c *gin.Context) {
 	}
 	userId := userIdVal.(string)
 
-	var expenses []models.Expense
-
-	result := database.DB.
+	query := database.DB.
 		Omit("User").
 		Omit("Splits.expenseId").
 		Omit("Splits.expense").
@@ -200,7 +199,18 @@ func GetUserExpenses(c *gin.Context) {
 		Preload("Splits.User").
 		Preload("Splits").
 		Joins("LEFT JOIN expense_splits ON expense_splits.expense_id = expenses.id").
-		Where("expenses.user_id = ? OR expense_splits.user_id = ?", userId, userId).
+		Where("expenses.user_id = ? OR expense_splits.user_id = ?", userId, userId)
+
+	if monthStr := strings.TrimSpace(c.Query("month")); monthStr != "" {
+		if t, err := time.Parse("2006-01", monthStr); err == nil {
+			monthStart := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+			monthEnd := time.Date(t.Year(), t.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+			query = query.Where("expenses.expense_date >= ? AND expenses.expense_date < ?", monthStart, monthEnd)
+		}
+	}
+
+	var expenses []models.Expense
+	result := query.
 		Group("expenses.id"). // Deduplicate because of join
 		Order("expenses.expense_date desc").
 		Find(&expenses)
@@ -326,6 +336,9 @@ func UpdateExpense(c *gin.Context) {
 
 	// Validate the NEW state the same way as creation. The payer stays the same unless
 	// a new (authorized) payer is provided.
+	// Remember whether the client sent includeInBudget. Validation below fills in a default,
+	// which would otherwise re-include an excluded expense on a plain edit.
+	includeInBudgetSent := input.IncludeInBudget != nil
 	sanitizeExpenseInput(&input)
 	if input.UserID == "" {
 		input.UserID = existingExpense.UserID
@@ -352,6 +365,9 @@ func UpdateExpense(c *gin.Context) {
 		existingExpense.CategoryID = input.CategoryID
 		existingExpense.GroupID = input.GroupID
 		existingExpense.UserID = input.UserID // already authorized above
+		if includeInBudgetSent {
+			existingExpense.IncludeInBudget = input.IncludeInBudget
+		}
 
 		// Delete ALL existing splits for this expense
 		if err := tx.Where("expense_id = ?", expenseId).Delete(&models.ExpenseSplit{}).Error; err != nil {

@@ -209,7 +209,8 @@ class SyncService {
 								(t.category ? categoryByName.get(t.category.toLowerCase()) : null);
 
 							const res = await expenseApi.create({
-								type: t.type === 'income' ? 'INCOME' : 'PERSONAL',
+								type: t.type === 'income' ? 'INCOME' : 'PERSONAL',
+								includeInBudget: t.includeInBudget !== false,
 								amount: t.amount,
 								description: t.description || 'Personal Transaction',
 								currency: 'INR',
@@ -229,7 +230,8 @@ class SyncService {
 								await expenseApi.update(targetId, {
 									amount: item.payload?.amount,
 									description: item.payload?.description,
-									type: item.payload?.type === 'income' ? 'INCOME' : 'PERSONAL',
+									type: item.payload?.type === 'income' ? 'INCOME' : 'PERSONAL',
+									includeInBudget: item.payload?.includeInBudget !== false,
 									expenseDate: item.payload?.date
 										? new Date(item.payload.date).toISOString()
 										: new Date().toISOString(),
@@ -288,7 +290,8 @@ class SyncService {
 						: null;
 
 					const res = await expenseApi.create({
-						type: t.type === 'income' ? 'INCOME' : 'PERSONAL',
+						type: t.type === 'income' ? 'INCOME' : 'PERSONAL',
+						includeInBudget: t.includeInBudget !== false,
 						amount: t.amount,
 						description: t.description || 'Personal Transaction',
 						currency: 'INR',
@@ -433,7 +436,8 @@ class SyncService {
 
 						const newLocal: Transaction = {
 							id: existingLocal ? existingLocal.id : exp.id,
-							type: exp.type === 'INCOME' ? 'income' : 'expense',
+							type: exp.type === 'INCOME' ? 'income' : 'expense',
+							includeInBudget: exp.includeInBudget !== false,
 							amount: parseFloat(exp.amount) || 0,
 							description: exp.description || '',
 							category: resolvedCat,

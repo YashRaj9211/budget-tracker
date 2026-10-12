@@ -115,6 +115,31 @@ describe('budget', () => {
 		expect(b[2].actual).toBeNull();
 		expect(b[9].ideal).toBe(1000);
 	});
+	it('skips excluded-from-budget expenses in budgetProgress and budgetBurn, but keeps in monthlyTrend', () => {
+		const p = budgetProgress(
+			budget,
+			[tx('2026-09-01', 300), { ...tx('2026-09-02', 500), includeInBudget: false }],
+			'2026-09-05'
+		);
+		expect(p.spent).toBe(300);
+		expect(p.remaining).toBe(700);
+
+		const b = budgetBurn(
+			budget,
+			[tx('2026-09-01', 100), { ...tx('2026-09-02', 500), includeInBudget: false }],
+			'2026-09-02'
+		);
+		expect(b[1].actual).toBe(100);
+
+		// Total spend view (monthly trend) keeps all rows including excluded
+		const trend = monthlyTrend(
+			[tx('2026-09-01', 300), { ...tx('2026-09-02', 500), includeInBudget: false }],
+			2026,
+			8,
+			1
+		);
+		expect(trend[0].expense).toBe(800);
+	});
 });
 
 describe('buildInsights', () => {

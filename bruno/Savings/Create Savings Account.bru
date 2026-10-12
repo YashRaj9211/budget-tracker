@@ -1,0 +1,40 @@
+meta {
+  name: Create Savings Account
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/savings-accounts
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "name": "HDFC Savings",
+    "kind": "BANK",
+    "openingBalance": "10000.00",
+    "currency": "INR"
+  }
+}
+
+docs {
+  # Create Savings Account (`CreateSavingsAccount`)
+
+  **Route**: `POST /api/_private/v1/savings-accounts` (Bearer token required)
+
+  Creates a new savings account:
+  - `name`: account name (required)
+  - `kind`: BANK, FD, RD, MUTUAL_FUND, CASH, or OTHER (default OTHER)
+  - `openingBalance`: decimal >= 0 (default 0)
+  - `currency`: default INR
+}

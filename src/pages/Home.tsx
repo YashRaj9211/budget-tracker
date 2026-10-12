@@ -28,7 +28,7 @@ function Home() {
 	const dayGroups = useDayGroups();
 	const { onEvent } = useWebSocket();
 	
-	const [activeTab, setActiveTab] = useState('daily');
+	const [activeTab, setActiveTab] = useState('budget');
 
 	useEffect(() => {
 		async function init() {
@@ -132,16 +132,15 @@ function Home() {
 			
 			<SegmentedTabs 
 				tabs={[
-					{ id: 'daily', label: 'Daily' },
-					{ id: 'monthly', label: 'Monthly' },
-					{ id: 'calendar', label: 'Calendar' }
+					{ id: 'budget', label: 'Budget' },
+					{ id: 'finance', label: 'Finance' },
 				]} 
 				activeId={activeTab} 
 				onChange={setActiveTab} 
 				className="mb-4"
 			/>
 			
-			{activeTab === 'daily' && (
+			{activeTab === 'budget' && (
 				<>
 					{isLoading ? (
 						<div className="my-4 p-6 bg-surface rounded-[24px] animate-pulse h-36 flex flex-col justify-between">
@@ -209,13 +208,7 @@ function Home() {
 				</>
 			)}
 			
-			{activeTab === 'monthly' && (
-				<div className="p-6 text-center text-sm text-text-muted">Monthly view coming soon</div>
-			)}
-			
-			{activeTab === 'calendar' && (
-				<div className="p-6 text-center text-sm text-text-muted">Calendar view coming soon</div>
-			)}
+			{activeTab === 'finance' && null}
 			
 			<AddTransactionForm />
 		</div>

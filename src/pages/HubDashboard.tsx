@@ -1,300 +1,338 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-	LayoutDashboard,
-	ArrowUpRight,
-	ArrowDownRight,
-	Activity,
-	TrendingUp,
-	PieChart as PieIcon,
-	Users,
-	Scale,
-} from 'lucide-react';
-import {
-	dashboardApi,
-	type AnalyticsResponse,
-	type ExpensesSummary,
-	type FriendsBalanceResponse,
-	type DailySpendStat,
+	financeOverviewApi,
+	financeSummaryApi,
+	salaryApi,
+	savingsApi,
+	type FinanceOverview,
+	type FinanceSummary,
+	type SalaryEntry,
+	type SavingsAccount,
 } from '../api/financeHubApi';
 import { useAuthStore } from '../stores/authStore';
 import { useWebSocket } from '../hooks/useWebSocket';
-import ChartCard from '../components/charts/ChartCard';
-import ChangeBadge from '../components/charts/ChangeBadge';
-import { CategoryDonut } from '../components/charts/StatsCharts';
+import { useTransactionStore } from '../stores/transactionStore';
+import * as db from '../db';
+import type { Transaction } from '../types';
+import { parseMonthKey, todayStr } from '../utils/date';
+import FinanceKPIHero from '../components/finance/FinanceKPIHero';
 import {
-	DailyTimelineChart,
-	FriendBalanceChart,
-	GroupSpendChart,
-	ServerTrendChart,
-} from '../components/charts/HubCharts';
-import { Card } from '../components/ui/Card';
-import SegmentedTabs from '../components/ui/SegmentedTabs';
-import { ListRow } from '../components/ui/ListRow';
+	BudgetedVsExcludedBento,
+	CategorySpendDonut,
+	MonthComparisonBento,
+	MonthWiseCashFlowBento,
+	SavingsTrajectoryChart,
+} from '../components/finance/FinanceCharts';
+import ExpenseExplorer from '../components/finance/ExpenseExplorer';
+import ChartCard from '../components/charts/ChartCard';
+import SalaryPanel from '../components/money/SalaryPanel';
+import AccountsPanel from '../components/money/AccountsPanel';
+import OverspendTracker from '../components/money/OverspendTracker';
+import PaymentMethodsPanel from '../components/money/PaymentMethodsPanel';
+import FlowChart from '../components/charts/FlowChart';
+import AddTransactionForm from '../components/transaction/AddTransactionForm';
+
+function displayMonthLong(ym: string): string {
+	const { year, month } = parseMonthKey(ym);
+	return new Date(year, month).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+const inr = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
+
+type TabType = 'Overview' | 'Trends' | 'Expenses' | 'Accounts' | 'Payments';
+
+const TABS: TabType[] = ['Overview', 'Trends', 'Expenses', 'Accounts', 'Payments'];
 
 export default function HubDashboard() {
 	const user = useAuthStore((s) => s.user);
-	const [summary, setSummary] = useState<ExpensesSummary | null>(null);
-	const [friendsBalance, setFriendsBalance] = useState<FriendsBalanceResponse | null>(null);
-	const [graphData, setGraphData] = useState<DailySpendStat[]>([]);
-	const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
-	const [period, setPeriod] = useState<'WEEK' | 'MONTH'>('MONTH');
+	const currentMonthKey = todayStr().slice(0, 7);
+	const [month, setMonth] = useState(currentMonthKey);
+	const [activeTab, setActiveTab] = useState<TabType>('Overview');
+
+	const [overview, setOverview] = useState<FinanceOverview | null>(null);
+	const [summary, setSummary] = useState<FinanceSummary | null>(null);
+	const [salaries, setSalaries] = useState<SalaryEntry[]>([]);
+	const [accounts, setAccounts] = useState<SavingsAccount[]>([]);
+	const [monthTransactions, setMonthTransactions] = useState<Transaction[]>([]);
+
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const { onEvent } = useWebSocket();
+	const setEditingTransaction = useTransactionStore((s) => s.setEditingTransaction);
 
-	const [chartView, setChartView] = useState<'CATEGORY' | 'GROUP' | 'SPLIT'>('CATEGORY');
-
-	const loadDashboardData = async () => {
+	const loadData = useCallback(async () => {
 		if (!user?.id) return;
 		setIsLoading(true);
 		setError(null);
 		try {
-			const [sumRes, friendsRes, graphRes, analyticsRes] = await Promise.all([
-				dashboardApi.getSummary(),
-				dashboardApi.getFriendsBalance(),
-				dashboardApi.getSpendOverviewGraph(period),
-				dashboardApi.getAnalytics(6),
+			const [ovRes, sumRes, salRes, accRes, txRes] = await Promise.all([
+				financeOverviewApi.get(month, 6),
+				financeSummaryApi.get(month),
+				salaryApi.list(),
+				savingsApi.listAccounts(),
+				db.getTransactionsByMonth(month),
 			]);
+			setOverview(ovRes);
 			setSummary(sumRes);
-			setAnalytics(analyticsRes);
-			setFriendsBalance(friendsRes);
-			setGraphData(graphRes || []);
+			setSalaries(salRes);
+			setAccounts(accRes);
+			setMonthTransactions(txRes || []);
 		} catch (err: any) {
-			setError(err.message || 'Failed to load dashboard data');
+			setError(err.message || 'Failed to load finance data');
 		} finally {
 			setIsLoading(false);
 		}
-	};
+	}, [user?.id, month]);
 
 	useEffect(() => {
-		loadDashboardData();
+		loadData();
 		window.hideSplashScreen?.();
-	}, [user?.id, period]);
+	}, [loadData]);
 
 	useEffect(() => {
 		const unsub = onEvent('REFETCH_EXPENSES', () => {
-			loadDashboardData();
+			loadData();
 		});
 		return () => unsub();
-	}, [onEvent, user?.id, period]);
+	}, [onEvent, loadData]);
+
+	const months = overview?.months ?? [];
+	const current = months.find((m) => m.month === month) || months[months.length - 1];
+	const currentIndex = months.findIndex((m) => m.month === current?.month);
+	const previous = currentIndex > 0 ? months[currentIndex - 1] : undefined;
+
+	const totalSpent = Number(current?.totalSpent || 0);
+	const prevSpent = previous ? Number(previous.totalSpent || 0) : 0;
+	const spendDelta = prevSpent > 0 ? Math.round(((totalSpent - prevSpent) / prevSpent) * 100) : 0;
+
+	const spendCurve = useMemo(() => {
+		if (totalSpent <= 0) {
+			return [0, 0, 0, 0, 0, 0, 0];
+		}
+		const expenseTxns = (monthTransactions || [])
+			.filter((t) => t.type === 'expense')
+			.sort((a, b) => a.date.localeCompare(b.date));
+
+		if (expenseTxns.length === 0) {
+			return [
+				0,
+				Math.round(totalSpent * 0.18),
+				Math.round(totalSpent * 0.38),
+				Math.round(totalSpent * 0.62),
+				Math.round(totalSpent * 0.82),
+				Math.round(totalSpent * 0.95),
+				totalSpent,
+			];
+		}
+
+		let running = 0;
+		const cumulative = expenseTxns.map((t) => {
+			running += Number(t.amount || 0);
+			return running;
+		});
+
+		const points = 7;
+		const curveData: number[] = [0];
+		for (let i = 1; i < points; i++) {
+			const idx = Math.min(
+				Math.floor((i / (points - 1)) * (cumulative.length - 1)),
+				cumulative.length - 1
+			);
+			curveData.push(cumulative[idx] || 0);
+		}
+		curveData[curveData.length - 1] = totalSpent;
+		return curveData;
+	}, [monthTransactions, totalSpent]);
 
 	return (
-		<div className="w-full space-y-3 pb-28">
-			{/* Title block */}
-			<div className="flex items-center justify-between mb-4">
+		<div className="w-full space-y-3.5 pb-28 pt-1">
+			{/* 1. Top Segmented Tabs Bar (Image 1 top) */}
+			<div className="bg-[#eef2ee] rounded-full p-1 flex items-center gap-0.5 overflow-x-auto shadow-sm scrollbar-width-none">
+				{TABS.map((tab) => {
+					const isActive = activeTab === tab;
+					return (
+						<button
+							key={tab}
+							type="button"
+							onClick={() => setActiveTab(tab)}
+							className={`shrink-0 rounded-full px-3 py-2 text-[12px] transition-all cursor-pointer whitespace-nowrap ${
+								isActive
+									? 'bg-ink text-white font-semibold shadow-sm'
+									: 'text-text/70 hover:text-text font-medium'
+							}`}
+						>
+							{tab}
+						</button>
+					);
+				})}
+			</div>
+
+			{/* 2. Month Header Card (Image 2 top) */}
+			<div className="bg-card rounded-[28px] p-3.5 px-4 flex items-center justify-between shadow-sm">
 				<div>
-					<h1 className="text-[20px] font-medium text-text flex items-center gap-2">
-						<LayoutDashboard className="w-5 h-5 text-text-muted" strokeWidth={1.5} /> Finance hub
-					</h1>
-					<p className="text-[12px] text-text-muted">Live synced cashflow</p>
+					<span className="text-[11px] font-medium text-text-muted block">Overview</span>
+					<label
+						htmlFor="finance-month-input"
+						className="text-[17px] font-bold text-text cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1.5"
+						title="Click to change month"
+					>
+						{displayMonthLong(month)}
+					</label>
+					<input
+						type="month"
+						id="finance-month-input"
+						aria-label="Select month"
+						value={month}
+						onChange={(e) => e.target.value && setMonth(e.target.value)}
+						className="sr-only"
+					/>
 				</div>
-				{isLoading && (
-					<span className="text-[12px] text-text-muted animate-pulse">Syncing…</span>
-				)}
+
+				<button
+					type="button"
+					onClick={() => setMonth(currentMonthKey)}
+					className="bg-ink text-white rounded-full px-5 py-1.5 text-[12px] font-semibold hover:bg-black active:scale-95 transition-all cursor-pointer shadow-sm"
+				>
+					Current
+				</button>
 			</div>
 
 			{error && (
-				<div className="p-3 bg-danger-soft text-danger rounded-[20px] text-sm">
+				<div className="p-3 bg-danger-soft text-danger rounded-[20px] text-xs">
 					{error}
 				</div>
 			)}
 
-			{/* 2×2 KPI grid */}
-			<div className="grid grid-cols-2 gap-3">
-				<Card variant="mint" nested>
-					<p className="text-[12px] text-text-muted mb-1">Total spent</p>
-					<p className="text-[22px] font-medium text-text">₹{summary ? Number(summary.totalExpenses).toLocaleString() : '0'}</p>
-				</Card>
-				<Card variant="lavender" nested>
-					<p className="text-[12px] text-text-muted mb-1">Personal</p>
-					<p className="text-[22px] font-medium text-text">₹{summary ? Number(summary.personalExpenses).toLocaleString() : '0'}</p>
-				</Card>
-				<Card variant="white" nested>
-					<p className="text-[12px] text-text-muted mb-1 flex items-center gap-1">
-						<ArrowUpRight className="w-3 h-3" /> Lent
-					</p>
-					<p className="text-[22px] font-medium text-mint-deep">+₹{summary ? Number(summary.totalLent).toLocaleString() : '0'}</p>
-				</Card>
-				<Card variant="white" nested>
-					<p className="text-[12px] text-text-muted mb-1 flex items-center gap-1">
-						<ArrowDownRight className="w-3 h-3" /> Borrowed
-					</p>
-					<p className="text-[22px] font-medium text-danger">-₹{summary ? Number(summary.totalBorrowed).toLocaleString() : '0'}</p>
-				</Card>
-			</div>
+			{isLoading && !overview && (
+				<div className="h-64 animate-pulse rounded-[28px] bg-card/60" />
+			)}
 
-			{/* Monthly spending chart */}
-			<ChartCard
-				className="mb-0"
-				title="Monthly spending"
-				subtitle="What you paid for yourself + your share of split bills"
-				icon={<TrendingUp className="w-4 h-4" strokeWidth={1.5} />}
-				action={
-					analytics ? (
-						<ChangeBadge
-							change={
-								analytics.comparison.lastMonth > 0 ? analytics.comparison.changePercent : null
-							}
-						/>
-					) : undefined
-				}
-				empty={!analytics || analytics.trend.every((m) => m.spent === 0 && m.lent === 0)}
-				emptyText="No spending in the last 6 months"
-			>
-				{analytics && <ServerTrendChart data={analytics.trend} />}
-			</ChartCard>
+			{/* ========================================================================= */}
+			{/* TAB 1: OVERVIEW (Full visual matching Image 2 top & Image 1 bottom)     */}
+			{/* ========================================================================= */}
+			{activeTab === 'Overview' && overview && current && (
+				<div className="space-y-3.5">
+					{/* Image 2: Hero Bento Cards (Total savings, Month cashflow left, Incoming, Spent, Overspend) */}
+					<FinanceKPIHero
+						currentMonth={current}
+						previousMonth={previous}
+						summary={overview.summary}
+						onOpenAccounts={() => setActiveTab('Accounts')}
+						onOpenSalary={() => setActiveTab('Accounts')}
+					/>
 
-			<div className="mt-4">
-				<SegmentedTabs
-					tabs={[
-						{ id: 'CATEGORY', label: 'Category' },
-						{ id: 'GROUP', label: 'Groups' },
-						{ id: 'SPLIT', label: 'Splits' },
-					]}
-					activeId={chartView}
-					onChange={(id) => setChartView(id as 'CATEGORY' | 'GROUP' | 'SPLIT')}
-				/>
-			</div>
+					{/* Image 1: Month-wise cash flow Card (Dark with 4 rounded pillar bars, active hatched mint) */}
+					<MonthWiseCashFlowBento months={months} activeMonth={month} />
 
-			<div className="grid grid-cols-1 gap-3">
-				{chartView === 'CATEGORY' && (
-					<ChartCard
-						className="mb-0"
-						title="By category"
-						subtitle="Last 6 months"
-						icon={<PieIcon className="w-4 h-4" strokeWidth={1.5} />}
-						empty={!analytics || analytics.categories.length === 0}
-						emptyText="No categorised spending yet"
-					>
-						{analytics && (
-							<CategoryDonut
-								data={analytics.categories.map((c) => ({
-									name: c.name,
-									amount: c.amount,
-									color: c.color || undefined,
-								}))}
-								centerLabel="Spent"
-							/>
-						)}
-					</ChartCard>
-				)}
+					{/* Image 1: Budgeted vs excluded Card (White with lavender & ink split pill bar) */}
+					<BudgetedVsExcludedBento currentMonth={current} />
 
-				{chartView === 'GROUP' && (
-					<ChartCard
-						className="mb-0"
-						title="Groups"
-						subtitle="Your share vs what the group spent"
-						icon={<Users className="w-4 h-4" strokeWidth={1.5} />}
-						empty={!analytics || analytics.groups.length === 0}
-						emptyText="No group spending yet"
-					>
-						{analytics && <GroupSpendChart data={analytics.groups} />}
-					</ChartCard>
-				)}
+					{/* Image 1: Avg monthly spend & Vs last month (2-Column Mint & Lavender cards) */}
+					<MonthComparisonBento
+						months={months}
+						currentMonth={current}
+						previousMonth={previous}
+					/>
 
-				{chartView === 'SPLIT' && (
-					<ChartCard
-						className="mb-0"
-						title="Who owes whom"
-						subtitle="Green: they owe you · Red: you owe them"
-						icon={<Scale className="w-4 h-4" strokeWidth={1.5} />}
-						empty={
-							!friendsBalance ||
-							(friendsBalance.owesYou.length === 0 && friendsBalance.youOwe.length === 0)
-						}
-						emptyText="You are all settled up"
-					>
-						{friendsBalance && (
-							<FriendBalanceChart
-								data={[
-									...friendsBalance.owesYou.map((f) => ({ name: f.name, balance: Number(f.amount) })),
-									...friendsBalance.youOwe.map((f) => ({ name: f.name, balance: -Number(f.amount) })),
-								]}
-							/>
-						)}
-					</ChartCard>
-				)}
-			</div>
-
-			{/* Friend debt balances */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-				<Card variant="white">
-					<div className="flex items-center justify-between mb-3">
-						<h2 className="text-[15px] font-medium text-text flex items-center gap-1.5">
-							<ArrowUpRight className="w-4 h-4 text-mint-deep" strokeWidth={1.5} /> Owed to you
-						</h2>
-						<span className="text-[12px] font-medium bg-mint text-ink px-2 py-0.5 rounded-full">
-							{friendsBalance?.owesYou.length || 0}
-						</span>
-					</div>
-					{friendsBalance?.owesYou.length === 0 ? (
-						<p className="text-[12px] text-text-muted py-2">No one owes you money right now.</p>
-					) : (
-						<div className="divide-y divide-black/5">
-							{friendsBalance?.owesYou.map((f) => (
-								<ListRow
-									key={f.id}
-									icon={<span className="font-medium text-[14px]">{f.name.slice(0, 1)}</span>}
-									title={f.name}
-									caption={`@${f.username}`}
-									amount={`+₹${Number(f.amount).toLocaleString()}`}
-									amountColor="mint-deep"
-								/>
-							))}
-						</div>
-					)}
-				</Card>
-
-				<Card variant="white">
-					<div className="flex items-center justify-between mb-3">
-						<h2 className="text-[15px] font-medium text-text flex items-center gap-1.5">
-							<ArrowDownRight className="w-4 h-4 text-danger" strokeWidth={1.5} /> You owe
-						</h2>
-						<span className="text-[12px] font-medium bg-danger-soft text-danger px-2 py-0.5 rounded-full">
-							{friendsBalance?.youOwe.length || 0}
-						</span>
-					</div>
-					{friendsBalance?.youOwe.length === 0 ? (
-						<p className="text-[12px] text-text-muted py-2">You don't owe any money!</p>
-					) : (
-						<div className="divide-y divide-black/5">
-							{friendsBalance?.youOwe.map((f) => (
-								<ListRow
-									key={f.id}
-									icon={<span className="font-medium text-[14px]">{f.name.slice(0, 1)}</span>}
-									title={f.name}
-									caption={`@${f.username}`}
-									amount={`-₹${Number(f.amount).toLocaleString()}`}
-									amountColor="danger"
-								/>
-							))}
-						</div>
-					)}
-				</Card>
-			</div>
-
-			{/* Daily spend timeline */}
-			<Card variant="white">
-				<div className="flex items-center justify-between mb-3">
-					<h2 className="text-[15px] font-medium text-text flex items-center gap-2">
-						<Activity className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> Daily timeline
-					</h2>
-					<SegmentedTabs
-						tabs={[{ id: 'WEEK', label: '7D' }, { id: 'MONTH', label: '30D' }]}
-						activeId={period}
-						onChange={(id) => setPeriod(id as 'WEEK' | 'MONTH')}
-						className="w-20"
+					{/* Layered FlowChart stream with draggable value markers */}
+					<FlowChart
+						title="Spending Velocity"
+						value={totalSpent}
+						delta={spendDelta}
+						caption={previous ? `Compared to ${inr(prevSpent)} last month` : undefined}
+						data={spendCurve}
+						markers={[0.2, 0.55, 0.9]}
+						formatValue={inr}
+						colors={['#1d1b3a', '#3b3478', '#7d6df0', '#aa9cf5']}
+						timelineLabels={['1st ' + displayMonthLong(month).slice(0, 3), '15th Mid', 'Today']}
+						budgetLimit={Number(current?.budgetLimit || 0)}
+						showIndicators={true}
 					/>
 				</div>
-				{graphData.every((d) => d.total === 0) ? (
-					<p className="text-[12px] text-text-muted py-4 text-center">
-						No transactions recorded in this period.
-					</p>
-				) : (
-					<DailyTimelineChart data={graphData} />
-				)}
-			</Card>
+			)}
+
+			{/* ========================================================================= */}
+			{/* TAB 2: TRENDS (Multi-month Savings Trajectory, Overspend, Categories)     */}
+			{/* ========================================================================= */}
+			{activeTab === 'Trends' && overview && current && (
+				<div className="space-y-3.5">
+					{/* Layered FlowChart stream with draggable value markers */}
+					<FlowChart
+						title="Spending Progression"
+						value={totalSpent}
+						delta={spendDelta}
+						caption={`Month velocity · ${displayMonthLong(month)}`}
+						data={spendCurve}
+						markers={[0.25, 0.55, 0.9]}
+						formatValue={inr}
+						colors={['#1d1b3a', '#3b3478', '#7d6df0', '#aa9cf5']}
+						timelineLabels={['Start', 'Halfway', 'Month end']}
+						budgetLimit={Number(current?.budgetLimit || 0)}
+						showIndicators={true}
+					/>
+
+					{/* Savings Trajectory Chart */}
+					<ChartCard
+						title="Savings growth trajectory"
+						subtitle="Green area = total savings · Violet line = after budget overspends"
+						empty={months.length === 0}
+						emptyText="No savings accounts recorded yet"
+					>
+						<SavingsTrajectoryChart months={months} />
+					</ChartCard>
+
+					{/* Category Spend Distribution for Month */}
+					<ChartCard
+						title={`Spending by category · ${displayMonthLong(month)}`}
+						subtitle="All expenses including budget-excluded items"
+						empty={!summary || !summary.categories || summary.categories.length === 0}
+						emptyText="No categorised expenses this month"
+					>
+						{summary?.categories && <CategorySpendDonut categories={summary.categories} />}
+					</ChartCard>
+
+					{/* Month-by-month Overspend Tracker */}
+					<OverspendTracker
+						months={months}
+						overspendTotal={overview.summary.overspendTotal}
+					/>
+				</div>
+			)}
+
+			{/* ========================================================================= */}
+			{/* TAB 3: EXPENSES (Audit All Transactions, Budgeted, Excluded, Income)       */}
+			{/* ========================================================================= */}
+			{activeTab === 'Expenses' && (
+				<div className="space-y-3.5">
+					<ExpenseExplorer
+						transactions={monthTransactions}
+						onEditTransaction={setEditingTransaction}
+					/>
+				</div>
+			)}
+
+			{/* ========================================================================= */}
+			{/* TAB 4: ACCOUNTS (Salary Management & Savings Accounts)                    */}
+			{/* ========================================================================= */}
+			{activeTab === 'Accounts' && (
+				<div className="space-y-3.5">
+					<SalaryPanel salaries={salaries} onChanged={loadData} />
+					<AccountsPanel accounts={accounts} onChanged={loadData} />
+				</div>
+			)}
+
+			{/* ========================================================================= */}
+			{/* TAB 5: PAYMENTS (Payment Methods Management & Account Mapping)            */}
+			{/* ========================================================================= */}
+			{activeTab === 'Payments' && (
+				<PaymentMethodsPanel
+					accounts={accounts}
+					transactions={monthTransactions}
+				/>
+			)}
+
+			<AddTransactionForm />
 		</div>
 	);
 }

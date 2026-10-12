@@ -20,6 +20,9 @@ export interface Transaction {
 	paidByMe?: boolean;
 	totalAmount?: number;
 	lentAmount?: number;
+
+	// Budget inclusion (undefined or true = included, false = excluded)
+	includeInBudget?: boolean;
 }
 
 export * from './sync';

@@ -5,7 +5,6 @@ import {
 	Mail,
 	Phone,
 	Sliders,
-	LayoutDashboard,
 	UserCheck,
 	BarChart3,
 	LogOut,
@@ -13,6 +12,8 @@ import {
 	CheckCircle,
 	FileSpreadsheet,
 	Download,
+	Wallet,
+	Receipt,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import ExcelTools from '../components/common/ExcelTools';
@@ -48,18 +49,25 @@ export default function Profile() {
 
 	const shortcuts = [
 		{
+			to: '/hub',
+			icon: Wallet,
+			label: 'Finance',
+			caption: 'Savings, income & cashflow',
+			variant: 'mint' as const,
+		},
+		{
 			to: '/budget',
 			icon: Sliders,
 			label: 'Budget settings',
 			caption: 'Configure allowance',
-			variant: 'mint' as const,
+			variant: 'lavender' as const,
 		},
 		{
-			to: '/hub',
-			icon: LayoutDashboard,
-			label: 'Finance hub',
-			caption: 'Live balance stats',
-			variant: 'lavender' as const,
+			to: '/split',
+			icon: Receipt,
+			label: 'Split expenses',
+			caption: 'Groups & shared bills',
+			variant: 'white' as const,
 		},
 		{
 			to: '/friends',

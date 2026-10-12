@@ -567,6 +567,335 @@ paths:
         '404':
           description: Not a member
 
+  /api/_private/v1/salary:
+    get:
+      summary: List salary history (newest first)
+      tags: [Salary]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Salary history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalaryEntry'
+        '401':
+          description: Missing or invalid token
+    post:
+      summary: Add a salary entry
+      tags: [Salary]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSalaryBody'
+      responses:
+        '201':
+          description: Salary entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryEntry'
+        '400':
+          description: Invalid input
+        '401':
+          description: Missing or invalid token
+
+  /api/_private/v1/salary/active:
+    get:
+      summary: Get active salary for a month (?month=YYYY-MM)
+      tags: [Salary]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          schema:
+            type: string
+            example: '2026-07'
+      responses:
+        '200':
+          description: Active salary
+        '400':
+          description: Invalid month format
+        '401':
+          description: Missing or invalid token
+
+  /api/_private/v1/salary/{id}:
+    put:
+      summary: Edit a salary entry
+      tags: [Salary]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSalaryBody'
+      responses:
+        '200':
+          description: Salary entry updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryEntry'
+        '400':
+          description: Invalid input
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Salary entry not found
+    delete:
+      summary: Soft delete a salary entry
+      tags: [Salary]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Salary entry not found
+
+  /api/_private/v1/savings-accounts:
+    get:
+      summary: List all savings accounts with calculated balances
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Accounts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavingsAccount'
+        '401':
+          description: Missing or invalid token
+    post:
+      summary: Create a savings account
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSavingsAccountBody'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavingsAccount'
+        '400':
+          description: Invalid input
+        '401':
+          description: Missing or invalid token
+
+  /api/_private/v1/savings-accounts/{id}:
+    get:
+      summary: Get savings account by ID
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavingsAccount'
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Account not found
+    put:
+      summary: Update a savings account
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSavingsAccountBody'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavingsAccount'
+        '400':
+          description: Invalid input
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Account not found
+    delete:
+      summary: Soft delete a savings account and its transactions
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Account not found
+
+  /api/_private/v1/savings-accounts/{id}/transactions:
+    get:
+      summary: List transactions for an account
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavingsTransaction'
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Account not found
+    post:
+      summary: Add a transaction (deposit or withdrawal)
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSavingsTransactionBody'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavingsTransaction'
+        '400':
+          description: Invalid input
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Account not found
+
+  /api/_private/v1/savings-accounts/{id}/transactions/{txnId}:
+    delete:
+      summary: Soft delete a transaction
+      tags: [Savings]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: txnId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          description: Missing or invalid token
+        '404':
+          description: Transaction not found
+
+  /api/_private/v1/finance-summary:
+    get:
+      summary: Get monthly finance summary (salary, spend, budget, savings)
+      tags: [FinanceSummary]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          required: false
+          schema:
+            type: string
+            example: '2026-07'
+          description: Target month in YYYY-MM format. Defaults to current month.
+      responses:
+        '200':
+          description: Monthly summary metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceSummaryResponse'
+        '400':
+          description: Invalid month format
+        '401':
+          description: Missing or invalid token
+
 components:
   securitySchemes:
     BearerAuth:
@@ -669,6 +998,9 @@ components:
         isSettlement:
           type: boolean
           description: true for a settle-up payment between two members
+        includeInBudget:
+          type: boolean
+          description: Whether this transaction counts toward the budget (defaults to true)
         createdAt:
           type: string
           format: date-time
@@ -808,6 +1140,9 @@ components:
           description: Payer. Leave out for "me". Another member is allowed only inside a group you both belong to.
         isSettlement:
           type: boolean
+        includeInBudget:
+          type: boolean
+          description: Whether this transaction counts toward the budget (PERSONAL and INCOME only, defaults to true)
         splits:
           type: array
           description: Only for SPLIT. Amounts must add up to amount; each user once.
@@ -908,3 +1243,186 @@ components:
             thisMonth: {type: number}
             lastMonth: {type: number}
             changePercent: {type: number, description: 0 when there is no last month to compare}
+
+    SalaryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        amount:
+          type: string
+          description: Decimal string
+        currency:
+          type: string
+          default: INR
+        effectiveFrom:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSalaryBody:
+      type: object
+      required: [amount, effectiveFrom]
+      properties:
+        amount:
+          type: string
+          description: Decimal string >= 0
+        currency:
+          type: string
+          default: INR
+        effectiveFrom:
+          type: string
+          example: '2026-01-01'
+        note:
+          type: string
+
+    UpdateSalaryBody:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+        effectiveFrom:
+          type: string
+        note:
+          type: string
+
+    SavingsAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [BANK, FD, RD, MUTUAL_FUND, CASH, OTHER]
+        openingBalance:
+          type: string
+          description: Decimal string
+        balance:
+          type: string
+          description: Dynamically calculated balance
+        currency:
+          type: string
+          default: INR
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSavingsAccountBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [BANK, FD, RD, MUTUAL_FUND, CASH, OTHER]
+          default: OTHER
+        openingBalance:
+          type: string
+          default: '0'
+        currency:
+          type: string
+          default: INR
+
+    UpdateSavingsAccountBody:
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [BANK, FD, RD, MUTUAL_FUND, CASH, OTHER]
+        openingBalance:
+          type: string
+        currency:
+          type: string
+
+    SavingsTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        userId:
+          type: string
+        amount:
+          type: string
+        direction:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL]
+        txnDate:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateSavingsTransactionBody:
+      type: object
+      required: [amount, direction, txnDate]
+      properties:
+        amount:
+          type: string
+        direction:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL]
+        txnDate:
+          type: string
+          example: '2026-07-01'
+        note:
+          type: string
+
+    FinanceSummaryResponse:
+      type: object
+      properties:
+        month:
+          type: string
+          example: '2026-07'
+        salary:
+          type: string
+          description: Decimal string of active salary for the month
+        otherIncome:
+          type: string
+          description: Decimal string of sum of INCOME expenses in the month
+        totalIncome:
+          type: string
+          description: salary + otherIncome
+        totalSpent:
+          type: string
+          description: All PERSONAL expenses in the month (included and excluded)
+        budgetSpent:
+          type: string
+          description: PERSONAL expenses in the month with include_in_budget=true
+        excludedSpent:
+          type: string
+          description: totalSpent - budgetSpent
+        left:
+          type: string
+          description: totalIncome - totalSpent
+        savingsTotal:
+          type: string
+          description: Total balance across all active savings accounts
+

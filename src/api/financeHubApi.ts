@@ -45,6 +45,8 @@ export interface CreateExpensePayload {
 	userId?: string;
 	/** True for a "settle up" payment between two members. */
 	isSettlement?: boolean;
+	/** false = excluded from the budget. Missing = included. */
+	includeInBudget?: boolean;
 	splits?: ExpenseSplitInput[];
 }
 
@@ -60,6 +62,8 @@ export interface Expense {
 	categoryId?: string;
 	groupId?: string;
 	isSettlement?: boolean;
+	/** false = excluded from the budget. Missing = included. */
+	includeInBudget?: boolean;
 	createdAt: string;
 	updatedAt: string;
 	splits?: ExpenseSplit[];
@@ -249,8 +253,10 @@ export const expenseApi = {
 		return res.data;
 	},
 
-	getUserExpenses: async (): Promise<Expense[]> => {
-		const res = await apiClient.get<Expense[]>('/api/_private/v1/expenses');
+	getUserExpenses: async (month?: string): Promise<Expense[]> => {
+		const res = await apiClient.get<Expense[]>('/api/_private/v1/expenses', {
+			params: month ? { month } : undefined,
+		});
 		return res.data;
 	},
 
@@ -430,3 +436,181 @@ export const budgetApi = {
 	},
 };
 
+// -------------------------------------------------------------
+// FINANCE HUB: salary, savings accounts, monthly summary
+// -------------------------------------------------------------
+
+const FINANCE_BASE = '/api/_private/v1';
+
+export interface SalaryEntry {
+	id: string;
+	amount: string;
+	currency: string;
+	effectiveFrom: string; // 'YYYY-MM-DD'
+	note?: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface SalaryPayload {
+	amount: number | string;
+	currency?: string;
+	effectiveFrom: string;
+	note?: string;
+}
+
+export type SavingsAccountKind = 'BANK' | 'FD' | 'RD' | 'MUTUAL_FUND' | 'CASH' | 'OTHER';
+export type SavingsDirection = 'DEPOSIT' | 'WITHDRAWAL';
+
+export interface SavingsAccount {
+	id: string;
+	name: string;
+	kind: SavingsAccountKind;
+	openingBalance: string;
+	openingDate: string;
+	currency: string;
+	balance?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface SavingsAccountPayload {
+	name: string;
+	kind?: SavingsAccountKind;
+	openingBalance?: number | string;
+	openingDate?: string;
+	currency?: string;
+}
+
+export interface SavingsTransaction {
+	id: string;
+	accountId: string;
+	amount: string;
+	direction: SavingsDirection;
+	txnDate: string; // 'YYYY-MM-DD'
+	note?: string | null;
+	createdAt: string;
+}
+
+export interface SavingsTransactionPayload {
+	amount: number | string;
+	direction: SavingsDirection;
+	txnDate: string;
+	note?: string;
+}
+
+export interface MonthCategorySpend {
+	categoryId: string;
+	name: string;
+	color: string;
+	amount: string;
+	budgeted: string;
+	excluded: string;
+}
+
+export interface FinanceSummary {
+	month: string;
+	salary: string;
+	otherIncome: string;
+	totalIncome: string;
+	totalSpent: string;
+	budgetSpent: string;
+	excludedSpent: string;
+	left: string;
+	savingsTotal: string;
+	categories?: MonthCategorySpend[];
+}
+
+export const salaryApi = {
+	list: async (): Promise<SalaryEntry[]> => {
+		const res = await apiClient.get<SalaryEntry[]>(`${FINANCE_BASE}/salary`);
+		return res.data;
+	},
+	create: async (payload: SalaryPayload): Promise<SalaryEntry> => {
+		const res = await apiClient.post<SalaryEntry>(`${FINANCE_BASE}/salary`, payload);
+		return res.data;
+	},
+	remove: async (id: string): Promise<void> => {
+		await apiClient.delete(`${FINANCE_BASE}/salary/${id}`);
+	},
+};
+
+export const savingsApi = {
+	listAccounts: async (): Promise<SavingsAccount[]> => {
+		const res = await apiClient.get<SavingsAccount[]>(`${FINANCE_BASE}/savings-accounts`);
+		return res.data;
+	},
+	createAccount: async (payload: SavingsAccountPayload): Promise<SavingsAccount> => {
+		const res = await apiClient.post<SavingsAccount>(`${FINANCE_BASE}/savings-accounts`, payload);
+		return res.data;
+	},
+	deleteAccount: async (id: string): Promise<void> => {
+		await apiClient.delete(`${FINANCE_BASE}/savings-accounts/${id}`);
+	},
+	listTransactions: async (accountId: string): Promise<SavingsTransaction[]> => {
+		const res = await apiClient.get<SavingsTransaction[]>(`${FINANCE_BASE}/savings-accounts/${accountId}/transactions`);
+		return res.data;
+	},
+	addTransaction: async (accountId: string, payload: SavingsTransactionPayload): Promise<SavingsTransaction> => {
+		const res = await apiClient.post<SavingsTransaction>(`${FINANCE_BASE}/savings-accounts/${accountId}/transactions`, payload);
+		return res.data;
+	},
+	deleteTransaction: async (accountId: string, txnId: string): Promise<void> => {
+		await apiClient.delete(`${FINANCE_BASE}/savings-accounts/${accountId}/transactions/${txnId}`);
+	},
+};
+
+export const financeSummaryApi = {
+	get: async (month: string): Promise<FinanceSummary> => {
+		const res = await apiClient.get<FinanceSummary>(`${FINANCE_BASE}/finance-summary`, { params: { month } });
+		return res.data;
+	},
+};
+
+export interface OverviewAccountBalance {
+	accountId: string;
+	name: string;
+	kind: SavingsAccountKind;
+	balance: string;
+}
+
+export interface OverviewMonth {
+	month: string;
+	salary: string;
+	otherIncome: string;
+	totalIncome: string;
+	totalSpent: string;
+	budgetSpent: string;
+	excludedSpent: string;
+	left: string;
+	budgetLimit: string;
+	hasBudget: boolean;
+	budgetLeft: string;
+	overspent: boolean;
+	overspentBy: string;
+	overspendTotal: string;
+	savingsEnd: string;
+	netSavingsFlow: string;
+	adjustedSavings: string;
+	accounts: OverviewAccountBalance[];
+}
+
+export interface FinanceOverview {
+	to: string;
+	months: OverviewMonth[];
+	accounts: OverviewAccountBalance[];
+	summary: {
+		month: string;
+		savingsTotal: string;
+		overspendTotal: string;
+		adjustedSavings: string;
+		overspentMonths: number;
+	};
+}
+
+export const financeOverviewApi = {
+	get: async (month: string, months = 6): Promise<FinanceOverview> => {
+		const res = await apiClient.get<FinanceOverview>(`${FINANCE_BASE}/finance/overview`, { params: { month, months } });
+		return res.data;
+	},
+};

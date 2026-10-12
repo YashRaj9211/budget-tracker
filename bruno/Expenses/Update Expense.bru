@@ -56,7 +56,7 @@ docs {
   
   ### Description
   Modifies an existing expense record atomically:
-  - Updates top-level attributes (`amount`, `description`, `note`, `type`, `expenseDate`, `categoryId`, `groupId`).
+  - Updates top-level attributes (`amount`, `description`, `note`, `type`, `expenseDate`, `categoryId`, `groupId`, `includeInBudget`).
   - Clears existing splits and recreates the updated split shares if `type = 'SPLIT'`.
   - Reloads related models with preloads (`Splits.User`, `Category`, `Group`).
   - Broadcasts `REFETCH_EXPENSES` event over WebSocket to all relevant members.

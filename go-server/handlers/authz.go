@@ -142,11 +142,20 @@ func validateExpenseShape(in *models.Expense) *httpError {
 	}
 
 	// PERSONAL/INCOME never have splits (prevents the dashboard counting them twice).
+	// includeInBudget applies to PERSONAL and INCOME; defaults to true if omitted.
 	if in.Type != models.ExpenseTypeSplit {
 		in.Splits = nil
 		in.IsSettlement = false
+		if in.IncludeInBudget == nil {
+			defaultTrue := true
+			in.IncludeInBudget = &defaultTrue
+		}
 		return nil
 	}
+
+	// SPLIT expenses ignore includeInBudget; always default to true.
+	defaultTrue := true
+	in.IncludeInBudget = &defaultTrue
 
 	if len(in.Splits) == 0 {
 		if in.GroupID != nil {

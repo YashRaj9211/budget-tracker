@@ -41,6 +41,10 @@ const router = createBrowserRouter([
 						lazy: async () => ({ Component: (await import("./pages/HubDashboard")).default }),
 					},
 					{
+						path: "/finance",
+						lazy: async () => ({ Component: (await import("./pages/HubDashboard")).default }),
+					},
+					{
 						path: "/budget",
 						Component: BudgetSettings,
 					},
@@ -55,6 +59,10 @@ const router = createBrowserRouter([
 					{
 						path: "/friends",
 						Component: Friends,
+					},
+					{
+						path: "/money",
+						lazy: async () => ({ Component: (await import("./pages/HubDashboard")).default }),
 					},
 					{
 						path: "/profile",
