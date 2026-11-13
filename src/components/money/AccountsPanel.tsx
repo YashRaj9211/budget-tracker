@@ -1,5 +1,5 @@
-import { useCallback, useState, type FormEvent } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, Landmark, Plus, Trash2, Wallet, History } from 'lucide-react';
+import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Landmark, Plus, Trash2, History } from 'lucide-react';
 import { Card } from '../ui/Card';
 import {
   savingsApi,
@@ -8,6 +8,8 @@ import {
   type SavingsDirection,
   type SavingsTransaction,
 } from '../../api/financeHubApi';
+import { usePaymentMethodStore } from '../../stores/paymentMethodStore';
+import type { Transaction } from '../../types';
 import DatePickerField from './DatePickerField';
 import {
   AmountInput,
@@ -45,12 +47,45 @@ const ACCOUNT_THEMES = [
 
 export default function AccountsPanel({
   accounts,
+  transactions = [],
   onChanged,
 }: {
   accounts: SavingsAccount[];
+  transactions?: Transaction[];
   onChanged: () => Promise<void>;
 }) {
-  const total = accounts.reduce((sum, account) => sum + num(account.balance ?? account.openingBalance), 0);
+  const methods = usePaymentMethodStore((s) => s.methods);
+
+  // Compute live deductions from linked payment methods
+  const accountDeductions = useMemo(() => {
+    const map = new Map<string, { totalSpent: number; netBalance: number; linkedMethodNames: string[] }>();
+    for (const a of accounts) {
+      const base = num(a.balance ?? a.openingBalance);
+      const linked = methods.filter((m) => m.linkedAccountIds.includes(a.id));
+      let spent = 0;
+      for (const m of linked) {
+        const txAccounts = new Set(m.transactionAccounts);
+        for (const t of transactions) {
+          if (txAccounts.has(t.account)) {
+            if (t.type === 'expense') spent += t.amount;
+            else spent -= t.amount;
+          }
+        }
+      }
+      map.set(a.id, {
+        totalSpent: spent,
+        netBalance: Math.max(0, base - spent),
+        linkedMethodNames: linked.map((m) => m.name),
+      });
+    }
+    return map;
+  }, [accounts, methods, transactions]);
+
+  const total = accounts.reduce((sum, account) => {
+    const d = accountDeductions.get(account.id);
+    return sum + (d ? d.netBalance : num(account.balance ?? account.openingBalance));
+  }, 0);
+
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
@@ -82,6 +117,9 @@ export default function AccountsPanel({
               const theme = ACCOUNT_THEMES[index % ACCOUNT_THEMES.length];
               const balance = num(account.balance ?? account.openingBalance);
               const kindLabel = KINDS.find((k) => k.value === account.kind)?.label ?? account.kind;
+              const deduction = accountDeductions.get(account.id);
+              const hasDeductions = !!(deduction && deduction.totalSpent > 0);
+              const displayBalance = hasDeductions ? deduction.netBalance : balance;
               const isSelected = selectedAccountId === account.id;
 
               return (
@@ -99,8 +137,13 @@ export default function AccountsPanel({
                   <div className="relative z-10 flex items-center justify-between h-full">
                     <div className="flex-1 pr-4">
                       <p className="text-[13px] font-semibold opacity-70 mb-1">{kindLabel}</p>
-                      <h3 className="text-xl font-bold leading-tight mb-4 pr-2">{account.name}</h3>
-                      <p className="text-2xl font-black tracking-tight">{money(balance)}</p>
+                      <h3 className="text-xl font-bold leading-tight mb-2 pr-2">{account.name}</h3>
+                      <p className="text-2xl font-black tracking-tight">{money(displayBalance)}</p>
+                      {hasDeductions && (
+                        <p className="text-[11px] opacity-75 mt-1 font-medium">
+                          Base: {money(balance)} (-{money(deduction.totalSpent)} via {deduction.linkedMethodNames.join(', ')})
+                        </p>
+                      )}
                     </div>
                     
                     {/* Right side circular avatar/icon */}

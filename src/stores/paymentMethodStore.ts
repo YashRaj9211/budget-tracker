@@ -23,9 +23,11 @@ export interface PaymentMethod {
 
 export interface PaymentMethodState {
 	methods: PaymentMethod[];
+	deletedMethodNames?: string[];
 	addMethod: (data: Omit<PaymentMethod, "id" | "createdAt">) => void;
 	updateMethod: (id: string, data: Partial<Omit<PaymentMethod, "id" | "createdAt">>) => void;
 	removeMethod: (id: string) => void;
+	syncExistingAccounts: (accountNames: string[]) => void;
 	linkAccount: (methodId: string, savingsAccountId: string) => void;
 	unlinkAccount: (methodId: string, savingsAccountId: string) => void;
 	linkTransactionAccount: (methodId: string, txAccount: string) => void;
@@ -43,14 +45,53 @@ export const PAYMENT_KIND_META: Record<PaymentMethodKind, { label: string; hexCo
 	OTHER:        { label: "Other",       hexColor: "#6B7280" },
 };
 
+export function inferKindFromName(name: string): PaymentMethodKind {
+	const lower = name.toLowerCase();
+	if (
+		lower.includes("upi") ||
+		lower.includes("gpay") ||
+		lower.includes("google pay") ||
+		lower.includes("paytm") ||
+		lower.includes("phonepe") ||
+		lower.includes("bhim")
+	) {
+		return "UPI";
+	}
+	if (lower.includes("cash")) {
+		return "CASH";
+	}
+	if (lower.includes("credit")) {
+		return "CREDIT_CARD";
+	}
+	if (lower.includes("debit") || lower.includes("card")) {
+		return "DEBIT_CARD";
+	}
+	if (lower.includes("net") || lower.includes("bank") || lower.includes("neft") || lower.includes("rtgs")) {
+		return "NET_BANKING";
+	}
+	if (lower.includes("wallet")) {
+		return "WALLET";
+	}
+	if (lower.includes("emi")) {
+		return "EMI";
+	}
+	return "OTHER";
+}
+
 export const usePaymentMethodStore = create<PaymentMethodState>()(
 	persist(
 		(set) => ({
 			methods: [],
+			deletedMethodNames: [],
 
 			addMethod(data) {
 				const method: PaymentMethod = { ...data, id: crypto.randomUUID(), createdAt: Date.now() };
-				set((s) => ({ methods: [...s.methods, method] }));
+				set((s) => ({
+					methods: [...s.methods, method],
+					deletedMethodNames: (s.deletedMethodNames || []).filter(
+						(n) => n.toLowerCase() !== data.name.toLowerCase()
+					),
+				}));
 			},
 
 			updateMethod(id, data) {
@@ -58,7 +99,48 @@ export const usePaymentMethodStore = create<PaymentMethodState>()(
 			},
 
 			removeMethod(id) {
-				set((s) => ({ methods: s.methods.filter((m) => m.id !== id) }));
+				set((s) => {
+					const target = s.methods.find((m) => m.id === id);
+					return {
+						methods: s.methods.filter((m) => m.id !== id),
+						deletedMethodNames: target
+							? [...(s.deletedMethodNames || []), target.name.toLowerCase()]
+							: s.deletedMethodNames || [],
+					};
+				});
+			},
+
+			syncExistingAccounts(accountNames) {
+				set((s) => {
+					const existingNames = new Set(s.methods.map((m) => m.name.toLowerCase()));
+					const deleted = new Set((s.deletedMethodNames || []).map((n) => n.toLowerCase()));
+					const toAdd: PaymentMethod[] = [];
+
+					for (const name of accountNames) {
+						const trimmed = name.trim();
+						if (!trimmed) continue;
+						const lower = trimmed.toLowerCase();
+						// Check if already covered by an existing method name or transactionAccounts
+						const alreadyHandled =
+							existingNames.has(lower) ||
+							s.methods.some((m) => m.transactionAccounts.some((ta) => ta.toLowerCase() === lower));
+
+						if (alreadyHandled || deleted.has(lower)) continue;
+
+						toAdd.push({
+							id: crypto.randomUUID(),
+							name: trimmed,
+							kind: inferKindFromName(trimmed),
+							linkedAccountIds: [],
+							transactionAccounts: [trimmed],
+							createdAt: Date.now(),
+						});
+						existingNames.add(lower);
+					}
+
+					if (toAdd.length === 0) return s;
+					return { methods: [...s.methods, ...toAdd] };
+				});
 			},
 
 			linkAccount(methodId, savingsAccountId) {

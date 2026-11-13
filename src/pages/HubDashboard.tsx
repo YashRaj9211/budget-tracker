@@ -318,7 +318,7 @@ export default function HubDashboard() {
 			{activeTab === 'Accounts' && (
 				<div className="space-y-3.5">
 					<SalaryPanel salaries={salaries} onChanged={loadData} />
-					<AccountsPanel accounts={accounts} onChanged={loadData} />
+					<AccountsPanel accounts={accounts} transactions={monthTransactions} onChanged={loadData} />
 				</div>
 			)}
 
@@ -329,6 +329,7 @@ export default function HubDashboard() {
 				<PaymentMethodsPanel
 					accounts={accounts}
 					transactions={monthTransactions}
+					onGoToAccounts={() => setActiveTab('Accounts')}
 				/>
 			)}
 
