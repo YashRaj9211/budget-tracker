@@ -28,6 +28,11 @@ export async function requestSignupOtpApi(data: { email: string; username: strin
 	return response.data;
 }
 
+export async function checkUsernameApi(username: string): Promise<{ available: boolean; reason?: string }> {
+	const response = await apiClient.get<{ available: boolean; reason?: string }>('/api/_public/v1/users/username-available', { params: { username } });
+	return response.data;
+}
+
 export async function verifyOtpApi(email: string, code: string): Promise<AuthResponse> {
 	const response = await apiClient.post<AuthResponse>('/api/_public/v1/users/verify-otp', { email, code });
 	return response.data;

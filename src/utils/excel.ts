@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { todayStr } from './date';
 import type { Transaction } from '../types';
 
 /**
@@ -19,7 +20,7 @@ export function exportTransactionsToExcel(transactions: Transaction[], filename?
 	const workbook = XLSX.utils.book_new();
 	XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
 
-	const exportName = filename || `budget_tracker_transactions_${new Date().toISOString().slice(0, 10)}.xlsx`;
+	const exportName = filename || `budget_tracker_transactions_${todayStr()}.xlsx`;
 	XLSX.writeFile(workbook, exportName);
 }
 

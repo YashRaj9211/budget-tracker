@@ -22,6 +22,8 @@ export interface FlowChartProps {
 	timelineLabels?: string[];
 	showIndicators?: boolean;
 	budgetLimit?: number;
+	/** Replaces the default legend; one entry per stream layer, outermost first */
+	legend?: { color: string; label: string; value?: string }[];
 }
 
 const VB_W = 600;
@@ -80,6 +82,7 @@ export function FlowChart({
 	timelineLabels = ['Day 1', 'Mid Month', 'Today / End'],
 	showIndicators = true,
 	budgetLimit,
+	legend,
 }: FlowChartProps) {
 	const plotRef = useRef<HTMLDivElement>(null);
 	const [positions, setPositions] = useState(markers);
@@ -286,7 +289,20 @@ export function FlowChart({
 
 					{/* Layer stream indicators and guidance */}
 					<div className="flex items-center justify-between flex-wrap gap-2 pt-1 text-[11px]">
-						<div className="flex items-center gap-3 text-white/60">
+						{legend ? (
+								<div className="flex w-full flex-col gap-1.5 text-white/70">
+									{legend.map((l) => (
+										<div key={l.label} className="flex items-center justify-between">
+											<span className="flex items-center gap-2">
+												<span className="w-2.5 h-2.5 rounded-full" style={{ background: l.color }} />
+												{l.label}
+											</span>
+											{l.value && <span className="font-semibold text-white">{l.value}</span>}
+										</div>
+									))}
+								</div>
+							) : (
+								<div className="flex items-center gap-3 text-white/60">
 							<span className="flex items-center gap-1.5">
 								<span className="w-2 h-2 rounded-full bg-[#aa9cf5]" />
 								Core spend
@@ -300,8 +316,9 @@ export function FlowChart({
 								Monthly envelope
 							</span>
 						</div>
+							)}
 
-						{budgetLimit !== undefined && budgetLimit > 0 && (
+							{!legend && budgetLimit !== undefined && budgetLimit > 0 && (
 							<span className="text-white/50 font-mono text-[11px]">
 								Budget: {formatValue(budgetLimit)}
 							</span>

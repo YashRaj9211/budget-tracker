@@ -11,6 +11,7 @@ import {
 import { usePaymentMethodStore } from '../../stores/paymentMethodStore';
 import type { Transaction } from '../../types';
 import DatePickerField from './DatePickerField';
+import { getAccountDeduction } from './paymentShared';
 import {
   AmountInput,
   Chip,
@@ -56,26 +57,15 @@ export default function AccountsPanel({
 }) {
   const methods = usePaymentMethodStore((s) => s.methods);
 
-  // Compute live deductions from linked payment methods
+  // Live balances from linked payment methods (same math as the Payments tab)
   const accountDeductions = useMemo(() => {
     const map = new Map<string, { totalSpent: number; netBalance: number; linkedMethodNames: string[] }>();
     for (const a of accounts) {
-      const base = num(a.balance ?? a.openingBalance);
-      const linked = methods.filter((m) => m.linkedAccountIds.includes(a.id));
-      let spent = 0;
-      for (const m of linked) {
-        const txAccounts = new Set(m.transactionAccounts);
-        for (const t of transactions) {
-          if (txAccounts.has(t.account)) {
-            if (t.type === 'expense') spent += t.amount;
-            else spent -= t.amount;
-          }
-        }
-      }
+      const d = getAccountDeduction(a, methods, transactions);
       map.set(a.id, {
-        totalSpent: spent,
-        netBalance: Math.max(0, base - spent),
-        linkedMethodNames: linked.map((m) => m.name),
+        totalSpent: d.totalSpent - d.totalIncome,
+        netBalance: d.deductedBalance,
+        linkedMethodNames: d.linkedMethods.map((m) => m.name),
       });
     }
     return map;

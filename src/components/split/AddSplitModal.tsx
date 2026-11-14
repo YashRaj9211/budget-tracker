@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { todayStr } from '../../utils/date';
 import { Receipt, Calendar, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
 import { errorMessage, useSplitDraft } from '../../hooks/useSplitDraft';
@@ -20,7 +21,7 @@ export default function AddSplitModal() {
 	const [step, setStep] = useState<1 | 2>(1);
 	const [title, setTitle] = useState('');
 	const [amount, setAmount] = useState('');
-	const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+	const [date, setDate] = useState(todayStr());
 	const [error, setError] = useState<string | null>(null);
 
 	const numAmount = parseFloat(amount) || 0;

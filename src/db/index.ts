@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
+import { todayStr } from '../utils/date';
 import type { Transaction, Budget, SyncQueueItem } from '../types';
 import type { Group, SplitExpense } from '../types/split';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
@@ -269,7 +270,7 @@ export async function seedSplitData(): Promise<void> {
 			createdAt: Date.now() - 86400000 * 10,
 		};
 
-		const today = new Date().toISOString().split('T')[0];
+		const today = todayStr();
 
 		const sampleSplits: SplitExpense[] = [
 			{

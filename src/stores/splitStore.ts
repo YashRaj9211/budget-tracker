@@ -146,7 +146,7 @@ const isSettlement = !!exp.isSettlement;
 		splitAmong,
 		splitAmongIds,
 		splitIds,
-		date: exp.expenseDate ? exp.expenseDate.split('T')[0] : new Date(exp.createdAt).toISOString().split('T')[0],
+		date: exp.expenseDate ? exp.expenseDate.split('T')[0] : new Date(exp.createdAt).toLocaleDateString('en-CA'),
 		createdAt: new Date(exp.createdAt).getTime(),
 		isSettlement,
 		serverId: exp.id,

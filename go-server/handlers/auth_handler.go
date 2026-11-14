@@ -40,15 +40,15 @@ func RequestSignupOTP(c *gin.Context) {
 	}
 
 	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
-	trimmedUsername := strings.TrimSpace(strings.ToLower(body.Username))
+	trimmedUsername := services.NormalizeUsername(body.Username)
 
 	if trimmedEmail == "" || !strings.Contains(trimmedEmail, "@") {
 		c.JSON(400, gin.H{"error": "Please provide a valid email address"})
 		return
 	}
 
-	if trimmedUsername == "" {
-		c.JSON(400, gin.H{"error": "Please provide a valid username"})
+	if msg := services.ValidateUsername(trimmedUsername); msg != "" {
+		c.JSON(400, gin.H{"error": msg})
 		return
 	}
 
@@ -59,11 +59,9 @@ func RequestSignupOTP(c *gin.Context) {
 		return
 	}
 
-	// 2. Check if username has reached max limit
-	var count int64
-	database.DB.Model(&models.User{}).Where("LOWER(username) = ?", trimmedUsername).Count(&count)
-	if count >= 9999 {
-		c.JSON(400, gin.H{"error": "This username is currently full. Please choose another."})
+	// 2. Check the username is still free (bloom filter fast path, DB confirm)
+	if services.IsUsernameTaken(trimmedUsername) {
+		c.JSON(409, gin.H{"error": "This username is already taken. Please choose another."})
 		return
 	}
 
@@ -102,7 +100,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	trimmedEmail := strings.TrimSpace(strings.ToLower(body.Email))
-	trimmedUsername := strings.TrimSpace(strings.ToLower(body.Username))
+	trimmedUsername := services.NormalizeUsername(body.Username)
 	trimmedCode := strings.TrimSpace(body.Code)
 
 	if trimmedCode == "" {
@@ -129,10 +127,12 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	var count int64
-	database.DB.Model(&models.User{}).Where("LOWER(username) = ?", trimmedUsername).Count(&count)
-	if count >= 9999 {
-		c.JSON(400, gin.H{"error": "This username is currently full. Please choose another."})
+	if msg := services.ValidateUsername(trimmedUsername); msg != "" {
+		c.JSON(400, gin.H{"error": msg})
+		return
+	}
+	if services.IsUsernameTaken(trimmedUsername) {
+		c.JSON(409, gin.H{"error": "This username is already taken. Please choose another."})
 		return
 	}
 
@@ -147,47 +147,26 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Generate a unique tag
-	var tag string
-	var attempts int
-	for attempts = 0; attempts < 50; attempts++ {
-		tag = fmt.Sprintf("%04d", rand.Intn(10000))
-		identifier := fmt.Sprintf("%s#%s", trimmedUsername, tag)
-
-		// Check bloom filter first (fast path)
-		if services.UserBloomFilter != nil && !services.UserBloomFilter.TestString(identifier) {
-			break // Definitely available!
-		}
-
-		// DB fallback for false positives
-		var existing models.User
-		if err := database.DB.Where("LOWER(username) = ? AND tag = ?", trimmedUsername, tag).First(&existing).Error; err != nil {
-			break // Tag is actually available
-		}
-	}
-	if attempts == 50 {
-		c.JSON(500, gin.H{"error": "Failed to generate a unique user tag. Please try again or use a different username."})
-		return
-	}
-
 	user := models.User{
 		Email:     trimmedEmail,
 		Name:      strings.TrimSpace(body.Name),
 		Username:  trimmedUsername,
-		Tag:       tag,
 		Password:  hashedPassword,
 		Phone:     body.Phone,
 		AvatarURL: body.AvatarURL,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
+		// The unique index is the final arbiter if two signups race for one username.
+		if strings.Contains(err.Error(), "idx_users_username_lower") || strings.Contains(err.Error(), "SQLSTATE 23505") {
+			c.JSON(409, gin.H{"error": "This username is already taken. Please choose another."})
+			return
+		}
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	if services.UserBloomFilter != nil {
-		services.UserBloomFilter.AddString(fmt.Sprintf("%s#%s", trimmedUsername, tag))
-	}
+	services.AddUsernameToBloom(trimmedUsername)
 
 	// Delete used OTP
 	database.DB.Delete(&otp)
@@ -205,6 +184,20 @@ func CreateUser(c *gin.Context) {
 		},
 		"token": token,
 	})
+}
+
+// CheckUsernameAvailable powers the live "is this username free?" hint on the signup form.
+func CheckUsernameAvailable(c *gin.Context) {
+	username := services.NormalizeUsername(c.Query("username"))
+	if msg := services.ValidateUsername(username); msg != "" {
+		c.JSON(200, gin.H{"available": false, "reason": msg})
+		return
+	}
+	if services.IsUsernameTaken(username) {
+		c.JSON(200, gin.H{"available": false, "reason": "Username is already taken"})
+		return
+	}
+	c.JSON(200, gin.H{"available": true})
 }
 
 type LoginBody struct {

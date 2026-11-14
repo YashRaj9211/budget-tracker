@@ -16,6 +16,11 @@ export interface PaymentMethod {
 	name: string;
 	kind: PaymentMethodKind;
 	linkedAccountIds: string[];
+	/**
+	 * accountId → 'YYYY-MM-DD' the link was made. Only transactions on/after this
+	 * date move that account's balance. Missing = legacy link, counts all history.
+	 */
+	linkDates?: Record<string, string>;
 	transactionAccounts: string[];
 	note?: string;
 	createdAt: number;
@@ -28,8 +33,11 @@ export interface PaymentMethodState {
 	updateMethod: (id: string, data: Partial<Omit<PaymentMethod, "id" | "createdAt">>) => void;
 	removeMethod: (id: string) => void;
 	syncExistingAccounts: (accountNames: string[]) => void;
-	linkAccount: (methodId: string, savingsAccountId: string) => void;
+	/** `since`: 'YYYY-MM-DD' cutoff (default today); null = count all history. */
+	linkAccount: (methodId: string, savingsAccountId: string, since?: string | null) => void;
 	unlinkAccount: (methodId: string, savingsAccountId: string) => void;
+	/** Change the date a link starts counting from; null = count all history. */
+	setLinkDate: (methodId: string, savingsAccountId: string, since: string | null) => void;
 	linkTransactionAccount: (methodId: string, txAccount: string) => void;
 	unlinkTransactionAccount: (methodId: string, txAccount: string) => void;
 }
@@ -143,13 +151,28 @@ export const usePaymentMethodStore = create<PaymentMethodState>()(
 				});
 			},
 
-			linkAccount(methodId, savingsAccountId) {
+			linkAccount(methodId, savingsAccountId, since) {
+				const cutoff = since === undefined ? new Date().toLocaleDateString("en-CA") : since;
 				set((s) => ({
-					methods: s.methods.map((m) =>
-						m.id === methodId && !m.linkedAccountIds.includes(savingsAccountId)
-							? { ...m, linkedAccountIds: [...m.linkedAccountIds, savingsAccountId] }
-							: m,
-					),
+					methods: s.methods.map((m) => {
+						if (m.id !== methodId || m.linkedAccountIds.includes(savingsAccountId)) return m;
+						const linkDates = { ...(m.linkDates ?? {}) };
+						if (cutoff) linkDates[savingsAccountId] = cutoff;
+						else delete linkDates[savingsAccountId]; // drop any stale date: null = all history
+						return { ...m, linkedAccountIds: [...m.linkedAccountIds, savingsAccountId], linkDates };
+					}),
+				}));
+			},
+
+			setLinkDate(methodId, savingsAccountId, since) {
+				set((s) => ({
+					methods: s.methods.map((m) => {
+						if (m.id !== methodId || !m.linkedAccountIds.includes(savingsAccountId)) return m;
+						const linkDates = { ...(m.linkDates ?? {}) };
+						if (since) linkDates[savingsAccountId] = since;
+						else delete linkDates[savingsAccountId];
+						return { ...m, linkDates };
+					}),
 				}));
 			},
 
@@ -157,7 +180,13 @@ export const usePaymentMethodStore = create<PaymentMethodState>()(
 				set((s) => ({
 					methods: s.methods.map((m) =>
 						m.id === methodId
-							? { ...m, linkedAccountIds: m.linkedAccountIds.filter((id) => id !== savingsAccountId) }
+							? {
+									...m,
+									linkedAccountIds: m.linkedAccountIds.filter((id) => id !== savingsAccountId),
+									linkDates: Object.fromEntries(
+										Object.entries(m.linkDates ?? {}).filter(([id]) => id !== savingsAccountId),
+									),
+								}
 							: m,
 					),
 				}));

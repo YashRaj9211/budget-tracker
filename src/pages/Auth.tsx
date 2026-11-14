@@ -16,6 +16,7 @@ import {
 	AlertCircle,
 	RefreshCw,
 } from 'lucide-react';
+import { checkUsernameApi } from '../api/authApi';
 import { useAuthStore } from '../stores/authStore';
 import AnimatedLogo from '../components/common/AnimatedLogo';
 
@@ -58,6 +59,7 @@ export default function Auth() {
 	const [username, setUsername] = useState('');
 	const [phone, setPhone] = useState('');
 	const [isUsernameTouched, setIsUsernameTouched] = useState(false);
+	const [usernameStatus, setUsernameStatus] = useState<{ state: 'idle' | 'checking' | 'ok' | 'bad'; reason?: string }>({ state: 'idle' });
 
 	// 6-digit OTP state
 	const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
@@ -85,6 +87,25 @@ export default function Auth() {
 			}, 150);
 		}
 	}, [otpState]);
+
+	// Debounced live availability check (server answers via bloom filter, so it is cheap)
+	useEffect(() => {
+		if (mode !== 'signup' || !username) {
+			setUsernameStatus({ state: 'idle' });
+			return;
+		}
+		setUsernameStatus({ state: 'checking' });
+		let cancelled = false;
+		const t = setTimeout(async () => {
+			try {
+				const res = await checkUsernameApi(username);
+				if (!cancelled) setUsernameStatus(res.available ? { state: 'ok' } : { state: 'bad', reason: res.reason });
+			} catch {
+				if (!cancelled) setUsernameStatus({ state: 'idle' });
+			}
+		}, 350);
+		return () => { cancelled = true; clearTimeout(t); };
+	}, [username, mode]);
 
 	const handleSwitchMode = (newMode: 'welcome' | 'login' | 'signup') => {
 		setMode(newMode);
@@ -180,6 +201,10 @@ export default function Auth() {
 					}
 					if (!username.trim()) {
 						useAuthStore.setState({ error: 'Please enter a username' });
+						return;
+					}
+					if (usernameStatus.state === 'bad') {
+						useAuthStore.setState({ error: usernameStatus.reason || 'Username is not available' });
 						return;
 					}
 					if (!email.trim()) {
@@ -450,6 +475,13 @@ export default function Auth() {
 														className="w-full bg-surface rounded-full pl-11 pr-4 h-11 text-sm text-text placeholder-text-muted/60 border border-transparent focus:border-ink/20 focus:bg-white focus:outline-none focus:ring-2 focus:ring-mint transition-all font-mono text-[13px]"
 													/>
 												</div>
+												{usernameStatus.state !== 'idle' && (
+													<p className={`mt-1 ml-3 text-[11px] ${usernameStatus.state === 'bad' ? 'text-danger' : usernameStatus.state === 'ok' ? 'text-text' : 'text-text-muted'}`}>
+														{usernameStatus.state === 'checking' && 'Checking availability...'}
+														{usernameStatus.state === 'ok' && `@${username} is available`}
+														{usernameStatus.state === 'bad' && usernameStatus.reason}
+													</p>
+												)}
 											</div>
 										</>
 									)}

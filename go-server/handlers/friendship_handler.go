@@ -26,23 +26,28 @@ func SendFriendshipRequest(c *gin.Context) {
 	identifier := strings.TrimSpace(body.Identifier)
 	var targetUser models.User
 
-	if strings.Contains(identifier, "@") {
+	if identifier == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter an email or username"})
+		return
+	}
+
+	// Email contains "@" in the middle; a leading "@" is just a username prefix (@john).
+	if strings.Contains(strings.TrimPrefix(identifier, "@"), "@") {
 		if err := database.DB.Where("LOWER(email) = ?", strings.ToLower(identifier)).First(&targetUser).Error; err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User with this email not found"})
 			return
 		}
-	} else if strings.Contains(identifier, "#") {
-		parts := strings.SplitN(identifier, "#", 2)
-		username := strings.ToLower(strings.TrimSpace(parts[0]))
-		tag := strings.TrimSpace(parts[1])
-		
-		if err := database.DB.Where("LOWER(username) = ? AND tag = ?", username, tag).First(&targetUser).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User with this username and tag not found"})
+	} else {
+		// Usernames are unique; a legacy "#tag" suffix is ignored.
+		username := strings.ToLower(strings.TrimSpace(strings.SplitN(strings.TrimPrefix(identifier, "@"), "#", 2)[0]))
+		if username == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter an email or username"})
 			return
 		}
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter a valid email or Username#Tag (e.g. John#1234)"})
-		return
+		if err := database.DB.Where("LOWER(username) = ?", username).First(&targetUser).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "No user found with that username"})
+			return
+		}
 	}
 
 	currentUserId, exists := c.Get("userId")

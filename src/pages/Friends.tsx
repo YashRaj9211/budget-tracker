@@ -121,7 +121,7 @@ export default function Friends() {
 						<Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" strokeWidth={1.5} />
 						<input
 							type="text"
-							placeholder="friend@example.com or Username#Tag"
+							placeholder="Email or username"
 							value={identifierInput}
 							onChange={(e) => setIdentifierInput(e.target.value)}
 							required
@@ -170,7 +170,7 @@ export default function Friends() {
 				friends.length === 0 ? (
 					<div className="p-6 bg-surface rounded-[20px] text-center">
 						<p className="text-[14px] font-medium text-text-muted">No friends added yet.</p>
-						<p className="text-[12px] text-text-muted mt-1">Send a friend invite using their email or username above!</p>
+						<p className="text-[12px] text-text-muted mt-1">Invite someone with their email or username above!</p>
 					</div>
 				) : (
 					<Card variant="white" className="!p-0 divide-y divide-black/5">

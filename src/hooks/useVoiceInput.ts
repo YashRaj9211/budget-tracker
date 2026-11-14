@@ -1,86 +1,118 @@
-import { useState, useEffect, useCallback } from 'react';
-import { parseVoiceCommand } from '../utils/gemini';
-import type { Transaction } from '../types';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-declare global {
-	interface Window {
-		SpeechRecognition: any;
-		webkitSpeechRecognition: any;
-	}
+// Minimal types for the browser Web Speech API (not in TS's DOM lib yet)
+interface SpeechResultEvent {
+	results: ArrayLike<ArrayLike<{ transcript: string }>>;
 }
+interface SpeechErrorEvent {
+	error: string;
+}
+interface Recognizer {
+	lang: string;
+	interimResults: boolean;
+	continuous: boolean;
+	maxAlternatives: number;
+	onstart: (() => void) | null;
+	onresult: ((e: SpeechResultEvent) => void) | null;
+	onerror: ((e: SpeechErrorEvent) => void) | null;
+	onend: (() => void) | null;
+	start: () => void;
+	stop: () => void;
+	abort: () => void;
+}
+type RecognizerCtor = new () => Recognizer;
 
-export function useVoiceInput(onParsed: (transaction: Partial<Transaction>) => void) {
+const speechWindow = (typeof window !== 'undefined' ? window : {}) as {
+	SpeechRecognition?: RecognizerCtor;
+	webkitSpeechRecognition?: RecognizerCtor;
+};
+const SpeechRecognitionImpl = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+
+// Android Chrome repeats text when continuous=true, so we use single-utterance mode there.
+const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+
+/**
+ * Live speech-to-text using the browser's built-in recogniser (free + instant).
+ * `transcript` updates while the user is still speaking.
+ * `onFinished(text)` runs once when listening stops (silence or user taps Done).
+ */
+export function useVoiceInput(onFinished: (text: string) => void) {
 	const [isListening, setIsListening] = useState(false);
-	const [isProcessing, setIsProcessing] = useState(false);
+	const [transcript, setTranscript] = useState('');
 	const [error, setError] = useState<string | null>(null);
 
-	const isSupported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
-
+	const recognitionRef = useRef<Recognizer | null>(null);
+	const textRef = useRef('');
+	const cancelledRef = useRef(false);
+	const onFinishedRef = useRef(onFinished);
 	useEffect(() => {
-		if (error) {
-			const timer = setTimeout(() => setError(null), 5000);
-			return () => clearTimeout(timer);
-		}
-	}, [error]);
+		onFinishedRef.current = onFinished;
+	}, [onFinished]);
 
-	const startListening = useCallback(() => {
-		if (!isSupported) {
-			setError('Voice recognition is not supported in this browser.');
+	const isSupported = !!SpeechRecognitionImpl;
+
+	const start = useCallback(() => {
+		if (!SpeechRecognitionImpl) {
+			setError('Voice is not supported in this browser. Type it instead.');
 			return;
 		}
+		recognitionRef.current?.abort();
 
-		const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-		if (!apiKey) {
-			setError('Please set VITE_GEMINI_API_KEY in your .env file.');
-			return;
-		}
-
-		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-		const recognition = new SpeechRecognition();
-
-		recognition.lang = 'en-US';
-		recognition.interimResults = false;
+		const recognition = new SpeechRecognitionImpl();
+		recognition.lang = 'en-IN'; // understands Indian English + Hinglish better than en-US
+		recognition.interimResults = true; // live words while speaking
+		recognition.continuous = !isAndroid;
 		recognition.maxAlternatives = 1;
 
-		recognition.onstart = () => {
-			setIsListening(true);
-			setError(null);
-		};
+		textRef.current = '';
+		cancelledRef.current = false;
+		setTranscript('');
+		setError(null);
 
-		recognition.onresult = async (event: any) => {
-			const transcript = event.results[0][0].transcript;
-			setIsListening(false);
-			setIsProcessing(true);
+		recognition.onstart = () => setIsListening(true);
 
-			try {
-				const parsed = await parseVoiceCommand(transcript, apiKey);
-				onParsed(parsed);
-			} catch (err) {
-				console.error(err);
-				setError('Failed to process voice command.');
-			} finally {
-				setIsProcessing(false);
+		recognition.onresult = (event) => {
+			// Rebuild full text from all results (final + in-progress)
+			let text = '';
+			for (let i = 0; i < event.results.length; i++) {
+				text += event.results[i][0].transcript + ' ';
 			}
+			textRef.current = text.trim();
+			setTranscript(textRef.current);
 		};
 
-		recognition.onerror = (event: any) => {
-			console.error('Speech recognition error', event.error);
-			setError('Microphone error: ' + event.error);
-			setIsListening(false);
+		recognition.onerror = (event) => {
+			if (event.error === 'aborted' || event.error === 'no-speech') return;
+			setError(
+				event.error === 'not-allowed'
+					? 'Microphone permission denied. Allow mic access and try again.'
+					: 'Microphone error: ' + event.error
+			);
 		};
 
 		recognition.onend = () => {
+			// Ignore stale recognizers (aborted by a restart / StrictMode remount)
+			if (recognitionRef.current !== recognition) return;
 			setIsListening(false);
+			recognitionRef.current = null;
+			if (!cancelledRef.current && textRef.current) onFinishedRef.current(textRef.current);
 		};
 
+		recognitionRef.current = recognition;
 		recognition.start();
-	}, [isSupported, onParsed]);
+	}, []);
 
-	return {
-		isSupported,
-		isListening,
-		isProcessing,
-		error,
-		startListening,
-	};
+	// Stop and process what was heard
+	const stop = useCallback(() => recognitionRef.current?.stop(), []);
+
+	// Stop and throw away what was heard
+	const cancel = useCallback(() => {
+		cancelledRef.current = true;
+		recognitionRef.current?.abort();
+		setIsListening(false);
+	}, []);
+
+	useEffect(() => () => recognitionRef.current?.abort(), []);
+
+	return { isSupported, isListening, transcript, setTranscript, error, start, stop, cancel };
 }

@@ -34,6 +34,8 @@ export interface SelectProps {
 	id?: string;
 	className?: string;
 	triggerClassName?: string;
+	menuClassName?: string;
+	align?: 'left' | 'right' | 'full';
 	variant?: 'surface' | 'card';
 	size?: 'sm' | 'md';
 	emptyMessage?: string;
@@ -54,6 +56,8 @@ export function Select({
 	id,
 	className = '',
 	triggerClassName = '',
+	menuClassName = '',
+	align = 'full',
 	variant = 'surface',
 	size = 'md',
 	emptyMessage = 'No options found',
@@ -176,7 +180,15 @@ export function Select({
 
 				{/* Floating Options Popover */}
 				{isOpen && (
-					<div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-card rounded-[20px] shadow-xl border border-ink/5 max-h-64 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+					<div
+						className={`absolute z-50 top-full mt-1.5 bg-card rounded-[20px] shadow-xl border border-ink/5 max-h-64 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
+							align === 'right'
+								? 'right-0 min-w-full sm:min-w-[190px]'
+								: align === 'left'
+								? 'left-0 min-w-full sm:min-w-[190px]'
+								: 'left-0 right-0'
+						} ${menuClassName}`}
+					>
 						{shouldShowSearch && (
 							<div className="p-2.5 border-b border-surface flex items-center gap-2 bg-card shrink-0">
 								<Search className="w-4 h-4 text-text-muted shrink-0" strokeWidth={1.5} />
@@ -280,6 +292,8 @@ export interface MultiSelectProps {
 	id?: string;
 	className?: string;
 	triggerClassName?: string;
+	menuClassName?: string;
+	align?: 'left' | 'right' | 'full';
 	variant?: 'surface' | 'card';
 	size?: 'sm' | 'md';
 	emptyMessage?: string;
@@ -302,6 +316,8 @@ export function MultiSelect({
 	id,
 	className = '',
 	triggerClassName = '',
+	menuClassName = '',
+	align = 'full',
 	variant = 'surface',
 	size = 'md',
 	emptyMessage = 'No options found',
@@ -445,7 +461,15 @@ export function MultiSelect({
 
 				{/* Floating Options Popover */}
 				{isOpen && (
-					<div className="absolute z-50 top-full left-0 right-0 mt-1.5 bg-card rounded-[20px] shadow-xl border border-ink/5 max-h-72 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+					<div
+						className={`absolute z-50 top-full mt-1.5 bg-card rounded-[20px] shadow-xl border border-ink/5 max-h-72 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
+							align === 'right'
+								? 'right-0 min-w-full sm:min-w-[190px]'
+								: align === 'left'
+								? 'left-0 min-w-full sm:min-w-[190px]'
+								: 'left-0 right-0'
+						} ${menuClassName}`}
+					>
 						{shouldShowSearch && (
 							<div className="p-2.5 border-b border-surface flex items-center gap-2 bg-card shrink-0">
 								<Search className="w-4 h-4 text-text-muted shrink-0" strokeWidth={1.5} />

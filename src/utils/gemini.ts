@@ -1,9 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
+import { todayStr } from './date';
 import { DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../types';
 
 export const parseVoiceCommand = async (text: string, apiKey: string) => {
 	const ai = new GoogleGenAI({ apiKey });
-	const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+	const today = todayStr(); // YYYY-MM-DD
 
 	const prompt = `
 You are an assistant that parses natural language into a JSON object representing a personal finance transaction in India.

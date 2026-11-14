@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { todayStr } from '../../utils/date';
 import { Handshake, ArrowRight } from 'lucide-react';
 import { useSplitStore } from '../../stores/splitStore';
 import { Button } from '../common/Button';
@@ -47,7 +48,7 @@ export default function SettleUpModal() {
 			amount: numAmount,
 			paidBy: payer,
 			splitAmong: [receiver], // Receiver receives full credit
-			date: new Date().toISOString().split('T')[0],
+			date: todayStr(),
 			createdAt: Date.now(),
 			isSettlement: true,
 		};

@@ -20,7 +20,7 @@ auth:bearer {
 
 body:json {
   {
-    "email": "friend@example.com"
+    "identifier": "friend@example.com"
   }
 }
 
@@ -39,5 +39,5 @@ docs {
   - Broadcasts a real-time WebSocket notification (`FRIEND_REQUEST_RECEIVED`) to the recipient.
   
   ### Body
-  - `email` (string, required): Registered email of the friend.
+  - `identifier` (string, required): Friend's email, or username (`john` / `@john`). If several users share a username, use `john#1234`.
 }
