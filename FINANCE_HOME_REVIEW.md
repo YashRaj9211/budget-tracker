@@ -8,7 +8,7 @@ Method: read diffs + `tsc --noEmit` (clean). App not run. `vitest`: first run ha
 |---|------|-------|-------|--------|
 | 1 | Balances | `AccountsPanel` no longer clamps balance at 0 (`Math.max(0, …)` removed) -> can go negative | `src/components/money/AccountsPanel.tsx`, `paymentShared.ts` | OK - negatives correct, consistent with other panels |
 | 2 | Balances | Accounts/Payments panels now read `allTransactions`; may show unadjusted balances until loaded | `src/pages/HubDashboard.tsx` | FIXED - `txReady` guard in HubDashboard |
-| 3 | Balances | `linkedDelta` added to `savingsTotal`; double-counts if server total already reflects linked payments | `src/pages/HubDashboard.tsx`, go-server finance handlers | OK - not a double-count |
+| 3 | Balances | `linkedDelta` added to `savingsTotal`; double-counts if server total already reflects linked payments | `src/pages/HubDashboard.tsx`, backend finance handlers | OK - not a double-count |
 | 4 | Payment methods | New `linkDates`: legacy links count all history, new links default to today -> smaller deductions than before | `src/stores/paymentMethodStore.ts` | FIXED - null link clears stale date; test added. Open: no UI to pick link date |
 | 5 | Navigation | Finance tabs removed from page; only reachable via "+" menu (`?tab=`); `/finance` and `/money` auto-open menu | `src/components/common/BottomNav.tsx`, `HubDashboard.tsx`, `src/utils/financeTabs.ts` | FIXED - Finance nav active on /finance and /money. Suggest: active-tab title |
 | 6 | Add transaction | Single FAB (tap=form, hold 450ms=voice); z-index `z-40` -> `z-10`, may sit behind nav backdrop (`z-20`) | `src/components/transaction/AddTransactionForm.tsx` | FIXED - hold timer cleanup, ignore non-primary buttons; z-index fine |

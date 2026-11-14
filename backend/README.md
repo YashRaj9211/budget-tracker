@@ -13,7 +13,7 @@ A high-performance backend for Splitwise built with **Go**, **Gin**, and **GORM*
 ## 🛠️ Project Structure
 
 ```
-go-server/
+backend/
 ├── main.go             # Entry point (Lambda handler + Local server)
 ├── database/
 │   └── db.go           # GORM database connection

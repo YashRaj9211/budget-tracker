@@ -8,7 +8,7 @@ A mobile-style PWA for **personal budgeting** (offline, stored in the browser) p
 ## 1b. Folder changes made (branch `refactor/folder-structure`)
 - `docs/` now holds `PROJECT_MAP.md`, `STYLE_GUIDE.md` (was `Style.md`), `FALLOW_ANALYSIS.md`, `API_ROUTER_NOTES.md` (was `bruno/User_Router_Notes.md`).
 - Renamed `Calander.tsx` → `Calendar.tsx`; Go router files now `auth_router.go`, `group_router.go`, `friendship_router.go`.
-- Deleted empty `go-server/router/user_router.go` and its call.
+- Deleted empty `backend/router/user_router.go` and its call.
 - Root `.env` removed from git tracking (file stays on disk).
 - Go backend compiled and vetted clean; auth behaviour tested against a real PostgreSQL (see `ISSUES.md`).
 - Rejected work is kept in `docs/rejected/migrations-attempt/` (not compiled).
@@ -17,7 +17,7 @@ A mobile-style PWA for **personal budgeting** (offline, stored in the browser) p
 | Half | Tech | Lives in | Data stored |
 |---|---|---|---|
 | Frontend | React 19, TypeScript, Vite 8, Tailwind 4, Zustand, React Router 8, PWA | `src/` | IndexedDB (`idb`) in the browser |
-| Backend | Go 1.25, Gin, GORM, PostgreSQL (Neon), Gorilla WebSocket, JWT | `go-server/` | PostgreSQL |
+| Backend | Go 1.25, Gin, GORM, PostgreSQL (Neon), Gorilla WebSocket, JWT | `backend/` | PostgreSQL |
 | API tests | Bruno collection | `bruno/` | — |
 
 Backend runs two ways: normal server (`ENV=local`) or AWS Lambda. Production is on Render (`divvit.onrender.com`); frontend on Netlify.
@@ -57,7 +57,7 @@ Income / Expense save to IndexedDB. **Split** saves to the server via `useSplitD
 ### Biggest files (refactor candidates)
 `AddTransactionForm.tsx` 405 · `db/index.ts` 314 · `Budget.tsx` 309 · `financeHubApi.ts` 300 · `Calendar.tsx` 286 · `AddSplitModal.tsx` 272
 
-## 5. Backend map (`go-server/`)
+## 5. Backend map (`backend/`)
 | Path | What it does |
 |---|---|
 | `main.go` | Entry. Local server or Lambda. Has a self-ping loop to keep Render awake |
@@ -68,7 +68,7 @@ Income / Expense save to IndexedDB. **Split** saves to the server via `useSplitD
 | `functions/simplify_expense.go` | Greedy debt-simplification (uses `decimal`) |
 | `websocket/` | Hub + client (broadcasts refetch events) |
 | `mcp/` | MCP server over SSE (tools for AI agents) — experimental |
-| `cmd/` | One-off tools: `migrate` (versioned SQL in `go-server/migrations/`), `seed`, `reset_db -yes`, `fix_schema` (deprecated, runs migrate), `debug_uuid` |
+| `cmd/` | One-off tools: `migrate` (versioned SQL in `backend/migrations/`), `seed`, `reset_db -yes`, `fix_schema` (deprecated, runs migrate), `debug_uuid` |
 | `openapi.yaml` | API spec |
 
 Endpoints (private, **user comes from the JWT, never the URL**): `POST/GET /expenses`, `PUT/DELETE /expenses/:id`, `PUT /expenses/settle/:splitId`, `/groups`, `/groups/:id`, `/groups/:id/members`, `/groups/:id/leave`, `/friendships/...`, `/friends`, `/dashboard`, `/dashboard/{expenses,friends,graph,analytics}`, `/categories`, `/ws`, `/mcp/...`
@@ -88,9 +88,9 @@ npm install        # frontend deps
 npm run dev        # http://localhost:5173
 npm run build      # tsc -b && vite build
 npm run lint
-cd go-server && go run main.go      # needs go-server/.env (DATABASE_URL, JWT_SECRET, ENV=local, PORT=3001)
+cd backend && go run main.go      # needs backend/.env (DATABASE_URL, JWT_SECRET, ENV=local, PORT=3001)
 ```
-Env: root `.env` (see `.env.example`) for frontend; `go-server/.env` for backend.
+Env: root `.env` (see `.env.example`) for frontend; `backend/.env` for backend.
 
 ## 9. Skills to improve (based on what this code shows)
 Ordered by payoff.
@@ -116,15 +116,15 @@ Ordered by payoff.
 | Add a route/page | `src/pages/`, then `src/router.ts`, then `components/common/BottomNav.tsx` |
 | Change default categories/accounts | `src/types/index.ts` and `src/stores/initialState.ts` (two lists — they disagree!) |
 | Change the IndexedDB schema | `src/db/index.ts` (bump `DB_VERSION`, add an `oldVersion < N` block) |
-| Add an API endpoint | `go-server/handlers/`, `go-server/router/`, then `src/api/financeHubApi.ts`, `bruno/`, `openapi.yaml` |
-| Change DB tables | `go-server/models/models.go` **and** a new `go-server/migrations/0000NN_name.up.sql` + `.down.sql` |
-| Who may do what (auth rules) | `go-server/handlers/authz.go` |
-| API tests | `go-server/router/api_test.go` (needs `TEST_DATABASE_URL`) |
+| Add an API endpoint | `backend/handlers/`, `backend/router/`, then `src/api/financeHubApi.ts`, `bruno/`, `openapi.yaml` |
+| Change DB tables | `backend/models/models.go` **and** a new `backend/migrations/0000NN_name.up.sql` + `.down.sql` |
+| Who may do what (auth rules) | `backend/handlers/authz.go` |
+| API tests | `backend/router/api_test.go` (needs `TEST_DATABASE_URL`) |
 | Charts (Recharts, soft colours) | `src/components/charts/` |
 | Chart maths (trends, budget pace, insights) | `src/utils/analytics.ts` (+ `.test.ts`) |
-| Server chart data | `go-server/handlers/analytics_handler.go` -> `GET /dashboard/analytics` |
+| Server chart data | `backend/handlers/analytics_handler.go` -> `GET /dashboard/analytics` |
 | Split form logic (group/friends, payer, split types) | `src/hooks/useSplitDraft.ts`, `src/utils/splitMath.ts`, `src/components/split/SplitExpenseFields.tsx` |
-| Categories list for forms | `go-server/handlers/category_handler.go` -> `GET /categories` |
+| Categories list for forms | `backend/handlers/category_handler.go` -> `GET /categories` |
 | Analytics "My account" view | `src/components/charts/AccountAnalytics.tsx` |
 | Split balances | `src/utils/debtSimplification.ts` (+ `.test.ts`) |
 | Change the Gemini prompt | `src/utils/gemini.ts` |

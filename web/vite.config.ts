@@ -62,7 +62,7 @@ export default defineConfig({
   ],
   server: {
     watch: {
-      ignored: ['**/go-server/**', '**/.env*'],
+      ignored: ['**/backend/**', '**/.env*'],
     },
   },
 })

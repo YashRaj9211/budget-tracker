@@ -1,4 +1,4 @@
-// Command fix_schema is deprecated. Schema changes now live in go-server/migrations/*.sql
+// Command fix_schema is deprecated. Schema changes now live in backend/migrations/*.sql
 // and are applied with `go run ./cmd/migrate`. This command just does the same thing.
 package main
 

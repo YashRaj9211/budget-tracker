@@ -1,6 +1,6 @@
 // Command seed fills the database with demo data so every chart has something to show.
 //
-//	cd go-server && go run ./cmd/seed
+//	cd backend && go run ./cmd/seed
 //
 // Log in with  alice@demo.com  /  password   (bob, charlie and diya use the same password).
 // It creates ~6 months of income, personal spending, group splits and settle-ups for Alice.

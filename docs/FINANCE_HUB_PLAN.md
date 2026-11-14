@@ -51,7 +51,7 @@ Steps 1–5 were implemented before this review. Corrections:
 
 ## 5. Database approach
 
-- Migrations are SQL files in `go-server/migrations/`, numbered in order (`000006_...`).
+- Migrations are SQL files in `backend/migrations/`, numbered in order (`000006_...`).
 - They are run by `go run ./cmd/migrate`, or automatically if `AUTO_MIGRATE=true`.
 - Each file runs once and is recorded in `schema_migrations`.
 - Each migration needs an `.up.sql` and a `.down.sql`.
@@ -71,7 +71,7 @@ Each step = one migration + one small set of code changes + tests. Do not start 
 ### Step 0 — Baseline (no code change)
 - Commit the current work to git on a new branch, e.g. `feature/finance-hub`.
 - Take a Neon branch/backup of the database.
-- Run existing tests: `npm test` and `cd go-server && TEST_DATABASE_URL=<scratch db> go test ./...`.
+- Run existing tests: `npm test` and `cd backend && TEST_DATABASE_URL=<scratch db> go test ./...`.
 - **Done when:** the commit exists and tests pass.
 
 ### Step 1 — Exclude-from-budget flag on transactions — `[COMPLETED]`
@@ -79,11 +79,11 @@ Each step = one migration + one small set of code changes + tests. Do not start 
 - **Status:** COMPLETED
 - **What was achieved:**
   - Added migration `000006_add_expense_include_in_budget` (`up.sql` and `down.sql`).
-  - Added `IncludeInBudget *bool` to `Expense` struct in `go-server/models/models.go` with pointer to prevent zero-value overrides and defaulted in `BeforeCreate`.
-  - Updated `go-server/handlers/authz.go` to validate that the flag applies to `PERSONAL` and `INCOME`, defaults to `true` if omitted, and `SPLIT` expenses ignore it.
-  - Updated `go-server/handlers/expense_handler.go` to assign `IncludeInBudget` on create and update.
-  - Added test suite `TestExpenseIncludeInBudget` in `go-server/router/api_test.go` verifying create default true, create false, updates, old payload compatibility, and split behavior.
-  - Updated `go-server/openapi.yaml` and Bruno request collections.
+  - Added `IncludeInBudget *bool` to `Expense` struct in `backend/models/models.go` with pointer to prevent zero-value overrides and defaulted in `BeforeCreate`.
+  - Updated `backend/handlers/authz.go` to validate that the flag applies to `PERSONAL` and `INCOME`, defaults to `true` if omitted, and `SPLIT` expenses ignore it.
+  - Updated `backend/handlers/expense_handler.go` to assign `IncludeInBudget` on create and update.
+  - Added test suite `TestExpenseIncludeInBudget` in `backend/router/api_test.go` verifying create default true, create false, updates, old payload compatibility, and split behavior.
+  - Updated `backend/openapi.yaml` and Bruno request collections.
 - **What is left:** None.
 
 **Migration `000006_add_expense_include_in_budget`**
@@ -98,14 +98,14 @@ ALTER TABLE expenses DROP COLUMN IF EXISTS include_in_budget;
 ```
 
 **Backend**
-- `go-server/models/models.go` → in `Expense` add:
+- `backend/models/models.go` → in `Expense` add:
   ```go
   IncludeInBudget *bool `gorm:"column:include_in_budget;default:true" json:"includeInBudget"`
   ```
   - Use a **pointer** (`*bool`). With a GORM default of `true`, a plain `bool` set to `false` is saved as `true`.
   - Treat `nil` as `true` in code.
-- `go-server/handlers/expense_handler.go` → accept `includeInBudget` on create and update. If missing, use `true`.
-- `go-server/handlers/authz.go` → validation: the flag only matters for `PERSONAL` and `INCOME`. (Splits ignore it.)
+- `backend/handlers/expense_handler.go` → accept `includeInBudget` on create and update. If missing, use `true`.
+- `backend/handlers/authz.go` → validation: the flag only matters for `PERSONAL` and `INCOME`. (Splits ignore it.)
 
 **Tests**
 - Create expense without the field → stored as `true`.
@@ -119,7 +119,7 @@ ALTER TABLE expenses DROP COLUMN IF EXISTS include_in_budget;
 - **Status:** COMPLETED
 - **What was achieved:**
   - Added migration `000007_add_salary_entries` (`up.sql` and `down.sql`).
-  - Added `SalaryEntry` model in `go-server/models/models.go` with `salary` UUID generation in `BeforeCreate`.
+  - Added `SalaryEntry` model in `backend/models/models.go` with `salary` UUID generation in `BeforeCreate`.
   - Implemented `handlers/salary_handler.go` with:
     - `GET /salary` (full history ordered newest first).
     - `GET /salary/active?month=YYYY-MM` (evaluates active salary for specified month or current month).
@@ -130,7 +130,7 @@ ALTER TABLE expenses DROP COLUMN IF EXISTS include_in_budget;
   - Registered `SalaryRouter` in `router/salary_router.go` and wired into `router/default_router.go`.
   - Added `TestSalaryHistoryAndMonthlyRule` in `router/api_test.go` and verified schema compatibility in `database/migrations_test.go`.
   - Added Bruno API request collection under `bruno/Salary/`.
-  - Updated `go-server/openapi.yaml` with salary endpoints and schemas.
+  - Updated `backend/openapi.yaml` with salary endpoints and schemas.
 - **What is left:** None.
 
 **Migration `000007_add_salary_entries`**
@@ -175,7 +175,7 @@ DROP TABLE IF EXISTS salary_entries;
 - **Status:** COMPLETED
 - **What was achieved:**
   - Added migration `000008_add_savings_accounts` (`up.sql` and `down.sql`) creating `savings_accounts` and `savings_transactions` tables with check constraints and foreign keys.
-  - Added models in `go-server/models/models.go`:
+  - Added models in `backend/models/models.go`:
     - `SavingsAccountKind` enum (`BANK`, `FD`, `RD`, `MUTUAL_FUND`, `CASH`, `OTHER`).
     - `SavingsTxnDirection` enum (`DEPOSIT`, `WITHDRAWAL`).
     - `SavingsAccount` with `BeforeCreate` generating `account` UUID prefix, default currency `INR`, and default kind `OTHER`. Dynamic `Balance *decimal.Decimal` tagged `gorm:"-"`.
@@ -193,7 +193,7 @@ DROP TABLE IF EXISTS salary_entries;
     - `DELETE /savings-accounts/:id/transactions/:txnId`: soft-deletes individual transaction, immediately updating dynamic balance.
   - Registered `SavingsRouter` in `router/savings_router.go` and wired it into `router/default_router.go`.
   - Added Bruno API request collection under `bruno/Savings/` (7 request templates).
-  - Updated `go-server/openapi.yaml` with savings accounts and transaction paths, parameters, and schemas.
+  - Updated `backend/openapi.yaml` with savings accounts and transaction paths, parameters, and schemas.
   - Added `TestSavingsAccountsAndTransactions` in `router/api_test.go` and verified model schema mapping in `database/migrations_test.go`. All tests pass.
 - **What is left:** None.
 
@@ -269,7 +269,7 @@ Storing the balance would drift; calculating it cannot.
     - Implemented `GetFinanceSummary(c *gin.Context)` with `requireUserID` authentication and `YYYY-MM` month query parameter validation.
   - Implemented `router/finance_summary_router.go` and registered `FinanceSummaryRouter(private)` in `router/default_router.go`.
   - Added Bruno API request file under `bruno/FinanceSummary/Get Finance Summary.bru`.
-  - Updated `go-server/openapi.yaml` with `GET /api/_private/v1/finance-summary` and `FinanceSummaryResponse` schema.
+  - Updated `backend/openapi.yaml` with `GET /api/_private/v1/finance-summary` and `FinanceSummaryResponse` schema.
   - Added comprehensive test `TestFinanceSummary` in `router/api_test.go` verifying hand calculation for a test user with multiple expenses, salary changes, multiple accounts, soft-deleted expenses/accounts, date boundaries, and user isolation. All tests pass.
 - **What is left:** None.
 
@@ -304,7 +304,7 @@ Returns, for the month:
     - In `src/stores/transactionStore.ts`: updated `useDateRangeTotals` and `useTodayExpense` (used by `useDailyBudget.ts`) to filter out `t.includeInBudget === false` when summing expenses. Total spend selectors (`useDayGroups`, `useMonthlyTotals`) keep all rows.
     - In `src/utils/analytics.ts`: updated `budgetProgress` and `budgetBurn` to filter `t.includeInBudget !== false`. Overall analytics functions (`monthlyTrend`, `categoryTotals`, etc.) keep all rows.
   - Automated tests added and passing:
-    - `TestExcludeFromBudgetBehavior` in `go-server/router/api_test.go`: a ₹500 excluded expense is not in `finance-summary` `budgetSpent`, but IS in total spent on `dashboard` and `analytics` (corrected in review; expectations are now 800), and it still appears in the list breakdown.
+    - `TestExcludeFromBudgetBehavior` in `backend/router/api_test.go`: a ₹500 excluded expense is not in `finance-summary` `budgetSpent`, but IS in total spent on `dashboard` and `analytics` (corrected in review; expectations are now 800), and it still appears in the list breakdown.
     - Added unit test in `src/utils/analytics.test.ts` verifying that `includeInBudget: false` is excluded from `budgetProgress` and `budgetBurn`, while remaining in `monthlyTrend`.
     - All Go tests (`go test ./...`) and frontend tests (`npm test` 75/75) pass.
 - **What is left:** Step 6 (sync + checkbox) so the flag reaches the server. See review notes in section 2b.

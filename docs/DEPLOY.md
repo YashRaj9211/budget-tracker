@@ -19,7 +19,7 @@ Push your code to GitHub first.
 
 | Field | Value |
 |---|---|
-| Root Directory | `go-server` |
+| Root Directory | `backend` |
 | Runtime | Go |
 | Build Command | `go build -o app .` |
 | Start Command | `./app` |
@@ -71,7 +71,7 @@ It now opens full-screen like a normal app, and local data works offline.
 On your PC, with the Render **External** database URL:
 
 ```powershell
-cd go-server
+cd backend
 $env:DATABASE_URL="<External Database URL>"
 go run ./cmd/migrate
 go run ./cmd/seed

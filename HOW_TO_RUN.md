@@ -45,15 +45,15 @@ The frontend will be available at `http://localhost:5173`.
 
 ## ⚙️ 2. Backend Setup (Go Server)
 
-The backend code lives inside the `go-server` directory.
+The backend code lives inside the `backend` directory.
 
 ### Step 1: Navigate to the Server Directory
 ```bash
-cd go-server
+cd backend
 ```
 
 ### Step 2: Setup the Database Environment Variable
-The Go server requires a PostgreSQL connection string. You can define it in the `.env` file inside the `go-server` folder, or set it directly in your terminal:
+The Go server requires a PostgreSQL connection string. You can define it in the `.env` file inside the `backend` folder, or set it directly in your terminal:
 ```powershell
 # For PowerShell
 $env:DATABASE_URL="postgres://user:password@localhost:5432/splitwise"

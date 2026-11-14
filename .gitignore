@@ -27,17 +27,17 @@ dist-ssr
 .netlify
 
 # Go and Backend Server
-go-server/app
-go-server/*.exe
-go-server/*.exe~
-go-server/*.dll
-go-server/*.so
-go-server/*.dylib
-go-server/*.test
-go-server/*.out
-go-server/.env*
-go-server/dist/
-go-server/tmp/
+backend/app
+backend/*.exe
+backend/*.exe~
+backend/*.dll
+backend/*.so
+backend/*.dylib
+backend/*.test
+backend/*.out
+backend/.env*
+backend/dist/
+backend/tmp/
 
 # Environment Variables
 .env

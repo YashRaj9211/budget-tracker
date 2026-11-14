@@ -24,8 +24,8 @@ import (
 var ginLambda *ginadapter.GinLambda
 
 func init() {
-	// Load .env file (supports running from repo root or go-server dir)
-	if err := godotenv.Load(".env", "go-server/.env", "../go-server/.env"); err != nil {
+	// Load .env file (supports running from repo root or backend dir)
+	if err := godotenv.Load(".env", "backend/.env", "../backend/.env"); err != nil {
 		log.Println("No .env file found")
 	}
 
@@ -63,7 +63,7 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 
 func main() {
 	// If running locally (not in Lambda), start the server
-	if err := godotenv.Load(".env", "go-server/.env", "../go-server/.env"); err != nil {
+	if err := godotenv.Load(".env", "backend/.env", "../backend/.env"); err != nil {
 		log.Println("No .env file found")
 	}
 
