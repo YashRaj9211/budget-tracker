@@ -1,0 +1,27 @@
+meta {
+  name: Get Savings Transactions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/savings-accounts/:id/transactions
+  body: none
+  auth: bearer
+}
+
+params:path {
+  id: account_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Savings Transactions (`GetSavingsTransactions`)
+
+  **Route**: `GET /api/_private/v1/savings-accounts/:id/transactions` (Bearer token required)
+
+  Lists transactions for the specified account, newest first.
+}

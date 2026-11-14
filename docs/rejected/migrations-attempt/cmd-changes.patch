@@ -1,7 +1,7 @@
-diff --git a/go-server/cmd/fix_schema/main.go b/go-server/cmd/fix_schema/main.go
+diff --git a/backend/cmd/fix_schema/main.go b/backend/cmd/fix_schema/main.go
 index 4131996..92bba3b 100644
---- a/go-server/cmd/fix_schema/main.go
-+++ b/go-server/cmd/fix_schema/main.go
+--- a/backend/cmd/fix_schema/main.go
++++ b/backend/cmd/fix_schema/main.go
 @@ -3,36 +3,29 @@ package main
  import (
  	"log"
@@ -12,7 +12,7 @@ index 4131996..92bba3b 100644
  )
  
 +// Deprecated: schema alterations should be added as versioned SQL migrations
-+// under go-server/migrations/*.up.sql and executed via go run ./cmd/migrate.
++// under backend/migrations/*.up.sql and executed via go run ./cmd/migrate.
  func main() {
 +	log.Println("cmd/fix_schema is deprecated. Running standard versioned migrations via database.MigrationManager...")
 +
@@ -51,10 +51,10 @@ index 4131996..92bba3b 100644
  	}
 +	log.Println("Schema verified and migrations applied.")
  }
-diff --git a/go-server/cmd/migrate/main.go b/go-server/cmd/migrate/main.go
+diff --git a/backend/cmd/migrate/main.go b/backend/cmd/migrate/main.go
 index d468a91..748a02e 100644
---- a/go-server/cmd/migrate/main.go
-+++ b/go-server/cmd/migrate/main.go
+--- a/backend/cmd/migrate/main.go
++++ b/backend/cmd/migrate/main.go
 @@ -1,44 +1,46 @@
  package main
  
@@ -122,10 +122,10 @@ index d468a91..748a02e 100644
 -	fmt.Println("Database migration completed successfully.")
 +	fmt.Println("Versioned migrations applied successfully.")
  }
-diff --git a/go-server/cmd/reset_db/main.go b/go-server/cmd/reset_db/main.go
+diff --git a/backend/cmd/reset_db/main.go b/backend/cmd/reset_db/main.go
 index 89888df..1e84253 100644
---- a/go-server/cmd/reset_db/main.go
-+++ b/go-server/cmd/reset_db/main.go
+--- a/backend/cmd/reset_db/main.go
++++ b/backend/cmd/reset_db/main.go
 @@ -5,58 +5,33 @@ import (
  	"log"
  

@@ -16,7 +16,7 @@ budget-tracker/
 │   ├── pages/            # Home, HubDashboard, Split, Friends, Stats, Auth, Budget
 │   ├── stores/           # Zustand state management (auth, split, transaction, budget)
 │   └── hooks/            # Custom hooks (useWebSocket, useDayGroups)
-├── go-server/            # High-performance Go (Gin + GORM + PostgreSQL + Gorilla WebSocket)
+├── backend/            # High-performance Go (Gin + GORM + PostgreSQL + Gorilla WebSocket)
 │   ├── handlers/         # Auth, Dashboard, Expenses, Groups, Friendships, WebSocket
 │   ├── router/           # Public & JWT-authenticated private route groups
 │   ├── models/           # Database schema & GORM models with UUID BeforeCreate hooks
@@ -41,14 +41,14 @@ budget-tracker/
 
 ---
 
-### 2. Backend Setup (`go-server`)
+### 2. Backend Setup (`backend`)
 
-1. Navigate to the `go-server` folder:
+1. Navigate to the `backend` folder:
    ```bash
-   cd go-server
+   cd backend
    ```
 
-2. Create/verify `.env` inside `go-server/`:
+2. Create/verify `.env` inside `backend/`:
    ```env
    DATABASE_URL=postgresql://user:password@ep-host.aws.neon.tech/neondb?sslmode=require
    ENV=local

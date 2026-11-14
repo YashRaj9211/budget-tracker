@@ -1,0 +1,39 @@
+meta {
+  name: Update Salary
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/_private/v1/salary/:id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  id: salary_id_here
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "amount": "55000.00",
+    "effectiveFrom": "2026-01-01",
+    "note": "Adjusted base salary"
+  }
+}
+
+docs {
+  # Update Salary Entry (`UpdateSalary`)
+
+  **Route**: `PUT /api/_private/v1/salary/:id` (Bearer token required)
+
+  Edits an existing salary entry owned by the authenticated user.
+}

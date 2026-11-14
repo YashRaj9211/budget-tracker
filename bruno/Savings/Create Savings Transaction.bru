@@ -1,0 +1,44 @@
+meta {
+  name: Create Savings Transaction
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/_private/v1/savings-accounts/:id/transactions
+  body: json
+  auth: bearer
+}
+
+params:path {
+  id: account_id_here
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "amount": "5000.00",
+    "direction": "DEPOSIT",
+    "txnDate": "2026-07-05",
+    "note": "Salary transfer"
+  }
+}
+
+docs {
+  # Create Savings Transaction (`CreateSavingsTransaction`)
+
+  **Route**: `POST /api/_private/v1/savings-accounts/:id/transactions` (Bearer token required)
+
+  Records a deposit or withdrawal against a savings account:
+  - `amount`: decimal > 0
+  - `direction`: "DEPOSIT" or "WITHDRAWAL"
+  - `txnDate`: YYYY-MM-DD
+  - `note`: optional description
+}

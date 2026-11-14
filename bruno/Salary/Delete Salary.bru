@@ -1,0 +1,27 @@
+meta {
+  name: Delete Salary
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/_private/v1/salary/:id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  id: salary_id_here
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Delete Salary Entry (`DeleteSalary`)
+
+  **Route**: `DELETE /api/_private/v1/salary/:id` (Bearer token required)
+
+  Soft deletes a salary entry owned by the authenticated user (sets `deleted_at`).
+}

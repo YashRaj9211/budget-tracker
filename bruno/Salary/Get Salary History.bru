@@ -1,0 +1,23 @@
+meta {
+  name: Get Salary History
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/salary
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Salary History (`GetSalaryHistory`)
+
+  **Route**: `GET /api/_private/v1/salary` (Bearer token required)
+
+  Returns the full history of salary entries for the user, ordered newest first (by `effective_from desc, created_at desc`). Soft-deleted entries are excluded.
+}

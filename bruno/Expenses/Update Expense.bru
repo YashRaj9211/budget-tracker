@@ -51,12 +51,12 @@ body:json {
 docs {
   # Update Expense (`UpdateExpense`)
   
-  **Handler**: `handlers.UpdateExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/expense_handler.go)
+  **Handler**: `handlers.UpdateExpense` in [expense_handler.go](file:///d:/Codes/budget-tracker/backend/handlers/expense_handler.go)
   **Route**: `PUT /api/_private/v1/expenses/:expenseId` (Private - Bearer Token required)
   
   ### Description
   Modifies an existing expense record atomically:
-  - Updates top-level attributes (`amount`, `description`, `note`, `type`, `expenseDate`, `categoryId`, `groupId`).
+  - Updates top-level attributes (`amount`, `description`, `note`, `type`, `expenseDate`, `categoryId`, `groupId`, `includeInBudget`).
   - Clears existing splits and recreates the updated split shares if `type = 'SPLIT'`.
   - Reloads related models with preloads (`Splits.User`, `Category`, `Group`).
   - Broadcasts `REFETCH_EXPENSES` event over WebSocket to all relevant members.

@@ -1,0 +1,29 @@
+meta {
+  name: Get Active Salary
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/_private/v1/salary/active?month=2026-07
+  body: none
+  auth: bearer
+}
+
+params:query {
+  month: 2026-07
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Active Salary (`GetActiveSalary`)
+
+  **Route**: `GET /api/_private/v1/salary/active?month=YYYY-MM` (Bearer token required)
+
+  Returns the salary effective for a given month:
+  - Latest entry whose `effective_from` is on or before the last day of the specified month.
+  - If `month` is omitted, defaults to the current UTC month.
+}

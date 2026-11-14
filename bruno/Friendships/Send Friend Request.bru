@@ -20,14 +20,14 @@ auth:bearer {
 
 body:json {
   {
-    "email": "friend@example.com"
+    "identifier": "friend@example.com"
   }
 }
 
 docs {
   # Send Friendship Request (`SendFriendshipRequest`)
   
-  **Handler**: `handlers.SendFriendshipRequest` in [friendship_handler.go](file:///d:/Codes/budget-tracker/go-server/handlers/friendship_handler.go)
+  **Handler**: `handlers.SendFriendshipRequest` in [friendship_handler.go](file:///d:/Codes/budget-tracker/backend/handlers/friendship_handler.go)
   **Route**: `POST /api/_private/v1/friendships/send` (Private - Bearer Token required)
   
   ### Description
@@ -39,5 +39,5 @@ docs {
   - Broadcasts a real-time WebSocket notification (`FRIEND_REQUEST_RECEIVED`) to the recipient.
   
   ### Body
-  - `email` (string, required): Registered email of the friend.
+  - `identifier` (string, required): Friend's email, or username (`john` / `@john`). If several users share a username, use `john#1234`.
 }

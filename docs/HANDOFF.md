@@ -5,7 +5,7 @@ Paste this at the start of a new session: *"Read docs/HANDOFF.md, docs/PROJECT_M
 Last updated: 2026-10-01 · Branch: `refactor/folder-structure` · **Nothing is committed yet** (all work is uncommitted).
 
 ## What the app is
-Budget tracker + expense splitting. React/TS/Vite PWA (`src/`) + Go/Gin/GORM/PostgreSQL API (`go-server/`).
+Budget tracker + expense splitting. React/TS/Vite PWA (`src/`) + Go/Gin/GORM/PostgreSQL API (`backend/`).
 Two data worlds: **local** (IndexedDB: Home, Budget, Analytics "This device") and **server** (groups, splits, Hub, Analytics "My account").
 
 ## Done so far
@@ -25,11 +25,11 @@ Two data worlds: **local** (IndexedDB: Home, Budget, Analytics "This device") an
 npm install && npm run dev          # frontend, http://localhost:5173
 npm test                            # Vitest (30 tests)
 npm run build && npm run lint       # lint has ~17 old errors (issue 15)
-cd go-server
+cd backend
 go run ./cmd/migrate                # apply DB migrations
 go run ./cmd/seed                   # demo data
 go run ./cmd/reset_db -yes          # WIPES the DB (never on production)
-go run main.go                      # needs go-server/.env: DATABASE_URL, JWT_SECRET, ENV=local, PORT=3001
+go run main.go                      # needs backend/.env: DATABASE_URL, JWT_SECRET, ENV=local, PORT=3001
 TEST_DATABASE_URL=<scratch db> go test ./...
 ```
 
